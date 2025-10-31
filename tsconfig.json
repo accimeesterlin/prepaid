@@ -19,9 +19,23 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@pg-prepaid/db": ["./packages/db/src"],
+      "@pg-prepaid/db/*": ["./packages/db/src/*"],
+      "@pg-prepaid/types": ["./packages/types/src"],
+      "@pg-prepaid/types/*": ["./packages/types/src/*"],
+      "@pg-prepaid/ui": ["./packages/ui/src"],
+      "@pg-prepaid/ui/*": ["./packages/ui/src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "packages/db/src/**/*",
+    "packages/types/src/**/*",
+    "packages/ui/src/**/*"
+  ],
   "exclude": ["node_modules"]
 }
