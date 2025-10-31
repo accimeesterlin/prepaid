@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create product
+// POST - Create product (simplified - just name required)
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -54,43 +54,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const {
-      name,
-      description,
-      provider,
-      providerProductId,
-      operatorId,
-      operatorName,
-      operatorCountry,
-      operatorLogo,
-      costPrice,
-      sellPrice,
-      currency,
-      denominationType,
-      fixedAmount,
-      minAmount,
-      maxAmount,
-      unit,
-      status,
-      category,
-    } = body;
+    const { name, description } = body;
 
-    // Validate required fields
-    if (!name || !operatorName || !operatorCountry || !costPrice || !sellPrice) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    // Validate sell price >= cost price
-    if (sellPrice < costPrice) {
-      return NextResponse.json({ error: 'Sell price must be greater than or equal to cost price' }, { status: 400 });
+    // Only name is required for initial creation
+    if (!name || !name.trim()) {
+      return NextResponse.json({ error: 'Product name is required' }, { status: 400 });
     }
 
     await dbConnection.connect();
 
-    // Check for duplicate product
+    // Check for duplicate product name
     const existing = await Product.findOne({
       orgId: session.orgId,
-      name,
+      name: name.trim(),
     });
 
     if (existing) {
@@ -100,34 +76,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create minimal product - will be configured on detail page
     const product = await Product.create({
       orgId: session.orgId,
-      name,
-      description: description || '',
-      provider: provider || 'dingconnect',
-      providerProductId: providerProductId || `auto-${Date.now()}`,
-      operatorId: operatorId || operatorName.toLowerCase().replace(/\s+/g, '-'),
-      operatorName,
-      operatorCountry,
-      operatorLogo: operatorLogo || '',
+      name: name.trim(),
+      description: description?.trim() || '',
+      provider: 'dingconnect', // Default, can be changed later
+      providerProductId: '', // Will be set when provider product is selected
+      operatorId: '', // Will be set when provider product is selected
+      operatorName: 'Not configured',
+      operatorCountry: '',
       pricing: {
-        costPrice: parseFloat(costPrice),
-        sellPrice: parseFloat(sellPrice),
-        currency: currency || 'USD',
-        profitMargin: 0, // Will be calculated by pre-save hook
+        costPrice: 0,
+        sellPrice: 0,
+        currency: 'USD',
+        profitMargin: 0,
       },
       denomination: {
-        type: denominationType || 'fixed',
-        fixedAmount: fixedAmount ? parseFloat(fixedAmount) : 10,
-        minAmount: minAmount ? parseFloat(minAmount) : undefined,
-        maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
-        unit: unit || 'USD',
+        type: 'fixed',
+        fixedAmount: 0,
+        unit: 'USD',
       },
-      status: status || 'active',
+      resaleSettings: {
+        allowedCountries: [],
+        blockedCountries: [],
+        customPricing: {
+          enabled: false,
+        },
+        discount: {
+          enabled: false,
+        },
+        limits: {},
+      },
+      sync: {
+        autoSync: false,
+      },
+      status: 'inactive', // Inactive until configured
       metadata: {
-        category: category || 'Mobile Top-up',
+        category: 'Mobile Top-up',
         tags: [],
         popularity: 0,
+        totalSales: 0,
+        revenue: 0,
       },
     });
 

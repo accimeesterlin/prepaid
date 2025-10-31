@@ -8,10 +8,14 @@ import {
   Users,
   CheckCircle,
   ArrowUpRight,
-  Package,
   TrendingUp,
   Plus,
   CreditCard,
+  Store,
+  Copy,
+  ExternalLink,
+  Globe,
+  Tag,
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -44,6 +48,8 @@ export default function DashboardPage() {
     successRate: { rate: 0, trend: 0 },
   });
   const [loading, setLoading] = useState(true);
+  const [orgSlug, setOrgSlug] = useState<string>('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -59,12 +65,29 @@ export default function DashboardPage() {
           return;
         }
       }
+
+      // Fetch organization slug
+      const orgResponse = await fetch('/api/v1/organization');
+      if (orgResponse.ok) {
+        const orgData = await orgResponse.json();
+        setOrgSlug(orgData.slug);
+      }
     } catch (err) {
       console.error('Auth check error:', err);
       router.push('/login');
     } finally {
       setLoading(false);
     }
+  };
+
+  const storefrontUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/store/${orgSlug}`
+    : '';
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(storefrontUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (loading) {
@@ -92,20 +115,63 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground mt-1">
-              Welcome back! Here's an overview of your business.
+              Welcome back! Manage your storefront and track your business.
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => router.push('/dashboard/products')}>
-              <Package className="h-4 w-4 mr-2" />
-              Products
-            </Button>
-            <Button onClick={() => router.push('/dashboard/transactions')}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Sale
+            <Button onClick={() => router.push('/dashboard/storefront')}>
+              <Store className="h-4 w-4 mr-2" />
+              Storefront Settings
             </Button>
           </div>
         </div>
+
+        {/* Storefront URL Card */}
+        <Card className="border-primary/50 shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Store className="h-5 w-5" />
+              Your Storefront
+            </CardTitle>
+            <CardDescription>
+              Share this link with customers to let them purchase top-ups
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm break-all">
+                {storefrontUrl || 'Loading...'}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyToClipboard}
+                disabled={!storefrontUrl}
+              >
+                {copied ? (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(storefrontUrl, '_blank')}
+                disabled={!storefrontUrl}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Visit
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -180,19 +246,19 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Get started with your platform</CardDescription>
+              <CardDescription>Get started with your storefront</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button
                 variant="outline"
                 className="w-full justify-start"
                 size="lg"
-                onClick={() => router.push('/dashboard/products')}
+                onClick={() => router.push('/dashboard/storefront')}
               >
-                <Package className="h-5 w-5 mr-3" />
+                <Store className="h-5 w-5 mr-3" />
                 <div className="text-left flex-1">
-                  <div className="font-medium">Add Products</div>
-                  <div className="text-xs text-muted-foreground">Create your product catalog</div>
+                  <div className="font-medium">Configure Storefront</div>
+                  <div className="text-xs text-muted-foreground">Set up branding and pricing</div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 ml-2" />
               </Button>
@@ -200,12 +266,25 @@ export default function DashboardPage() {
                 variant="outline"
                 className="w-full justify-start"
                 size="lg"
-                onClick={() => router.push('/dashboard/settings/payment')}
+                onClick={() => router.push('/dashboard/countries')}
               >
-                <CreditCard className="h-5 w-5 mr-3" />
+                <Globe className="h-5 w-5 mr-3" />
                 <div className="text-left flex-1">
-                  <div className="font-medium">Configure Payments</div>
-                  <div className="text-xs text-muted-foreground">Set up payment gateways</div>
+                  <div className="font-medium">Select Countries</div>
+                  <div className="text-xs text-muted-foreground">Choose countries to serve</div>
+                </div>
+                <ArrowUpRight className="h-4 w-4 ml-2" />
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                size="lg"
+                onClick={() => router.push('/dashboard/discounts')}
+              >
+                <Tag className="h-5 w-5 mr-3" />
+                <div className="text-left flex-1">
+                  <div className="font-medium">Create Discounts</div>
+                  <div className="text-xs text-muted-foreground">Set up promotional offers</div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 ml-2" />
               </Button>
@@ -247,19 +326,19 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
-              <Package className="h-10 w-10 text-primary mb-2" />
-              <CardTitle>Product Catalog</CardTitle>
+              <Store className="h-10 w-10 text-primary mb-2" />
+              <CardTitle>Storefront</CardTitle>
               <CardDescription>
-                Manage your prepaid minute packages and pricing
+                Customize your public storefront and pricing
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button
                 variant="link"
                 className="p-0"
-                onClick={() => router.push('/dashboard/products')}
+                onClick={() => router.push('/dashboard/storefront')}
               >
-                Go to Products <ArrowUpRight className="h-4 w-4 ml-1" />
+                Manage Storefront <ArrowUpRight className="h-4 w-4 ml-1" />
               </Button>
             </CardContent>
           </Card>

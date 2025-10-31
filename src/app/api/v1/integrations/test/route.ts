@@ -80,8 +80,9 @@ export async function POST(request: NextRequest) {
 }
 
 // Test DingConnect connection
-async function testDingConnect(credentials: any, environment: string) {
-  const baseUrl = credentials.baseUrl || 'https://api.dingconnect.com';
+async function testDingConnect(credentials: any, environment?: string) {
+  // DingConnect only has production API
+  const baseUrl = 'https://api.dingconnect.com';
 
   // Test with GetBalance endpoint to verify credentials
   const response = await fetch(`${baseUrl}/api/V1/GetBalance`, {

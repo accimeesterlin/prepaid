@@ -22,8 +22,8 @@ import { cn } from '@/lib/utils';
 interface Integration {
   id: string;
   provider: string;
-  status: 'connected' | 'disconnected' | 'error';
-  environment: string;
+  status: 'active' | 'inactive' | 'error';
+  environment?: string;
   metadata?: {
     lastTestSuccess?: string;
     lastTestError?: string;
@@ -45,30 +45,6 @@ const integrationConfigs = {
         placeholder: 'Enter your DingConnect API key',
         required: true,
         helpText: 'Found in your DingConnect dashboard under API Settings',
-      },
-      {
-        name: 'apiSecret',
-        label: 'API Secret (Optional)',
-        type: 'password',
-        placeholder: 'Enter your API secret if required',
-        required: false,
-        helpText: 'Some endpoints may require this',
-      },
-      {
-        name: 'baseUrl',
-        label: 'Base URL',
-        type: 'text',
-        placeholder: 'https://api.dingconnect.com',
-        required: true,
-        helpText: 'DingConnect API base URL (editable if needed)',
-      },
-      {
-        name: 'environment',
-        label: 'Environment',
-        type: 'select',
-        placeholder: 'Select environment',
-        required: true,
-        helpText: 'Use sandbox for testing, production for live transactions',
       },
     ],
   },
@@ -140,15 +116,17 @@ export default function IntegrationsPage() {
     // Pre-fill form if integration exists
     const existing = integrations.find((i) => i.provider === provider);
     if (existing) {
-      setFormData({
-        environment: existing.environment || 'sandbox',
-        baseUrl: (existing as any).baseUrl || (provider === 'dingconnect' ? 'https://api.dingconnect.com' : ''),
-      });
+      // For Reloadly, keep environment field
+      const defaultData: Record<string, any> = {};
+      if (provider === 'reloadly') {
+        defaultData.environment = existing.environment || 'sandbox';
+      }
+      setFormData(defaultData);
     } else {
-      // Auto-fill baseUrl for DingConnect
-      const defaultData: Record<string, any> = { environment: 'sandbox' };
-      if (provider === 'dingconnect') {
-        defaultData.baseUrl = 'https://api.dingconnect.com';
+      // Default environment for Reloadly only
+      const defaultData: Record<string, any> = {};
+      if (provider === 'reloadly') {
+        defaultData.environment = 'sandbox';
       }
       setFormData(defaultData);
     }
@@ -176,14 +154,20 @@ export default function IntegrationsPage() {
         }
       });
 
+      const payload: any = {
+        provider: selectedProvider,
+        credentials,
+      };
+
+      // Only include environment for Reloadly
+      if (selectedProvider === 'reloadly') {
+        payload.environment = formData.environment;
+      }
+
       const response = await fetch('/api/v1/integrations/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: selectedProvider,
-          credentials,
-          environment: formData.environment,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -225,14 +209,20 @@ export default function IntegrationsPage() {
         }
       });
 
+      const payload: any = {
+        provider: selectedProvider,
+        credentials,
+      };
+
+      // Only include environment for Reloadly
+      if (selectedProvider === 'reloadly') {
+        payload.environment = formData.environment;
+      }
+
       const response = await fetch('/api/v1/integrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: selectedProvider,
-          environment: formData.environment,
-          credentials,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -349,9 +339,9 @@ export default function IntegrationsPage() {
                       and create an account
                     </li>
                     <li>Complete the business verification process</li>
-                    <li>Navigate to Settings → API Keys</li>
+                    <li>Navigate to Settings → API Keys in your dashboard</li>
                     <li>Generate a new API key</li>
-                    <li>Click "Configure" above to enter your credentials</li>
+                    <li>Click "Configure" above and paste your API key</li>
                   </ol>
                 </div>
                 <div>

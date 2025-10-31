@@ -19,6 +19,10 @@ export {
   DialogDescription,
   DialogFooter,
 } from './components/dialog';
+export { Toast, Toaster, type ToastProps } from './components/toast';
+
+// Export hooks
+export { useToast, toast } from './hooks/use-toast';
 
 // Export utilities
 export { cn } from './lib/utils';

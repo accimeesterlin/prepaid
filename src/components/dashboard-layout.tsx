@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
-  Package,
   ShoppingCart,
   Users,
   CreditCard,
@@ -18,9 +17,14 @@ import {
   Bell,
   ChevronDown,
   Plug,
+  Store,
+  Tag,
+  Globe,
+  DollarSign,
 } from 'lucide-react';
 import { Button, Card } from '@pg-prepaid/ui';
 import { cn } from '@/lib/utils';
+import { OrganizationSwitcher } from './organization-switcher';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -28,7 +32,10 @@ interface DashboardLayoutProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Products', href: '/dashboard/products', icon: Package },
+  { name: 'Storefront', href: '/dashboard/storefront', icon: Store },
+  { name: 'Pricing', href: '/dashboard/pricing', icon: DollarSign },
+  { name: 'Discounts', href: '/dashboard/discounts', icon: Tag },
+  { name: 'Countries', href: '/dashboard/countries', icon: Globe },
   { name: 'Transactions', href: '/dashboard/transactions', icon: ShoppingCart },
   { name: 'Customers', href: '/dashboard/customers', icon: Users },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
@@ -89,7 +96,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex h-16 items-center gap-3 border-b px-6">
+          <div className="flex h-16 items-center gap-3 px-6">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <CreditCard className="h-5 w-5 text-primary-foreground" />
             </div>
@@ -106,6 +113,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
+
+          {/* Organization Switcher */}
+          <OrganizationSwitcher />
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -132,23 +142,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* User section */}
           <div className="border-t p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{organization?.name || 'Loading...'}</p>
-                <p className="text-xs text-muted-foreground truncate">Organization</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => router.push('/dashboard/settings/organization')}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </div>
             <Button
               variant="outline"
               size="sm"

@@ -4,7 +4,7 @@ export interface IIntegration extends Document {
   orgId: string;
   provider: 'dingconnect' | 'reloadly';
   status: 'active' | 'inactive' | 'error';
-  environment: 'sandbox' | 'production';
+  environment?: 'sandbox' | 'production';
   credentials: {
     apiKey?: string;
     apiSecret?: string;
@@ -48,9 +48,8 @@ const IntegrationSchema = new Schema<IIntegration>(
     },
     environment: {
       type: String,
-      required: true,
+      required: false,
       enum: ['sandbox', 'production'],
-      default: 'sandbox',
     },
     credentials: {
       apiKey: {

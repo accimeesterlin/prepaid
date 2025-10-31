@@ -6,7 +6,19 @@
       "Bash(npm install:*)",
       "Bash(yarn install)",
       "Bash(yarn install:*)",
-      "Read(//Users/esterlingaccime/Desktop/**)"
+      "Read(//Users/esterlingaccime/Desktop/**)",
+      "Bash(yarn typecheck:*)",
+      "WebFetch(domain:www.dingconnect.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(cat:*)",
+      "Bash(curl -s \"http://localhost:3002/api/v1/debug/test-lookup?orgSlug=trellis&phone=%2B50937654321\")",
+      "Bash(python3:*)",
+      "Bash(curl -X POST \"http://localhost:3002/api/v1/lookup/phone\" -H \"Content-Type: application/json\" -d '{\"\"\"\"phoneNumber\"\"\"\": \"\"\"\"+50937654321\"\"\"\", \"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\"}')",
+      "Bash(curl -X POST http://localhost:3002/api/v1/lookup/phone -H 'Content-Type: application/json' -d '{\"\"\"\"phoneNumber\"\"\"\": \"\"\"\"+50937654321\"\"\"\", \"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\"}')",
+      "Bash(curl -s -X POST http://localhost:3002/api/v1/lookup/phone -H 'Content-Type: application/json' -d '{\"\"\"\"phoneNumber\"\"\"\": \"\"\"\"+50937654321\"\"\"\", \"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\"}')"
     ],
     "deny": [],
     "ask": []

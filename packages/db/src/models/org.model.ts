@@ -3,6 +3,7 @@ import { PaymentProvider } from '@pg-prepaid/types';
 
 export interface IOrg extends Document {
   name: string;
+  slug: string;
   settings: {
     allowedDomains?: string[];
     defaultMarkup?: number;
@@ -20,6 +21,14 @@ const orgSchema = new Schema<IOrg>(
       type: String,
       required: true,
       trim: true,
+    },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
     },
     settings: {
       type: Schema.Types.Mixed,

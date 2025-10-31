@@ -48,9 +48,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { provider, environment, credentials } = body;
 
-    if (!provider || !environment || !credentials) {
+    // Validate required fields
+    if (!provider || !credentials) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Environment is required for Reloadly, optional for DingConnect
+    if (provider === 'reloadly' && !environment) {
+      return NextResponse.json(
+        { error: 'Environment is required for Reloadly' },
         { status: 400 }
       );
     }
@@ -65,19 +74,26 @@ export async function POST(request: NextRequest) {
 
     if (integration) {
       // Update existing
-      integration.environment = environment;
+      if (environment) {
+        integration.environment = environment;
+      }
       integration.credentials = credentials;
       integration.status = 'active'; // Mark as active when saved
       await integration.save();
     } else {
       // Create new
-      integration = await Integration.create({
+      const integrationData: any = {
         orgId: session.orgId,
         provider,
-        environment,
         credentials,
         status: 'active', // Mark as active when saved
-      });
+      };
+
+      if (environment) {
+        integrationData.environment = environment;
+      }
+
+      integration = await Integration.create(integrationData);
     }
 
     return NextResponse.json({

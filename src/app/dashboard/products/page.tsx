@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { Plus, Search, Package, DollarSign, TrendingUp, Globe } from 'lucide-react';
 import {
   Button,
@@ -43,31 +43,28 @@ interface Product {
 
 export default function ProductsPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
-    operatorName: '',
-    operatorCountry: '',
-    costPrice: '',
-    sellPrice: '',
-    currency: 'USD',
+    description: '',
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [search]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
+      setLoading(true);
       const url = search
         ? `/api/v1/products?search=${encodeURIComponent(search)}`
         : '/api/v1/products';
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        cache: 'no-store', // Force fresh data
+      });
       if (response.ok) {
         const data = await response.json();
         setProducts(data);
@@ -77,7 +74,24 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
+
+  // Fetch products on mount and when search changes
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts, refreshKey]);
+
+  // Listen for storage events (used by org switcher to signal changes)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'orgChanged') {
+        setRefreshKey(prev => prev + 1);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const handleCreate = async () => {
     setSaving(true);
@@ -87,24 +101,16 @@ export default function ProductsPage() {
       const response = await fetch('/api/v1/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          description: formData.description,
+        }),
       });
 
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Product created successfully!' });
-        await fetchProducts();
-        setTimeout(() => {
-          setShowCreateModal(false);
-          setFormData({
-            name: '',
-            operatorName: '',
-            operatorCountry: '',
-            costPrice: '',
-            sellPrice: '',
-            currency: 'USD',
-          });
-          setMessage(null);
-        }, 1500);
+        const product = await response.json();
+        // Navigate to product detail page for configuration
+        router.push(`/dashboard/products/${product._id}`);
       } else {
         const error = await response.json();
         setMessage({ type: 'error', text: error.error || 'Failed to create product' });
@@ -264,12 +270,14 @@ export default function ProductsPage() {
           </Card>
         )}
 
-        {/* Create Product Modal */}
+        {/* Create Product Modal - Simplified */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
-              <DialogDescription>Create a new prepaid minute package</DialogDescription>
+              <DialogTitle>Create New Product</DialogTitle>
+              <DialogDescription>
+                Enter a name for your product. You'll configure pricing and details on the next page.
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -279,82 +287,28 @@ export default function ProductsPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., Digicel PNG K10 Top-up"
+                  placeholder="e.g., PNG Mobile Top-ups"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  autoFocus
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Choose a descriptive name for this product offering
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Operator Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Digicel PNG"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.operatorName}
-                    onChange={(e) => setFormData({ ...formData, operatorName: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Country <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Papua New Guinea"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.operatorCountry}
-                    onChange={(e) => setFormData({ ...formData, operatorCountry: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Cost Price <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.costPrice}
-                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Sell Price <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.sellPrice}
-                    onChange={(e) => setFormData({ ...formData, sellPrice: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Currency <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.currency}
-                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                  >
-                    <option value="USD">USD</option>
-                    <option value="PGK">PGK</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Description <span className="text-muted-foreground">(Optional)</span>
+                </label>
+                <textarea
+                  placeholder="Brief description of this product..."
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  rows={3}
+                  value={formData.description || ''}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
               </div>
 
               {message && (
@@ -371,21 +325,14 @@ export default function ProductsPage() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+              <Button variant="outline" onClick={() => setShowCreateModal(false)} disabled={saving}>
                 Cancel
               </Button>
               <Button
                 onClick={handleCreate}
-                disabled={
-                  saving ||
-                  !formData.name ||
-                  !formData.operatorName ||
-                  !formData.operatorCountry ||
-                  !formData.costPrice ||
-                  !formData.sellPrice
-                }
+                disabled={saving || !formData.name?.trim()}
               >
-                {saving ? 'Creating...' : 'Create Product'}
+                {saving ? 'Creating...' : 'Create & Configure'}
               </Button>
             </DialogFooter>
           </DialogContent>

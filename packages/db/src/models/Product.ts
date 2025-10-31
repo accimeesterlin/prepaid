@@ -23,11 +23,43 @@ export interface IProduct extends Document {
     maxAmount?: number;
     unit: string; // 'USD', 'minutes', 'data'
   };
+  // Resale settings
+  resaleSettings: {
+    allowedCountries: string[]; // ISO country codes, empty = all countries
+    blockedCountries: string[]; // ISO country codes to block
+    customPricing: {
+      enabled: boolean;
+      priceByCountry?: Map<string, number>; // Country-specific pricing
+    };
+    discount: {
+      enabled: boolean;
+      type?: 'percentage' | 'fixed';
+      value?: number;
+      startDate?: Date;
+      endDate?: Date;
+      minPurchaseAmount?: number;
+    };
+    limits: {
+      minQuantity?: number;
+      maxQuantity?: number;
+      maxPerCustomer?: number; // Per customer per day
+    };
+  };
+  // Sync settings
+  sync: {
+    autoSync: boolean; // Auto-sync with provider
+    lastSyncAt?: Date;
+    syncFrequency?: number; // In minutes
+    lastSyncStatus?: 'success' | 'failed';
+    lastSyncError?: string;
+  };
   status: 'active' | 'inactive' | 'out_of_stock';
   metadata: {
     category?: string;
     tags?: string[];
     popularity?: number;
+    totalSales?: number;
+    revenue?: number;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -107,6 +139,60 @@ const ProductSchema = new Schema<IProduct>(
         required: true,
       },
     },
+    // Resale settings
+    resaleSettings: {
+      allowedCountries: {
+        type: [String],
+        default: [],
+      },
+      blockedCountries: {
+        type: [String],
+        default: [],
+      },
+      customPricing: {
+        enabled: {
+          type: Boolean,
+          default: false,
+        },
+        priceByCountry: {
+          type: Map,
+          of: Number,
+        },
+      },
+      discount: {
+        enabled: {
+          type: Boolean,
+          default: false,
+        },
+        type: {
+          type: String,
+          enum: ['percentage', 'fixed'],
+        },
+        value: Number,
+        startDate: Date,
+        endDate: Date,
+        minPurchaseAmount: Number,
+      },
+      limits: {
+        minQuantity: Number,
+        maxQuantity: Number,
+        maxPerCustomer: Number,
+      },
+    },
+    // Sync settings
+    sync: {
+      autoSync: {
+        type: Boolean,
+        default: false,
+      },
+      lastSyncAt: Date,
+      syncFrequency: Number,
+      lastSyncStatus: {
+        type: String,
+        enum: ['success', 'failed'],
+      },
+      lastSyncError: String,
+    },
     status: {
       type: String,
       enum: ['active', 'inactive', 'out_of_stock'],
@@ -116,6 +202,14 @@ const ProductSchema = new Schema<IProduct>(
       category: String,
       tags: [String],
       popularity: {
+        type: Number,
+        default: 0,
+      },
+      totalSales: {
+        type: Number,
+        default: 0,
+      },
+      revenue: {
         type: Number,
         default: 0,
       },
@@ -141,6 +235,70 @@ ProductSchema.pre('save', function (next) {
   this.pricing.profitMargin = ((this.pricing.sellPrice - this.pricing.costPrice) / this.pricing.costPrice) * 100;
   next();
 });
+
+// Methods
+ProductSchema.methods.getEffectivePrice = function (countryCode?: string): number {
+  let price = this.pricing.sellPrice;
+
+  // Apply country-specific pricing if enabled
+  if (countryCode && this.resaleSettings.customPricing.enabled) {
+    const countryPrice = this.resaleSettings.customPricing.priceByCountry?.get(countryCode);
+    if (countryPrice) {
+      price = countryPrice;
+    }
+  }
+
+  // Apply discount if active
+  if (this.resaleSettings.discount.enabled) {
+    const now = new Date();
+    const discountActive =
+      (!this.resaleSettings.discount.startDate || this.resaleSettings.discount.startDate <= now) &&
+      (!this.resaleSettings.discount.endDate || this.resaleSettings.discount.endDate >= now);
+
+    if (discountActive && this.resaleSettings.discount.value) {
+      if (this.resaleSettings.discount.type === 'percentage') {
+        price = price - (price * this.resaleSettings.discount.value) / 100;
+      } else if (this.resaleSettings.discount.type === 'fixed') {
+        price = Math.max(0, price - this.resaleSettings.discount.value);
+      }
+    }
+  }
+
+  return Math.round(price * 100) / 100; // Round to 2 decimal places
+};
+
+ProductSchema.methods.isAvailableInCountry = function (countryCode: string): boolean {
+  // Check if country is blocked
+  if (this.resaleSettings.blockedCountries.includes(countryCode)) {
+    return false;
+  }
+
+  // If allowedCountries is empty, product is available everywhere
+  if (this.resaleSettings.allowedCountries.length === 0) {
+    return true;
+  }
+
+  // Check if country is in allowed list
+  return this.resaleSettings.allowedCountries.includes(countryCode);
+};
+
+ProductSchema.methods.validateQuantity = function (quantity: number): { valid: boolean; error?: string } {
+  if (this.resaleSettings.limits.minQuantity && quantity < this.resaleSettings.limits.minQuantity) {
+    return {
+      valid: false,
+      error: `Minimum quantity is ${this.resaleSettings.limits.minQuantity}`,
+    };
+  }
+
+  if (this.resaleSettings.limits.maxQuantity && quantity > this.resaleSettings.limits.maxQuantity) {
+    return {
+      valid: false,
+      error: `Maximum quantity is ${this.resaleSettings.limits.maxQuantity}`,
+    };
+  }
+
+  return { valid: true };
+};
 
 export const Product: Model<IProduct> =
   mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);

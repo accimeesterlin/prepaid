@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { dbConnection } from '@pg-prepaid/db/connection';
 import { User } from '@pg-prepaid/db/models/user.model';
 import { Org } from '@pg-prepaid/db/models/org.model';
+import { UserOrganization } from '@pg-prepaid/db';
 import { UserRole } from '@pg-prepaid/types';
 import { hashPassword, createToken, createSessionCookie } from '@/lib/auth';
 import { ApiErrors, handleApiError } from '@/lib/api-error';
@@ -62,6 +63,20 @@ export async function POST(request: NextRequest) {
     });
 
     logger.info('User created', { userId: user._id.toString(), email: user.email });
+
+    // Create UserOrganization record
+    await UserOrganization.create({
+      userId: user._id,
+      orgId: org._id,
+      roles: [UserRole.ADMIN],
+      isActive: true,
+      joinedAt: new Date(),
+    });
+
+    logger.info('UserOrganization created', {
+      userId: user._id.toString(),
+      orgId: org._id.toString(),
+    });
 
     // Create session token
     const token = await createToken({

@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       id: org._id,
       name: org.name,
+      slug: org.slug,
       settings: org.settings,
       createdAt: org.createdAt,
     });
@@ -61,6 +62,7 @@ export async function PUT(request: NextRequest) {
       organization: {
         id: org._id,
         name: org.name,
+        slug: org.slug,
         settings: org.settings,
       },
     });
