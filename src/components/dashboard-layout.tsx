@@ -1,0 +1,192 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Users,
+  CreditCard,
+  Settings,
+  BarChart3,
+  Menu,
+  X,
+  LogOut,
+  Building2,
+  Bell,
+  ChevronDown,
+  Plug,
+} from 'lucide-react';
+import { Button, Card } from '@pg-prepaid/ui';
+import { cn } from '@/lib/utils';
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+}
+
+const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Products', href: '/dashboard/products', icon: Package },
+  { name: 'Transactions', href: '/dashboard/transactions', icon: ShoppingCart },
+  { name: 'Customers', href: '/dashboard/customers', icon: Users },
+  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+  { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
+  { name: 'Payment Settings', href: '/dashboard/settings/payment', icon: CreditCard },
+  { name: 'Organization', href: '/dashboard/settings/organization', icon: Building2 },
+  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+];
+
+export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [organization, setOrganization] = useState<{ name: string } | null>(null);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchOrganization();
+  }, []);
+
+  const fetchOrganization = async () => {
+    try {
+      const response = await fetch('/api/v1/organization');
+      if (response.ok) {
+        const data = await response.json();
+        setOrganization(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch organization:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/v1/auth/logout', { method: 'POST' });
+      router.push('/');
+    } catch (err) {
+      console.error('Logout failed:', err);
+      router.push('/');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-muted/30">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 w-64 transform bg-background border-r transition-transform duration-200 ease-in-out lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        <div className="flex h-full flex-col">
+          {/* Logo */}
+          <div className="flex h-16 items-center gap-3 border-b px-6">
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+              <CreditCard className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-sm font-bold">PG Prepaid Minutes</h1>
+              <p className="text-xs text-muted-foreground">Seller Platform</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* User section */}
+          <div className="border-t p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{organization?.name || 'Loading...'}</p>
+                <p className="text-xs text-muted-foreground truncate">Organization</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => router.push('/dashboard/settings/organization')}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="lg:pl-64">
+        {/* Top bar */}
+        <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+
+          <div className="flex-1" />
+
+          {/* Notifications */}
+          <Button variant="ghost" size="sm" className="relative">
+            <Bell className="h-5 w-5" />
+            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
+          </Button>
+        </header>
+
+        {/* Page content */}
+        <main className="p-6">{children}</main>
+      </div>
+    </div>
+  );
+}

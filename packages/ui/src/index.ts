@@ -11,6 +11,14 @@ export {
   CardContent,
 } from './components/card';
 export { Alert, AlertTitle, AlertDescription } from './components/alert';
+export {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from './components/dialog';
 
 // Export utilities
 export { cn } from './lib/utils';

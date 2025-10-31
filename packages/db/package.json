@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "mongoose": "^8.1.0",
-    "@pg-prepaid/types": "workspace:*"
+    "@pg-prepaid/types": "*"
   },
   "devDependencies": {
     "typescript": "^5",

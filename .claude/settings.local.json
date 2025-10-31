@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn add recharts date-fns lucide-react)",
+      "Bash(yarn add:*)",
+      "Bash(npm install:*)",
+      "Bash(yarn install)",
+      "Bash(yarn install:*)",
+      "Read(//Users/esterlingaccime/Desktop/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
