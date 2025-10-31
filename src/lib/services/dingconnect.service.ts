@@ -9,7 +9,27 @@ interface DingConnectConfig {
   baseUrl?: string;
 }
 
-interface DingConnectProduct {
+interface DingConnectBenefitValue {
+  CurrencyCode?: string;
+  CurrencySymbol?: string;
+  Amount: number;
+  Unit?: string;
+}
+
+interface DingConnectPrice {
+  CurrencyCode: string;
+  CurrencySymbol: string;
+  Amount: number;
+}
+
+interface DingConnectMinMax {
+  SendValue: number;
+  SendCurrencyIso: string;
+  ReceiveValue: number;
+  ReceiveCurrencyIso: string;
+}
+
+export interface DingConnectProduct {
   SkuCode: string;
   ProductId: number;
   ProviderCode: string;
@@ -17,31 +37,30 @@ interface DingConnectProduct {
   RegionCode: string;
   LocalizationKey: string;
   DefaultDisplayText: string;
-  BenefitTypes: {
-    Airtime?: {
-      CurrencyCode: string;
-      CurrencySymbol: string;
-      Amount: number;
-    };
-    Data?: {
-      Unit: string;
-      Amount: number;
-    };
+
+  // Benefit Types (for fixed-value products)
+  BenefitTypes?: {
+    Airtime?: DingConnectBenefitValue;
+    Data?: DingConnectBenefitValue;
+    Voice?: DingConnectBenefitValue;
+    SMS?: DingConnectBenefitValue;
   };
+
+  // Benefits array (for variable-value products)
+  Benefits?: string[];
+
   ValidityPeriodIso?: string;
-  Price: {
-    CurrencyCode: string;
-    CurrencySymbol: string;
-    Amount: number;
-  };
-  ReceiveValue: {
-    CurrencyCode: string;
-    CurrencySymbol: string;
-    Amount: number;
-  };
+
+  // Pricing (for fixed-value products)
+  Price?: DingConnectPrice;
+  ReceiveValue?: DingConnectPrice;
+
+  // Min/Max (for variable-value products)
+  Minimum?: DingConnectMinMax;
+  Maximum?: DingConnectMinMax;
 }
 
-interface DingConnectProvider {
+export interface DingConnectProvider {
   ProviderCode: string;
   ProviderName: string;
   CountryIso: string;
@@ -50,12 +69,12 @@ interface DingConnectProvider {
   CurrencyCode: string;
 }
 
-interface DingConnectBalance {
+export interface DingConnectBalance {
   AccountBalance: number;
   CurrencyCode: string;
 }
 
-interface SendTransferRequest {
+export interface SendTransferRequest {
   SkuCode: string;
   SendValue?: number;
   ReceiveValue?: number;
@@ -65,12 +84,38 @@ interface SendTransferRequest {
   DistributorRef?: string;
 }
 
-interface SendTransferResponse {
+export interface SendTransferResponse {
   TransferId: number;
   Status: 'Completed' | 'Processing' | 'Failed';
   ProviderTransactionId?: string;
   ErrorMessage?: string;
   ErrorCode?: string;
+}
+
+export interface GetProvidersParams {
+  countryIso?: string;
+  regionCode?: string;
+  accountNumber?: string;
+}
+
+export interface GetProductsParams {
+  providerCode?: string;
+  countryIso?: string;
+  regionCode?: string;
+  accountNumber?: string;
+}
+
+export interface LookupAccountParams {
+  accountNumber: string;
+  countryIso?: string;
+  providerCode?: string;
+}
+
+export interface AccountLookupResponse {
+  AccountNumber: string;
+  CountryIso: string;
+  ProviderCode: string;
+  ProviderName?: string;
 }
 
 export class DingConnectService {
@@ -134,16 +179,14 @@ export class DingConnectService {
   /**
    * Get list of available products
    * GET /api/V1/GetProducts
+   * When accountNumber is provided, DingConnect will return products for the detected operator
    */
-  async getProducts(params?: {
-    providerCode?: string;
-    countryIso?: string;
-    regionCode?: string;
-  }): Promise<DingConnectProduct[]> {
+  async getProducts(params?: GetProductsParams): Promise<DingConnectProduct[]> {
     const query = new URLSearchParams();
     if (params?.providerCode) query.append('ProviderCode', params.providerCode);
     if (params?.countryIso) query.append('CountryIso', params.countryIso);
     if (params?.regionCode) query.append('RegionCode', params.regionCode);
+    if (params?.accountNumber) query.append('AccountNumber', params.accountNumber);
 
     const queryString = query.toString();
     const endpoint = queryString ? `/api/V1/GetProducts?${queryString}` : '/api/V1/GetProducts';
@@ -154,14 +197,13 @@ export class DingConnectService {
   /**
    * Get list of available providers/operators
    * GET /api/V1/GetProviders
+   * When accountNumber is provided, DingConnect will return only the matching provider
    */
-  async getProviders(params?: {
-    countryIso?: string;
-    regionCode?: string;
-  }): Promise<DingConnectProvider[]> {
+  async getProviders(params?: GetProvidersParams): Promise<DingConnectProvider[]> {
     const query = new URLSearchParams();
     if (params?.countryIso) query.append('CountryIso', params.countryIso);
     if (params?.regionCode) query.append('RegionCode', params.regionCode);
+    if (params?.accountNumber) query.append('AccountNumber', params.accountNumber);
 
     const queryString = query.toString();
     const endpoint = queryString ? `/api/V1/GetProviders?${queryString}` : '/api/V1/GetProviders';
@@ -172,18 +214,34 @@ export class DingConnectService {
   /**
    * Estimate prices for send or receive values
    * POST /api/V1/EstimatePrices
+   * Accepts array of estimation requests
    */
-  async estimatePrices(params: {
-    skuCode: string;
-    sendValue?: number;
-    receiveValue?: number;
-    receiveCurrencyIso?: string;
-  }): Promise<{
+  async estimatePrices(params: Array<{
+    SkuCode: string;
+    SendValue?: number;
+    SendCurrencyIso?: string;
+    ReceiveValue?: number;
+    ReceiveCurrencyIso?: string;
+    BatchItemRef?: string;
+  }>): Promise<Array<{
     SkuCode: string;
     SendValue: number;
+    SendCurrencyIso: string;
     ReceiveValue: number;
+    ReceiveCurrencyIso: string;
     Fee: number;
-  }> {
+    BatchItemRef?: string;
+    Price?: {
+      CustomerFee: number;
+      DistributorFee: number;
+      ReceiveValue: number;
+      ReceiveCurrencyIso: string;
+      ReceiveValueExcludingTax: number;
+      TaxRate: number;
+      SendValue: number;
+      SendCurrencyIso: string;
+    };
+  }>> {
     return this.request('/api/V1/EstimatePrices', {
       method: 'POST',
       body: JSON.stringify(params),
@@ -226,22 +284,13 @@ export class DingConnectService {
    * Lookup account/operator for a phone number
    * GET /api/V1/GetAccountLookup
    */
-  async lookupAccount(params: {
-    accountNumber: string;
-    countryIso?: string;
-    providerCode?: string;
-  }): Promise<{
-    AccountNumber: string;
-    CountryIso: string;
-    ProviderCode: string;
-    ProviderName?: string;
-  }> {
+  async lookupAccount(params: LookupAccountParams): Promise<AccountLookupResponse> {
     const query = new URLSearchParams();
     query.append('AccountNumber', params.accountNumber);
     if (params.countryIso) query.append('CountryIso', params.countryIso);
     if (params.providerCode) query.append('ProviderCode', params.providerCode);
 
-    return this.request(`/api/V1/GetAccountLookup?${query.toString()}`);
+    return this.request<AccountLookupResponse>(`/api/V1/GetAccountLookup?${query.toString()}`);
   }
 
   /**

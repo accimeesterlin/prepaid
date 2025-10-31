@@ -4,7 +4,24 @@ import { Integration, StorefrontSettings, Org, Organization } from '@pg-prepaid/
 import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
-import { createDingConnectService } from '@/lib/services/dingconnect.service';
+import { createDingConnectService, DingConnectProduct, DingConnectProvider } from '@/lib/services/dingconnect.service';
+import { parsePhoneNumber } from 'awesome-phonenumber';
+import countries from 'i18n-iso-countries';
+import en from 'i18n-iso-countries/langs/en.json';
+import type {
+  PhoneLookupRequest,
+  PhoneLookupResponse,
+  ProductInfo,
+  OperatorInfo,
+} from '@/types/phone-lookup';
+
+// Register English locale for country names
+countries.registerLocale(en);
+
+// Helper to get country name from ISO code
+function getCountryName(countryCode: string): string {
+  return countries.getName(countryCode, 'en') || countryCode;
+}
 
 /**
  * POST /api/v1/lookup/phone
@@ -15,7 +32,7 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnection.connect();
 
-    const body = await request.json();
+    const body: PhoneLookupRequest = await request.json();
     const { phoneNumber, orgSlug } = body;
 
     logger.info('Phone lookup request', { phoneNumber: phoneNumber?.substring(0, 5) + '***', orgSlug });
@@ -80,131 +97,95 @@ export async function POST(request: NextRequest) {
     const dingService = createDingConnectService(integration.credentials as any);
 
     try {
-      // DingConnect doesn't have a direct phone lookup endpoint,
-      // but we can use their GetProducts endpoint with phone number detection
-      // For now, we'll use a simple country code detection from the phone number
+      // Parse phone number using awesome-phonenumber for accurate country detection
+      const parsedPhone = parsePhoneNumber(phoneNumber);
 
-      // Extract country code from phone number (basic implementation)
-      const cleanPhone = phoneNumber.replace(/\D/g, '');
-      let countryCode = '';
-      let detectedCountry = '';
-
-      // Common country code patterns
-      const countryPatterns: { [key: string]: { code: string; name: string; minLength: number } } = {
-        '1': { code: 'US', name: 'United States', minLength: 11 },
-        '44': { code: 'GB', name: 'United Kingdom', minLength: 10 },
-        '675': { code: 'PG', name: 'Papua New Guinea', minLength: 11 },
-        '509': { code: 'HT', name: 'Haiti', minLength: 11 },
-        '1876': { code: 'JM', name: 'Jamaica (1876)', minLength: 11 },
-        '1658': { code: 'JM', name: 'Jamaica (1658)', minLength: 11 },
-        '93': { code: 'AF', name: 'Afghanistan', minLength: 11 },
-        '52': { code: 'MX', name: 'Mexico', minLength: 12 },
-        '91': { code: 'IN', name: 'India', minLength: 12 },
-        '63': { code: 'PH', name: 'Philippines', minLength: 12 },
-        '234': { code: 'NG', name: 'Nigeria', minLength: 13 },
-      };
-
-      // Try to match country code (longest first)
-      const sortedPatterns = Object.entries(countryPatterns).sort(
-        (a, b) => b[0].length - a[0].length
-      );
-
-      for (const [code, info] of sortedPatterns) {
-        if (cleanPhone.startsWith(code)) {
-          countryCode = code;
-          detectedCountry = info.code;
-          break;
-        }
-      }
-
-      if (!detectedCountry) {
+      if (!parsedPhone.valid) {
         return createErrorResponse(
-          'Unable to detect country from phone number. Please check the number format.',
+          'Invalid phone number. Please enter a valid international phone number (e.g., +1234567890).',
           400
         );
       }
+
+      const detectedCountry = parsedPhone.regionCode || '';
+      // E.164 format includes + sign (e.g., +50934748112)
+      const e164Phone = parsedPhone.number?.e164 || phoneNumber;
+      // DingConnect API expects phone without + sign (e.g., 50934748112)
+      const cleanPhone = e164Phone.replace(/^\+/, '');
+      const countryName = getCountryName(detectedCountry);
+
+      if (!detectedCountry) {
+        return createErrorResponse(
+          'Unable to detect country from phone number. Please include country code (e.g., +1 for US).',
+          400
+        );
+      }
+
+      logger.info('Phone number parsed successfully', {
+        detectedCountry,
+        countryName,
+        phoneType: parsedPhone.typeIsMobile ? 'mobile' : parsedPhone.typeIsFixedLine ? 'fixed' : 'unknown',
+      });
 
       // Check if country is enabled in storefront settings
       if (!storefrontSettings.isCountryEnabled(detectedCountry)) {
         return createErrorResponse(
-          `Top-ups are not available for ${countryPatterns[countryCode]?.name || detectedCountry}`,
+          `Top-ups are not available for ${countryName}. Please contact support if you believe this is an error.`,
           400
         );
       }
 
-      // Try to detect the specific operator for this phone number
-      logger.info('Attempting operator detection', { phoneNumber: cleanPhone, countryIso: detectedCountry });
-      let detectedProvider = null;
-      try {
-        const accountLookup = await dingService.lookupAccount({
-          accountNumber: cleanPhone,
-          countryIso: detectedCountry,
-        });
-        detectedProvider = accountLookup.ProviderCode;
-        logger.info('Operator detected successfully', {
-          providerCode: detectedProvider,
-          providerName: accountLookup.ProviderName,
-        });
-      } catch (error: any) {
-        logger.warn('Operator detection failed, will show all operators', { error: error.message });
-        // Continue without operator detection - we'll show all products
-      }
+      // Fetch providers and products with phone number for automatic detection
+      logger.info('Fetching providers and products from DingConnect', {
+        countryIso: detectedCountry,
+        accountNumber: cleanPhone.substring(0, 5) + '***',
+      });
 
-      // Get available operators/providers for this country
-      logger.info('Fetching providers from DingConnect', { countryIso: detectedCountry });
       let providers;
-      try {
-        providers = await dingService.getProviders({
-          countryIso: detectedCountry,
-        });
-      } catch (error: any) {
-        logger.error('DingConnect getProviders failed', { error: error.message, countryIso: detectedCountry });
-        throw new Error(`Failed to fetch providers: ${error.message}`);
-      }
-
-      if (!providers || providers.length === 0) {
-        logger.warn('No providers found for country', { countryIso: detectedCountry });
-        return createErrorResponse(
-          'No operators available for this country at the moment',
-          404
-        );
-      }
-
-      logger.info('Providers fetched successfully', { count: providers.length, detectedProvider });
-
-      // Get products for the first/main provider (or all providers)
-      logger.info('Fetching products from DingConnect', { countryIso: detectedCountry });
       let products;
+
       try {
-        products = await dingService.getProducts({
-          countryIso: detectedCountry,
+        // Fetch providers and products in parallel with accountNumber for detection
+        [providers, products] = await Promise.all([
+          dingService.getProviders({
+            countryIso: detectedCountry,
+            accountNumber: cleanPhone,
+          }),
+          dingService.getProducts({
+            countryIso: detectedCountry,
+            accountNumber: cleanPhone,
+          }),
+        ]);
+
+        if (!providers || providers.length === 0) {
+          logger.warn('No operators detected from phone number', {
+            countryIso: detectedCountry,
+            accountNumber: cleanPhone.substring(0, 5) + '***',
+          });
+          return createErrorResponse(
+            'Unable to detect operator for this phone number. Please verify the number is correct.',
+            404
+          );
+        }
+
+        logger.info('Providers and products fetched successfully', {
+          providers: providers.map(p => p.ProviderCode).join(', '),
+          productsCount: products.length,
         });
       } catch (error: any) {
-        logger.error('DingConnect getProducts failed', { error: error.message, countryIso: detectedCountry });
-        throw new Error(`Failed to fetch products: ${error.message}`);
+        logger.error('DingConnect lookup failed', {
+          error: error.message,
+          countryIso: detectedCountry,
+          accountNumber: cleanPhone.substring(0, 5) + '***',
+        });
+        throw new Error(`Failed to lookup phone number: ${error.message}`);
       }
-
-      logger.info('Products fetched successfully', { count: products.length });
 
       // Apply pricing from storefront settings
       logger.info('Applying pricing to products', { productsCount: products.length });
-      let productsWithPricing;
+      let productsWithPricing: ProductInfo[];
       try {
-        productsWithPricing = products
-          .filter((product) => {
-            // Filter by detected country - DingConnect returns all products regardless of countryIso param
-            const isCorrectCountry = product.CountryIso === detectedCountry || product.RegionCode === detectedCountry;
-            if (!isCorrectCountry) {
-              return false;
-            }
-
-            // Filter out products without proper pricing structure
-            // Support both old format (Price.Amount) and new format (Minimum/Maximum)
-            const hasOldFormat = product.Price && product.Price.Amount;
-            const hasNewFormat = product.Minimum && product.Minimum.SendValue;
-            return hasOldFormat || hasNewFormat;
-          })
-          .map((product) => {
+        productsWithPricing = products.map((product) => {
             // Determine the cost price based on available format
             let costPrice = 0;
             let benefitAmount = 0;
@@ -239,7 +220,7 @@ export async function POST(request: NextRequest) {
               name: product.DefaultDisplayText,
               providerCode: product.ProviderCode,
               providerName: providers.find((p) => p.ProviderCode === product.ProviderCode)?.ProviderName || product.ProviderCode,
-              benefitType,
+              benefitType: benefitType as 'airtime' | 'data' | 'voice' | 'sms' | 'bundle',
               benefitAmount,
               benefitUnit,
               pricing,
@@ -247,7 +228,10 @@ export async function POST(request: NextRequest) {
               isVariableValue: !!(product.Minimum && product.Maximum),
               minAmount: product.Minimum?.SendValue,
               maxAmount: product.Maximum?.SendValue,
-            };
+              // Include product classification fields
+              benefits: product.Benefits,
+              validityPeriod: product.ValidityPeriodIso,
+            } as ProductInfo;
           });
       } catch (error: any) {
         logger.error('Error applying pricing to products', { error: error.message, stack: error.stack });
@@ -256,64 +240,41 @@ export async function POST(request: NextRequest) {
 
       logger.info('Pricing applied successfully', { productsWithPricingCount: productsWithPricing.length });
 
-      // If operator was detected, filter and prioritize those products
-      let filteredProducts = productsWithPricing;
-      const detectedOperator = detectedProvider ? providers.find(p => p.ProviderCode === detectedProvider) : null;
+      // All providers are detected operators
+      const detectedOperators = providers;
 
-      if (detectedProvider) {
-        // Separate detected provider products from others
-        const detectedProviderProducts = productsWithPricing.filter(
-          p => p.providerCode === detectedProvider
-        );
-        const otherProducts = productsWithPricing.filter(
-          p => p.providerCode !== detectedProvider
-        );
-
-        // Prioritize detected provider products, limit others
-        filteredProducts = [
-          ...detectedProviderProducts,
-          ...otherProducts.slice(0, 20), // Show only first 20 from other providers
-        ];
-
-        logger.info('Products filtered by detected operator', {
-          detectedProvider,
-          detectedProviderProducts: detectedProviderProducts.length,
-          otherProducts: otherProducts.length,
-          totalFiltered: filteredProducts.length,
-        });
-      } else {
-        // No operator detected, limit total products
-        filteredProducts = productsWithPricing.slice(0, 50);
-        logger.info('No operator detected, limiting to 50 products');
-      }
+      // Limit to reasonable number for performance
+      const MAX_PRODUCTS_PER_REQUEST = 100;
+      const limitedProducts = productsWithPricing.slice(0, MAX_PRODUCTS_PER_REQUEST);
 
       logger.info('Phone lookup successful', {
         orgSlug,
         orgId,
-        phoneNumber: cleanPhone.substring(0, 5) + '***', // Log partial number for privacy
+        phoneNumber: cleanPhone.substring(0, 5) + '***',
         detectedCountry,
-        detectedProvider,
+        detectedOperators: providers.map(p => p.ProviderCode).join(', '),
         providersCount: providers.length,
-        productsCount: filteredProducts.length,
+        productsReturned: limitedProducts.length,
+        totalProducts: productsWithPricing.length,
       });
 
       return createSuccessResponse({
         phoneNumber: cleanPhone,
         country: {
           code: detectedCountry,
-          name: countryPatterns[countryCode]?.name || detectedCountry,
+          name: countryName || detectedCountry,
         },
-        detectedOperator: detectedOperator ? {
-          code: detectedOperator.ProviderCode,
-          name: detectedOperator.ProviderName,
-          logo: detectedOperator.LogoUrl,
-        } : null,
-        operators: providers.map((p) => ({
+        detectedOperators: detectedOperators.map((p) => ({
           code: p.ProviderCode,
-          name: p.ProviderName,
+          name: p.ProviderName || p.ProviderCode, // Fallback to code if name is empty
           logo: p.LogoUrl,
         })),
-        products: filteredProducts,
+        operators: providers.map((p) => ({
+          code: p.ProviderCode,
+          name: p.ProviderName || p.ProviderCode, // Fallback to code if name is empty
+          logo: p.LogoUrl,
+        })),
+        products: limitedProducts,
         totalProducts: productsWithPricing.length,
         branding: storefrontSettings.branding,
         discount: storefrontSettings.discount.enabled ? {

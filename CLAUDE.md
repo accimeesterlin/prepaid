@@ -220,6 +220,578 @@ Husky is configured for git hooks (check `.husky/` directory)
 - Run `yarn typecheck` to catch TypeScript errors across all packages
 - ESLint configured with Next.js rules
 
+### TypeScript Best Practices
+
+**ALWAYS prioritize strong typing for better autocomplete, type safety, and developer experience.**
+
+#### 1. Export All Interfaces and Types
+
+Always export interfaces and types from their source files, even if they're only used internally at first. This enables reuse and prevents duplication.
+
+**Good:**
+```typescript
+// src/lib/services/dingconnect.service.ts
+export interface DingConnectProduct {
+  SkuCode: string;
+  ProductId: number;
+  ProviderCode: string;
+  CountryIso: string;
+  // ... more fields
+}
+
+export interface DingConnectProvider {
+  ProviderCode: string;
+  ProviderName: string;
+  LogoUrl?: string;
+}
+```
+
+**Bad:**
+```typescript
+// Inline types that can't be reused
+function getProducts(): Promise<{
+  SkuCode: string;
+  ProductId: number;
+  // ...
+}[]> {
+  // ...
+}
+```
+
+#### 2. Create Centralized Type Files for API Responses
+
+When an API endpoint has complex request/response shapes, create a dedicated type file in `src/types/`:
+
+**Example:** `src/types/phone-lookup.ts`
+```typescript
+export interface PhoneLookupRequest {
+  phoneNumber: string;
+  orgSlug: string;
+}
+
+export interface PhoneLookupResponse {
+  phoneNumber: string;
+  country: CountryInfo;
+  detectedOperator: OperatorInfo | null;
+  operators: OperatorInfo[];
+  products: ProductInfo[];
+  totalProducts: number;
+  branding: BrandingInfo;
+  discount: DiscountInfo | null;
+}
+
+export interface ProductInfo {
+  skuCode: string;
+  name: string;
+  providerCode: string;
+  providerName: string;
+  benefitType: 'airtime' | 'data' | 'voice' | 'sms' | 'bundle';
+  // ... more fields
+}
+```
+
+This enables both frontend and backend to share the same types:
+```typescript
+// Backend
+import type { PhoneLookupRequest, PhoneLookupResponse } from '@/types/phone-lookup';
+
+export async function POST(request: NextRequest) {
+  const body: PhoneLookupRequest = await request.json();
+  // TypeScript knows exactly what fields are available
+  const { phoneNumber, orgSlug } = body;
+
+  // Return typed response
+  return createSuccessResponse<PhoneLookupResponse>({
+    phoneNumber,
+    country: { code: 'HT', name: 'Haiti' },
+    // ... autocomplete works perfectly
+  });
+}
+
+// Frontend
+import type { PhoneLookupResponse } from '@/types/phone-lookup';
+
+const response = await fetch('/api/v1/lookup/phone', {
+  method: 'POST',
+  body: JSON.stringify({ phoneNumber, orgSlug }),
+});
+
+const data: PhoneLookupResponse = await response.json();
+// Full autocomplete for data.country, data.operators, etc.
+```
+
+#### 3. Use Typed Parameters Instead of Inline Objects
+
+Define parameter interfaces for functions with complex options:
+
+**Good:**
+```typescript
+export interface GetProvidersParams {
+  countryIso?: string;
+  regionCode?: string;
+  accountNumber?: string;
+}
+
+async getProviders(params?: GetProvidersParams): Promise<DingConnectProvider[]> {
+  // Implementation
+}
+```
+
+**Bad:**
+```typescript
+async getProviders(params?: {
+  countryIso?: string;
+  regionCode?: string;
+  accountNumber?: string;
+}): Promise<DingConnectProvider[]> {
+  // Inline type makes it harder to reuse and document
+}
+```
+
+#### 4. Leverage Type Inference but Add Explicit Types for Public APIs
+
+Let TypeScript infer types for local variables, but always add explicit types for:
+- Function parameters
+- Function return types
+- Exported constants
+- API request/response bodies
+
+**Good:**
+```typescript
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const body: PhoneLookupRequest = await request.json();
+
+  // Local variable - inference is fine
+  const parsedPhone = parsePhoneNumber(phoneNumber);
+  const detectedCountry = parsedPhone.regionCode || '';
+
+  return createSuccessResponse<PhoneLookupResponse>({
+    phoneNumber: cleanPhone,
+    country: { code: detectedCountry, name: countryName },
+  });
+}
+```
+
+#### 5. Use Union Types for String Literals
+
+Instead of accepting `string` for fields with known values, use union types:
+
+**Good:**
+```typescript
+export interface ProductInfo {
+  benefitType: 'airtime' | 'data' | 'voice' | 'sms' | 'bundle';
+}
+
+// TypeScript will autocomplete and validate
+const product: ProductInfo = {
+  benefitType: 'airtime', // ✓ Valid
+  // benefitType: 'invalid', // ✗ Type error
+};
+```
+
+**Bad:**
+```typescript
+export interface ProductInfo {
+  benefitType: string; // Too loose, no autocomplete
+}
+```
+
+#### 6. Optional vs Required Fields
+
+Be explicit about what's optional vs required:
+
+```typescript
+export interface OperatorInfo {
+  code: string;        // Required
+  name: string;        // Required
+  logo?: string;       // Optional - use ? for optional fields
+}
+
+// When all providers might not have logos
+const operator: OperatorInfo = {
+  code: 'DIGICEL',
+  name: 'Digicel Haiti',
+  // logo is optional, so this is valid
+};
+```
+
+#### 7. Type Third-Party API Responses
+
+Always create comprehensive types for third-party API responses (DingConnect, payment providers, etc.):
+
+```typescript
+// src/lib/services/dingconnect.service.ts
+
+// Support both old and new API response formats
+interface DingConnectMinMax {
+  SendValue: number;
+  SendCurrencyIso: string;
+  ReceiveValue: number;
+  ReceiveCurrencyIso: string;
+}
+
+export interface DingConnectProduct {
+  SkuCode: string;
+  ProductId: number;
+  ProviderCode: string;
+  CountryIso: string;
+
+  // Old format - fixed-value products
+  Price?: DingConnectPrice;
+  BenefitTypes?: {
+    Airtime?: DingConnectBenefitValue;
+    Data?: DingConnectBenefitValue;
+  };
+
+  // New format - variable-value products
+  Minimum?: DingConnectMinMax;
+  Maximum?: DingConnectMinMax;
+  Benefits?: string[];
+}
+```
+
+#### 8. Use Strict TypeScript Configuration
+
+Ensure `tsconfig.json` has strict mode enabled:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  }
+}
+```
+
+#### 9. Avoid `any` Type
+
+Use `unknown` instead of `any` when the type is truly unknown, then narrow it with type guards:
+
+**Good:**
+```typescript
+try {
+  const data = await response.json();
+  // Validate the structure before using
+  if (isValidProduct(data)) {
+    const product: DingConnectProduct = data;
+  }
+} catch (error: unknown) {
+  // Narrow the type before using
+  if (error instanceof Error) {
+    logger.error('Error message:', error.message);
+  }
+}
+```
+
+**Bad:**
+```typescript
+catch (error: any) {
+  // Can call any property without type checking
+  logger.error(error.message);
+}
+```
+
+#### 10. Document Complex Types
+
+Add JSDoc comments for complex types to provide context:
+
+```typescript
+/**
+ * Product information returned from phone lookup API.
+ * Includes pricing breakdown and availability details.
+ */
+export interface ProductInfo {
+  skuCode: string;
+
+  /** Display name of the product */
+  name: string;
+
+  /** Type of benefit: airtime, data, voice, sms, or bundle */
+  benefitType: 'airtime' | 'data' | 'voice' | 'sms' | 'bundle';
+
+  /** Detailed pricing breakdown including markup and discounts */
+  pricing: PricingBreakdown;
+
+  /** True if this is a variable-value product (custom amounts) */
+  isVariableValue: boolean;
+}
+```
+
+#### Type Organization Guidelines
+
+1. **Shared domain types** → `packages/types/src/` (UserRole, TransactionStatus, etc.)
+2. **API request/response types** → `src/types/` (phone-lookup.ts, wallet.ts, etc.)
+3. **Service-specific types** → Co-located with service (`dingconnect.service.ts`)
+4. **Component prop types** → Co-located with component or in `src/types/` if reused
+5. **Database model types** → Co-located with Mongoose schemas in `packages/db/src/models/`
+
+#### Benefits of Strong Typing
+
+- **Autocomplete:** IDEs provide accurate suggestions
+- **Refactoring:** Rename and restructure with confidence
+- **Documentation:** Types serve as inline documentation
+- **Bug Prevention:** Catch errors at compile time, not runtime
+- **API Contracts:** Frontend and backend stay in sync
+
+### Code Reusability & DRY Principles
+
+**ALWAYS prioritize reusable, maintainable code. Avoid duplication at all costs.**
+
+#### 1. Eliminate Duplicate Logic
+
+When you find yourself writing similar code twice, refactor immediately.
+
+**Bad - Duplicate API Calls:**
+```typescript
+// First call
+let providers;
+try {
+  providers = await dingService.getProviders({
+    countryIso: detectedCountry,
+  });
+} catch (error: any) {
+  logger.error('Failed to fetch providers', { error: error.message });
+  throw error;
+}
+
+// Later in the code - DUPLICATE!
+let detectedProviders;
+try {
+  detectedProviders = await dingService.getProviders({
+    countryIso: detectedCountry,
+    accountNumber: cleanPhone,
+  });
+} catch (error: any) {
+  logger.error('Failed to detect provider', { error: error.message });
+}
+```
+
+**Good - Parallel Execution, Single Source:**
+```typescript
+// Fetch both in parallel - no duplication
+const [allProviders, detectedProviders] = await Promise.all([
+  // Get all providers for this country
+  dingService.getProviders({ countryIso: detectedCountry }),
+  // Attempt to detect operator from phone number
+  dingService.getProviders({
+    countryIso: detectedCountry,
+    accountNumber: cleanPhone
+  }).catch(error => {
+    logger.warn('Operator detection failed', { error: error.message });
+    return []; // Graceful degradation
+  })
+]);
+```
+
+#### 2. Use Promise.all() for Parallel Operations
+
+When operations are independent, run them in parallel for better performance.
+
+**Bad - Sequential (Slower):**
+```typescript
+const providers = await dingService.getProviders({ countryIso });
+const products = await dingService.getProducts({ countryIso });
+const balance = await dingService.getBalance();
+// Total time: sum of all requests
+```
+
+**Good - Parallel (Faster):**
+```typescript
+const [providers, products, balance] = await Promise.all([
+  dingService.getProviders({ countryIso }),
+  dingService.getProducts({ countryIso }),
+  dingService.getBalance(),
+]);
+// Total time: longest request duration
+```
+
+#### 3. Extract Reusable Helper Functions
+
+If a piece of logic is used more than once, extract it.
+
+**Bad - Repeated Logic:**
+```typescript
+// In multiple places
+const providerCodes1 = providers1.map(p => p.ProviderCode).join(',');
+// Later...
+const providerCodes2 = providers2.map(p => p.ProviderCode).join(',');
+```
+
+**Good - Extracted Helper:**
+```typescript
+// Helper function
+function joinProviderCodes(providers: DingConnectProvider[]): string {
+  return providers.map(p => p.ProviderCode).join(',');
+}
+
+// Usage
+const providerCodes1 = joinProviderCodes(providers1);
+const providerCodes2 = joinProviderCodes(providers2);
+```
+
+#### 4. Graceful Error Handling
+
+Use `.catch()` inline for non-critical operations instead of try/catch blocks.
+
+**Bad - Verbose Try/Catch:**
+```typescript
+let detectedProvider = null;
+try {
+  const result = await optionalOperation();
+  detectedProvider = result;
+} catch (error) {
+  logger.warn('Optional operation failed');
+  // Continue without it
+}
+```
+
+**Good - Inline Catch:**
+```typescript
+const detectedProvider = await optionalOperation().catch(error => {
+  logger.warn('Optional operation failed', { error: error.message });
+  return null; // Default value
+});
+```
+
+#### 5. Avoid Magic Numbers and Strings
+
+Use constants with meaningful names.
+
+**Bad:**
+```typescript
+const limitedProducts = products.slice(0, 100);
+if (retryCount > 3) return;
+```
+
+**Good:**
+```typescript
+const MAX_PRODUCTS_PER_PAGE = 100;
+const MAX_RETRY_ATTEMPTS = 3;
+
+const limitedProducts = products.slice(0, MAX_PRODUCTS_PER_PAGE);
+if (retryCount > MAX_RETRY_ATTEMPTS) return;
+```
+
+#### 6. Single Responsibility Principle
+
+Each function should do one thing well.
+
+**Bad - Function Doing Too Much:**
+```typescript
+async function processLookup(phone: string) {
+  // Validates phone
+  if (!phone) throw new Error('Invalid');
+
+  // Fetches providers
+  const providers = await getProviders();
+
+  // Fetches products
+  const products = await getProducts();
+
+  // Calculates pricing
+  const withPricing = products.map(p => calculatePrice(p));
+
+  // Filters results
+  return withPricing.filter(p => p.price > 0);
+}
+```
+
+**Good - Separated Concerns:**
+```typescript
+async function validatePhoneNumber(phone: string): void {
+  if (!phone) throw new Error('Invalid phone number');
+}
+
+async function fetchProvidersAndProducts(countryIso: string) {
+  return Promise.all([
+    getProviders({ countryIso }),
+    getProducts({ countryIso }),
+  ]);
+}
+
+function applyPricingToProducts(products: Product[]): ProductWithPricing[] {
+  return products.map(calculatePrice);
+}
+
+// Main function orchestrates
+async function processLookup(phone: string) {
+  validatePhoneNumber(phone);
+  const [providers, products] = await fetchProvidersAndProducts(countryIso);
+  return applyPricingToProducts(products).filter(p => p.price > 0);
+}
+```
+
+#### 7. Early Returns to Reduce Nesting
+
+**Bad - Deep Nesting:**
+```typescript
+if (data) {
+  if (data.items) {
+    if (data.items.length > 0) {
+      return data.items[0];
+    } else {
+      return null;
+    }
+  } else {
+    return null;
+  }
+} else {
+  return null;
+}
+```
+
+**Good - Early Returns:**
+```typescript
+if (!data) return null;
+if (!data.items) return null;
+if (data.items.length === 0) return null;
+
+return data.items[0];
+```
+
+#### 8. Use Array Methods Wisely
+
+Chain array methods for clarity, but don't overdo it.
+
+**Good - Clear Intent:**
+```typescript
+const detectedProducts = products
+  .filter(p => detectedProviderCodes.includes(p.providerCode))
+  .sort((a, b) => a.price - b.price)
+  .slice(0, 10);
+```
+
+**Bad - Inefficient:**
+```typescript
+// Filtering twice when once would suffice
+const filtered = products.filter(p => p.active);
+const detectedOnly = filtered.filter(p => detectedProviderCodes.includes(p.providerCode));
+```
+
+**Better:**
+```typescript
+const detectedProducts = products.filter(p =>
+  p.active && detectedProviderCodes.includes(p.providerCode)
+);
+```
+
+#### Code Quality Checklist
+
+Before committing code, ask yourself:
+
+- ✅ **DRY:** Am I repeating any logic that could be extracted?
+- ✅ **Readability:** Would another developer understand this in 6 months?
+- ✅ **Performance:** Can any operations run in parallel?
+- ✅ **Error Handling:** Are errors handled gracefully?
+- ✅ **Types:** Are all types explicit and reusable?
+- ✅ **Constants:** Are magic numbers/strings extracted?
+- ✅ **Single Responsibility:** Does each function do one thing?
+- ✅ **Early Returns:** Can I reduce nesting with early returns?
+
 ### User Notifications
 
 **NEVER use `alert()`, `confirm()`, or `prompt()` - Use Toast Notifications Instead**

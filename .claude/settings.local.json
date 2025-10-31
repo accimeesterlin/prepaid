@@ -18,7 +18,13 @@
       "Bash(python3:*)",
       "Bash(curl -X POST \"http://localhost:3002/api/v1/lookup/phone\" -H \"Content-Type: application/json\" -d '{\"\"\"\"phoneNumber\"\"\"\": \"\"\"\"+50937654321\"\"\"\", \"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\"}')",
       "Bash(curl -X POST http://localhost:3002/api/v1/lookup/phone -H 'Content-Type: application/json' -d '{\"\"\"\"phoneNumber\"\"\"\": \"\"\"\"+50937654321\"\"\"\", \"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\"}')",
-      "Bash(curl -s -X POST http://localhost:3002/api/v1/lookup/phone -H 'Content-Type: application/json' -d '{\"\"\"\"phoneNumber\"\"\"\": \"\"\"\"+50937654321\"\"\"\", \"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\"}')"
+      "Bash(curl -s -X POST http://localhost:3002/api/v1/lookup/phone -H 'Content-Type: application/json' -d '{\"\"\"\"phoneNumber\"\"\"\": \"\"\"\"+50937654321\"\"\"\", \"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\"}')",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(node:*)",
+      "Bash(curl -X POST \"http://localhost:3002/api/v1/lookup/phone\" -H \"Content-Type: application/json\" -d '{\"\"\"\"phoneNumber\"\"\"\": \"\"\"\"+50934748112\"\"\"\", \"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\"}')",
+      "Bash(curl -s -X POST http://localhost:3002/api/v1/lookup/phone -H 'Content-Type: application/json' -d '{\"\"\"\"phoneNumber\"\"\"\": \"\"\"\"+50934748112\"\"\"\", \"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\"}')",
+      "Bash(curl -s -X POST http://localhost:3002/api/v1/estimate -H 'Content-Type: application/json' -d '{\"\"\"\"orgSlug\"\"\"\": \"\"\"\"trellis\"\"\"\", \"\"\"\"skuCode\"\"\"\": \"\"\"\"D0HTHT85801\"\"\"\", \"\"\"\"sendValue\"\"\"\": 35.00, \"\"\"\"sendCurrencyIso\"\"\"\": \"\"\"\"USD\"\"\"\"}')",
+      "Bash(curl -s -X POST http://localhost:3002/api/v1/estimate -H 'Content-Type: application/json' -d '{\"\"orgSlug\"\": \"\"trellis\"\", \"\"skuCode\"\": \"\"D0HTHT85801\"\", \"\"sendValue\"\": 35.00, \"\"sendCurrencyIso\"\": \"\"USD\"\"}')"
     ],
     "deny": [],
     "ask": []
