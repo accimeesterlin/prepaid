@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, User, Phone, Mail, MapPin, ChevronDown } from 'lucide-react';
+import { Plus, Search, User, Phone, MapPin, ChevronDown } from 'lucide-react';
 
 const COUNTRIES = [
   'Papua New Guinea', 'Australia', 'New Zealand', 'Fiji', 'Solomon Islands',

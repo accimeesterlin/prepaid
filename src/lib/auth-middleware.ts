@@ -44,7 +44,7 @@ export async function requireRole(
 /**
  * Optional authentication - returns session if available, null otherwise
  */
-export async function optionalAuth(request: NextRequest): Promise<SessionPayload | null> {
+export async function optionalAuth(): Promise<SessionPayload | null> {
   try {
     return await getSession();
   } catch {

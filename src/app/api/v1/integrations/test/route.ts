@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Test DingConnect connection
-async function testDingConnect(credentials: any, environment?: string) {
+async function testDingConnect(credentials: any, _environment?: string) {
   // DingConnect only has production API
   const baseUrl = 'https://api.dingconnect.com';
 

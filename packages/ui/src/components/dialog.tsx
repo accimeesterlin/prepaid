@@ -3,34 +3,90 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "../lib/utils";
 
-interface DialogProps {
+interface DialogContextValue {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+const DialogContext = React.createContext<DialogContextValue | undefined>(undefined);
+
+interface DialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
 }
 
-export function Dialog({ open, onOpenChange, children }: DialogProps) {
+export function Dialog({ open: controlledOpen, onOpenChange, children }: DialogProps) {
   const [mounted, setMounted] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!open || !mounted) return null;
+  const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
+  const handleOpenChange = onOpenChange || setUncontrolledOpen;
 
-  return createPortal(
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in-0"
-        onClick={() => onOpenChange(false)}
-      />
-      {/* Dialog */}
-      <div className="fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] p-4 animate-in fade-in-0 zoom-in-95">
-        {children}
-      </div>
-    </>,
-    document.body
+  if (!mounted) {
+    return null;
+  }
+
+  return (
+    <DialogContext.Provider value={{ open, onOpenChange: handleOpenChange }}>
+      {/* Render triggers outside of portal */}
+      {React.Children.toArray(children).map((child, index) => {
+        if (React.isValidElement(child) && (child as any).type?.name === 'DialogTrigger') {
+          return <React.Fragment key={index}>{child}</React.Fragment>;
+        }
+        return null;
+      })}
+
+      {/* Only render dialog content in portal when open */}
+      {open && mounted && createPortal(
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in-0"
+            onClick={() => handleOpenChange(false)}
+          />
+          {/* Dialog */}
+          <div className="fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] p-4 animate-in fade-in-0 zoom-in-95">
+            {children}
+          </div>
+        </>,
+        document.body
+      )}
+    </DialogContext.Provider>
+  );
+}
+
+interface DialogTriggerProps {
+  children: React.ReactElement;
+  asChild?: boolean;
+}
+
+export function DialogTrigger({ children, asChild }: DialogTriggerProps) {
+  const context = React.useContext(DialogContext);
+  if (!context) {
+    throw new Error("DialogTrigger must be used within a Dialog");
+  }
+
+  const { onOpenChange } = context;
+
+  if (asChild && React.isValidElement(children)) {
+    const childProps = children.props as any;
+    return React.cloneElement(children, {
+      onClick: (e: React.MouseEvent) => {
+        childProps.onClick?.(e);
+        onOpenChange(true);
+      },
+    } as any);
+  }
+
+  return (
+    <button onClick={() => onOpenChange(true)} type="button">
+      {children}
+    </button>
   );
 }
 

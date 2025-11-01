@@ -19,6 +19,13 @@ export interface IWallet extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods
+  hasAvailableBalance(amount: number): boolean;
+  reserve(amount: number): boolean;
+  releaseReservation(amount: number): void;
+  deduct(amount: number, reserved?: boolean): boolean;
+  deposit(amount: number): void;
 }
 
 const WalletSchema = new Schema<IWallet>(

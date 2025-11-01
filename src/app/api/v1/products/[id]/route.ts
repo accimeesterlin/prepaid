@@ -4,8 +4,9 @@ import { dbConnection } from '@pg-prepaid/db/connection';
 import { Product } from '@pg-prepaid/db';
 
 // GET single product
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     await dbConnection.connect();
 
     const product = await Product.findOne({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -30,8 +31,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT - Update product
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -59,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     await dbConnection.connect();
 
     const product = await Product.findOne({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -122,8 +124,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE product
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -132,7 +135,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     await dbConnection.connect();
 
     const product = await Product.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 

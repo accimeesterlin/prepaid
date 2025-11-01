@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     let syncedCount = 0;
     let updatedCount = 0;
-    let errors: string[] = [];
+    const errors: string[] = [];
 
     if (provider === 'dingconnect') {
       try {
@@ -63,22 +63,22 @@ export async function POST(request: NextRequest) {
             const providerInfo = providerMap.get(dingProduct.ProviderCode);
 
             // Determine product details
-            const isMobileData = !!dingProduct.BenefitTypes.Data;
-            const isAirtime = !!dingProduct.BenefitTypes.Airtime;
+            const isMobileData = !!dingProduct.BenefitTypes?.Data;
+            const isAirtime = !!dingProduct.BenefitTypes?.Airtime;
 
-            let denominationType: 'fixed' | 'range' = 'fixed';
+            const denominationType: 'fixed' | 'range' = 'fixed';
             let denominationAmount = 0;
             let denominationUnit = '';
 
-            if (isAirtime && dingProduct.BenefitTypes.Airtime) {
-              denominationAmount = dingProduct.BenefitTypes.Airtime.Amount;
-              denominationUnit = dingProduct.BenefitTypes.Airtime.CurrencyCode;
-            } else if (isMobileData && dingProduct.BenefitTypes.Data) {
-              denominationAmount = dingProduct.BenefitTypes.Data.Amount;
-              denominationUnit = dingProduct.BenefitTypes.Data.Unit;
+            if (isAirtime && dingProduct.BenefitTypes?.Airtime) {
+              denominationAmount = dingProduct.BenefitTypes.Airtime.Amount || 0;
+              denominationUnit = dingProduct.BenefitTypes.Airtime.CurrencyCode || '';
+            } else if (isMobileData && dingProduct.BenefitTypes?.Data) {
+              denominationAmount = dingProduct.BenefitTypes.Data.Amount || 0;
+              denominationUnit = dingProduct.BenefitTypes.Data.Unit || '';
             }
 
-            const costPrice = dingProduct.Price.Amount;
+            const costPrice = dingProduct.Price?.Amount || 0;
             const suggestedSellPrice = costPrice * 1.1; // 10% markup by default
 
             // Check if product already exists
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
                 pricing: {
                   costPrice,
                   sellPrice: suggestedSellPrice,
-                  currency: dingProduct.Price.CurrencyCode,
+                  currency: dingProduct.Price?.CurrencyCode || 'USD',
                   profitMargin: 10,
                 },
                 denomination: {

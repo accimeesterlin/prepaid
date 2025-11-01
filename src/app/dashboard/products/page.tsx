@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { Plus, Search, Package, DollarSign, TrendingUp, Globe } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Search, Package, TrendingUp, Globe } from 'lucide-react';
 import {
   Button,
   Card,
@@ -43,7 +43,6 @@ interface Product {
 
 export default function ProductsPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);

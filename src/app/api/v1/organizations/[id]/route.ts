@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth-middleware';
 import { dbConnection } from '@pg-prepaid/db/connection';
 import { Org, Organization, UserOrganization } from '@pg-prepaid/db';
 import { UserRole } from '@pg-prepaid/types';
-import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
+import { createSuccessResponse } from '@/lib/api-response';
 import { handleApiError, ApiErrors } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 

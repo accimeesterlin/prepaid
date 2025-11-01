@@ -4,7 +4,7 @@ import { Discount } from '@pg-prepaid/db';
 import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
-import { verifyAuthMiddleware } from '@/lib/auth-middleware';
+import { requireAuth } from '@/lib/auth-middleware';
 
 /**
  * GET /api/v1/discounts
@@ -12,10 +12,7 @@ import { verifyAuthMiddleware } from '@/lib/auth-middleware';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await verifyAuthMiddleware(request);
-    if (!session) {
-      return createErrorResponse('Unauthorized', 401);
-    }
+    const session = await requireAuth(request);
 
     await dbConnection.connect();
 
@@ -39,10 +36,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifyAuthMiddleware(request);
-    if (!session) {
-      return createErrorResponse('Unauthorized', 401);
-    }
+    const session = await requireAuth(request);
 
     await dbConnection.connect();
 

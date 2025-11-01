@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Store, Globe, DollarSign, Tag, Palette, CreditCard } from 'lucide-react';
+import { Save, Store, Globe, DollarSign, Tag, Palette, CreditCard, ShoppingCart, AlertTriangle } from 'lucide-react';
 import {
   Button,
   Card,
@@ -562,6 +562,238 @@ export default function StorefrontSettingsPage() {
                 <label className="text-sm font-medium">PGPay</label>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Product Types */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-primary" />
+              <CardTitle>Product Types</CardTitle>
+            </div>
+            <CardDescription>
+              Choose which product types to offer on your storefront
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  checked={settings.productTypes?.plansEnabled ?? true}
+                  onChange={(e) => {
+                    const newSettings = {
+                      ...settings,
+                      productTypes: {
+                        ...settings.productTypes,
+                        plansEnabled: e.target.checked,
+                      },
+                    };
+                    // Ensure at least one is enabled
+                    if (!e.target.checked && !newSettings.productTypes.topupsEnabled) {
+                      setMessage({ type: 'error', text: 'At least one product type must be enabled' });
+                      return;
+                    }
+                    setSettings(newSettings);
+                    setMessage(null);
+                  }}
+                  className="h-4 w-4"
+                />
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-blue-900">Enable Fixed Plans</label>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    Fixed-value plans with specific data, voice, and SMS benefits
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  checked={settings.productTypes?.topupsEnabled ?? true}
+                  onChange={(e) => {
+                    const newSettings = {
+                      ...settings,
+                      productTypes: {
+                        ...settings.productTypes,
+                        topupsEnabled: e.target.checked,
+                      },
+                    };
+                    // Ensure at least one is enabled
+                    if (!e.target.checked && !newSettings.productTypes.plansEnabled) {
+                      setMessage({ type: 'error', text: 'At least one product type must be enabled' });
+                      return;
+                    }
+                    setSettings(newSettings);
+                    setMessage(null);
+                  }}
+                  className="h-4 w-4"
+                />
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-blue-900">Enable Variable Top-ups</label>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    Flexible top-ups where customers can enter custom amounts
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-800">
+                  <strong>Note:</strong> At least one product type must be enabled for your storefront to function.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Balance Threshold */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+              <CardTitle>Balance Threshold Protection</CardTitle>
+            </div>
+            <CardDescription>
+              Prevent purchases when your DingConnect balance is too low
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={settings.balanceThreshold?.enabled ?? false}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    balanceThreshold: {
+                      ...settings.balanceThreshold,
+                      enabled: e.target.checked,
+                    },
+                  })
+                }
+                className="h-4 w-4"
+              />
+              <label className="text-sm font-medium">Enable balance threshold protection</label>
+            </div>
+
+            {settings.balanceThreshold?.enabled && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Minimum Balance Required
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g., 100"
+                      value={settings.balanceThreshold?.minimumBalance ?? 100}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          balanceThreshold: {
+                            ...settings.balanceThreshold,
+                            minimumBalance: parseFloat(e.target.value) || 0,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Currency</label>
+                    <select
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={settings.balanceThreshold?.currency ?? 'USD'}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          balanceThreshold: {
+                            ...settings.balanceThreshold,
+                            currency: e.target.value,
+                          },
+                        })
+                      }
+                    >
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                      <option value="PGK">PGK</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-xs text-red-800">
+                    <strong>Protection Enabled:</strong> Customers will not be able to complete purchases if your
+                    DingConnect balance falls below {settings.balanceThreshold?.currency ?? 'USD'} {settings.balanceThreshold?.minimumBalance ?? 100}.
+                    They will see a friendly message asking them to try again later.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {!settings.balanceThreshold?.enabled && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  Balance threshold protection is disabled. Purchases will be allowed regardless of your DingConnect balance.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top-up Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Store className="h-5 w-5 text-primary" />
+              <CardTitle>Top-up Processing Settings</CardTitle>
+            </div>
+            <CardDescription>
+              Configure how top-ups are processed with DingConnect
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <input
+                type="checkbox"
+                checked={settings.topupSettings?.validateOnly ?? false}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    topupSettings: {
+                      ...settings.topupSettings,
+                      validateOnly: e.target.checked,
+                    },
+                  })
+                }
+                className="h-4 w-4"
+              />
+              <div className="flex-1">
+                <label className="text-sm font-medium text-amber-900">Test Mode (Validate Only)</label>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  When enabled, transactions will only be validated without actually sending top-ups. Use this for testing.
+                </p>
+              </div>
+            </div>
+
+            {settings.topupSettings?.validateOnly ? (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-800">
+                  <strong>⚠️ Test Mode Active:</strong> All transactions will only be validated. No actual top-ups will be sent to customers.
+                  This is useful for testing your storefront before going live.
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-xs text-green-800">
+                  <strong>✓ Live Mode Active:</strong> Transactions will send actual top-ups to customers via DingConnect.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

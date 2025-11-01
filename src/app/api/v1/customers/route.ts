@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
 
-    let query: any = { orgId: session.orgId };
+    const query: any = { orgId: session.orgId };
 
     if (search) {
       query.$or = [

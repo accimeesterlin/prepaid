@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
         sendCurrency: priceData.SendCurrencyIso || 'USD',
         receiveValue: Number(priceData.ReceiveValue) || 0,
         receiveCurrency: priceData.ReceiveCurrencyIso || '',
-        fee: Number(priceData.CustomerFee || priceData.DistributorFee) || 0,
-        taxRate: Number(priceData.TaxRate) || 0,
+        fee: Number((priceData as any).CustomerFee || (priceData as any).DistributorFee || (priceData as any).Fee) || 0,
+        taxRate: Number((priceData as any).TaxRate) || 0,
       };
 
       logger.info('Sending estimate response', { responseData: JSON.stringify(responseData) });

@@ -4,17 +4,18 @@ import { dbConnection } from '@pg-prepaid/db/connection';
 import { Customer } from '@pg-prepaid/db';
 
 // GET single customer
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await dbConnection.connect();
 
     const customer = await Customer.findOne({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -30,20 +31,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT - Update customer
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { phoneNumber, email, name, country } = body;
 
     await dbConnection.connect();
 
     const customer = await Customer.findOne({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -66,17 +68,18 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE customer
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await dbConnection.connect();
 
     const customer = await Customer.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 

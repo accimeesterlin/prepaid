@@ -6,13 +6,16 @@ export interface IPaymentProvider extends Document {
   status: 'active' | 'inactive' | 'error';
   environment: 'sandbox' | 'production';
   credentials: {
-    apiKey?: string;
+    // Stripe
     secretKey?: string;
     publishableKey?: string;
+    webhookSecret?: string;
+    // PayPal
     clientId?: string;
     clientSecret?: string;
-    webhookSecret?: string;
-    merchantId?: string;
+    // PGPay
+    userId?: string; // UUID format
+    // Allow dynamic fields
     [key: string]: any;
   };
   settings: {

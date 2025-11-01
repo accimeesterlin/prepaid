@@ -9,8 +9,6 @@ import {
   CheckCircle,
   ArrowUpRight,
   TrendingUp,
-  Plus,
-  CreditCard,
   Store,
   Copy,
   ExternalLink,
@@ -41,7 +39,7 @@ interface Metrics {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [metrics, setMetrics] = useState<Metrics>({
+  const [metrics] = useState<Metrics>({
     revenue: { total: 0, trend: 0 },
     transactions: { total: 0, trend: 0 },
     customers: { total: 0, trend: 0 },

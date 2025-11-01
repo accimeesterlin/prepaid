@@ -7,7 +7,7 @@ import { createSuccessResponse } from '@/lib/api-response';
  * GET /api/v1/debug/org-check
  * Check organization setup status
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     await dbConnection.connect();
 

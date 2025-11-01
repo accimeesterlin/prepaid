@@ -4,15 +4,13 @@ import { Integration, StorefrontSettings, Org, Organization } from '@pg-prepaid/
 import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
-import { createDingConnectService, DingConnectProduct, DingConnectProvider } from '@/lib/services/dingconnect.service';
+import { createDingConnectService } from '@/lib/services/dingconnect.service';
 import { parsePhoneNumber } from 'awesome-phonenumber';
 import countries from 'i18n-iso-countries';
 import en from 'i18n-iso-countries/langs/en.json';
 import type {
   PhoneLookupRequest,
-  PhoneLookupResponse,
   ProductInfo,
-  OperatorInfo,
 } from '@/types/phone-lookup';
 
 // Register English locale for country names
@@ -74,6 +72,15 @@ export async function POST(request: NextRequest) {
 
     logger.info('Storefront settings found', { orgId, isActive: storefrontSettings.isActive });
 
+    // Check if at least one product type is enabled
+    const plansEnabled = storefrontSettings.productTypes?.plansEnabled ?? true;
+    const topupsEnabled = storefrontSettings.productTypes?.topupsEnabled ?? true;
+
+    if (!plansEnabled && !topupsEnabled) {
+      logger.error('No product types enabled', { orgId });
+      return createErrorResponse('No products are currently available. Please contact the merchant.', 400);
+    }
+
     // Get active DingConnect integration for this org
     const integration = await Integration.findOne({
       orgId,
@@ -95,6 +102,40 @@ export async function POST(request: NextRequest) {
 
     // Use DingConnect API to lookup phone number
     const dingService = createDingConnectService(integration.credentials as any);
+
+    // Check balance threshold if enabled
+    if (storefrontSettings.balanceThreshold?.enabled) {
+      try {
+        const balanceData = await dingService.getBalance();
+        const currentBalance = balanceData.AccountBalance || 0;
+        const minimumBalance = storefrontSettings.balanceThreshold.minimumBalance || 0;
+
+        logger.info('Balance check', {
+          currentBalance,
+          minimumBalance,
+          currency: balanceData.CurrencyCode,
+        });
+
+        if (currentBalance < minimumBalance) {
+          logger.error('Balance below threshold', {
+            orgId,
+            currentBalance,
+            minimumBalance,
+          });
+          return createErrorResponse(
+            'Service temporarily unavailable due to low balance. Please try again later or contact support.',
+            503
+          );
+        }
+      } catch (balanceError: any) {
+        logger.error('Failed to check balance', {
+          error: balanceError.message,
+          orgId,
+        });
+        // Don't block the request if balance check fails, just log the error
+        // This prevents false negatives if the API is temporarily unavailable
+      }
+    }
 
     try {
       // Parse phone number using awesome-phonenumber for accurate country detection
@@ -185,23 +226,74 @@ export async function POST(request: NextRequest) {
       logger.info('Applying pricing to products', { productsCount: products.length });
       let productsWithPricing: ProductInfo[];
       try {
-        productsWithPricing = products.map((product) => {
+        // First, filter products based on enabled product types
+        const filteredProducts = products.filter((product) => {
+          // Determine product type
+          const hasMinMax = !!(product.Minimum && product.Maximum);
+          const hasFixedPrice = !!(product.Price && product.Price.Amount);
+          const hasSpecificBenefits = product.BenefitTypes &&
+            (product.BenefitTypes.Data || product.BenefitTypes.Voice || product.BenefitTypes.SMS);
+          const hasValidityPeriod = !!product.ValidityPeriodIso;
+          const benefitsIndicatePlan = product.Benefits && Array.isArray(product.Benefits) &&
+            (product.Benefits.includes('Data') || product.Benefits.includes('Voice') || product.Benefits.includes('SMS'));
+
+          const isVariableValue = hasMinMax && !hasFixedPrice && !hasSpecificBenefits && !hasValidityPeriod && !benefitsIndicatePlan;
+
+          // Filter based on settings
+          if (isVariableValue && !topupsEnabled) {
+            return false; // Skip variable top-ups if disabled
+          }
+          if (!isVariableValue && !plansEnabled) {
+            return false; // Skip plans if disabled
+          }
+          return true;
+        });
+
+        logger.info('Products filtered by type', {
+          originalCount: products.length,
+          filteredCount: filteredProducts.length,
+          plansEnabled,
+          topupsEnabled,
+        });
+
+        productsWithPricing = filteredProducts.map((product) => {
             // Determine the cost price based on available format
             let costPrice = 0;
             let benefitAmount = 0;
             let benefitUnit = '';
             let benefitType = 'airtime';
 
-            // Old format: Price.Amount
+            // Determine if this is a variable-value product (top-up with custom amount)
+            // Variable-value products have:
+            // - Minimum and Maximum values
+            // - NO fixed Price (uses range pricing)
+            // - NO specific benefits (Data/Voice/SMS)
+            // - NO validity period (instant top-up, not a plan)
+            const hasMinMax = !!(product.Minimum && product.Maximum);
+            const hasFixedPrice = !!(product.Price && product.Price.Amount);
+            const hasSpecificBenefits = product.BenefitTypes &&
+              (product.BenefitTypes.Data || product.BenefitTypes.Voice || product.BenefitTypes.SMS);
+            const hasValidityPeriod = !!product.ValidityPeriodIso;
+
+            // Check if Benefits array indicates this is a plan
+            const benefitsIndicatePlan = product.Benefits && Array.isArray(product.Benefits) &&
+              (product.Benefits.includes('Data') || product.Benefits.includes('Voice') || product.Benefits.includes('SMS'));
+
+            // Variable-value: Has min/max BUT no fixed price, no specific benefits, and no validity period
+            // Fixed-value (plans): Has fixed price OR has specific benefit amounts OR has validity period OR benefits indicate plan
+            const isVariableValue = hasMinMax && !hasFixedPrice && !hasSpecificBenefits && !hasValidityPeriod && !benefitsIndicatePlan;
+
+            // Old format: Price.Amount (always fixed-value products/plans)
             if (product.Price && product.Price.Amount) {
               costPrice = product.Price.Amount;
               benefitAmount = product.BenefitTypes?.Airtime?.Amount || product.BenefitTypes?.Data?.Amount || 0;
               benefitUnit = product.BenefitTypes?.Airtime?.CurrencyCode || product.BenefitTypes?.Data?.Unit || '';
               benefitType = product.BenefitTypes?.Airtime ? 'airtime' : 'data';
             }
-            // New format: Minimum.SendValue
+            // New format: Minimum.SendValue (could be variable or fixed)
             else if (product.Minimum && product.Minimum.SendValue) {
-              costPrice = product.Minimum.SendValue;
+              // For fixed plans with min/max, use minimum as the price
+              costPrice = isVariableValue ? product.Minimum.SendValue : product.Minimum.SendValue;
               benefitAmount = product.Minimum.ReceiveValue || costPrice;
               benefitUnit = product.Minimum.ReceiveCurrencyIso || product.Minimum.SendCurrencyIso || 'USD';
               // Determine benefit type from Benefits array
@@ -224,8 +316,8 @@ export async function POST(request: NextRequest) {
               benefitAmount,
               benefitUnit,
               pricing,
-              // Include min/max for variable-value products
-              isVariableValue: !!(product.Minimum && product.Maximum),
+              // Only set as variable-value if it's truly a custom-amount top-up
+              isVariableValue,
               minAmount: product.Minimum?.SendValue,
               maxAmount: product.Maximum?.SendValue,
               // Include product classification fields

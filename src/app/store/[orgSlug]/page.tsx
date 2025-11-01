@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { Search, Phone, DollarSign, Zap, Shield, Filter, Tag, SlidersHorizontal, Globe, CreditCard, CheckCircle, XCircle, Wifi, Banknote } from 'lucide-react';
+import { Search, Phone, DollarSign, Zap, Shield, Filter, Tag, SlidersHorizontal, Globe, CreditCard, CheckCircle, XCircle, Wifi, Banknote, AlertCircle } from 'lucide-react';
 import { Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, toast } from '@pg-prepaid/ui';
 
 export default function PublicStorefrontPage() {
@@ -13,6 +13,8 @@ export default function PublicStorefrontPage() {
   const [loading, setLoading] = useState(false);
   const [lookupData, setLookupData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recentNumbers, setRecentNumbers] = useState<string[]>([]);
+  const [showRecentNumbers, setShowRecentNumbers] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterByProvider, setFilterByProvider] = useState<string>('all');
@@ -20,6 +22,7 @@ export default function PublicStorefrontPage() {
   const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'value-asc' | 'value-desc'>('price-asc');
   const [currentPage, setCurrentPage] = useState(1);
   const PRODUCTS_PER_PAGE = 12;
+  const [showFilters, setShowFilters] = useState(false);
 
   // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -56,17 +59,208 @@ export default function PublicStorefrontPage() {
     return { valid: true };
   };
 
+  // Convert country ISO code to flag emoji
+  const getCountryFlag = (countryCode: string): string => {
+    if (!countryCode || countryCode.length !== 2) return '';
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map((char) => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
+
   // Format phone number as user types
   const formatPhoneNumber = (value: string): string => {
     // Remove all non-digit characters except +
     const cleaned = value.replace(/[^\d+]/g, '');
-    return cleaned;
+
+    // Don't format if empty or just +
+    if (cleaned.length <= 1) {
+      return cleaned;
+    }
+
+    // If starts with +, format international number
+    if (cleaned.startsWith('+')) {
+      const digits = cleaned.substring(1);
+
+      // Format based on length: +XXX XXXX XXXX
+      if (digits.length <= 3) {
+        return `+${digits}`;
+      } else if (digits.length <= 7) {
+        return `+${digits.slice(0, 3)} ${digits.slice(3)}`;
+      } else {
+        return `+${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7)}`;
+      }
+    }
+
+    // If no +, add it and format
+    if (cleaned.length <= 3) {
+      return `+${cleaned}`;
+    } else if (cleaned.length <= 7) {
+      return `+${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
+    } else {
+      return `+${cleaned.slice(0, 3)} ${cleaned.slice(3, 7)} ${cleaned.slice(7)}`;
+    }
+  };
+
+  // Encryption/Decryption utilities using Web Crypto API
+  const getEncryptionKey = async (): Promise<CryptoKey> => {
+    // Use a deterministic key derived from browser fingerprint
+    // In production, consider using a more sophisticated key derivation
+    const keyMaterial = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(navigator.userAgent + window.location.hostname)
+    );
+
+    return crypto.subtle.importKey(
+      'raw',
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  };
+
+  const encryptData = async (data: string): Promise<string> => {
+    try {
+      const key = await getEncryptionKey();
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encodedData = new TextEncoder().encode(data);
+
+      const encryptedData = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        encodedData
+      );
+
+      // Combine IV and encrypted data, then encode as base64
+      const combined = new Uint8Array(iv.length + encryptedData.byteLength);
+      combined.set(iv, 0);
+      combined.set(new Uint8Array(encryptedData), iv.length);
+
+      return btoa(String.fromCharCode(...combined));
+    } catch (err) {
+      console.error('Encryption failed:', err);
+      throw err;
+    }
+  };
+
+  const decryptData = async (encryptedString: string): Promise<string> => {
+    try {
+      const key = await getEncryptionKey();
+      const combined = Uint8Array.from(atob(encryptedString), c => c.charCodeAt(0));
+
+      const iv = combined.slice(0, 12);
+      const encryptedData = combined.slice(12);
+
+      const decryptedData = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        encryptedData
+      );
+
+      return new TextDecoder().decode(decryptedData);
+    } catch (err) {
+      console.error('Decryption failed:', err);
+      throw err;
+    }
+  };
+
+  // Load recent numbers and email from localStorage on mount
+  useEffect(() => {
+    const loadRecentNumbers = async () => {
+      try {
+        const stored = localStorage.getItem('recentPhoneNumbers_encrypted');
+        if (stored) {
+          const decrypted = await decryptData(stored);
+          const numbers = JSON.parse(decrypted);
+          setRecentNumbers(numbers);
+        }
+      } catch (err) {
+        console.error('Failed to load recent numbers:', err);
+        // Clear corrupted data
+        localStorage.removeItem('recentPhoneNumbers_encrypted');
+      }
+    };
+
+    const loadSavedEmail = async () => {
+      try {
+        const stored = localStorage.getItem('customerEmail_encrypted');
+        if (stored) {
+          const decrypted = await decryptData(stored);
+          setCustomerEmail(decrypted);
+        }
+      } catch (err) {
+        console.error('Failed to load saved email:', err);
+        // Clear corrupted data
+        localStorage.removeItem('customerEmail_encrypted');
+      }
+    };
+
+    loadRecentNumbers();
+    loadSavedEmail();
+  }, []);
+
+  // Ref for the phone input container to detect clicks outside
+  const phoneInputContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close recent numbers dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showRecentNumbers && phoneInputContainerRef.current && !phoneInputContainerRef.current.contains(e.target as Node)) {
+        setShowRecentNumbers(false);
+      }
+    };
+
+    if (showRecentNumbers) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showRecentNumbers]);
+
+  // Save a phone number to recent numbers (encrypted)
+  const saveRecentNumber = async (number: string) => {
+    try {
+      const cleanNumber = number.trim();
+      if (!cleanNumber) return;
+
+      // Remove duplicates and add to front
+      const updated = [cleanNumber, ...recentNumbers.filter(n => n !== cleanNumber)].slice(0, 5);
+      setRecentNumbers(updated);
+
+      // Encrypt and save
+      const encrypted = await encryptData(JSON.stringify(updated));
+      localStorage.setItem('recentPhoneNumbers_encrypted', encrypted);
+    } catch (err) {
+      console.error('Failed to save recent number:', err);
+    }
+  };
+
+  // Save customer email (encrypted)
+  const saveCustomerEmail = async (email: string) => {
+    try {
+      const cleanEmail = email.trim();
+      if (!cleanEmail) return;
+
+      // Encrypt and save
+      const encrypted = await encryptData(cleanEmail);
+      localStorage.setItem('customerEmail_encrypted', encrypted);
+    } catch (err) {
+      console.error('Failed to save customer email:', err);
+    }
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
     setPhoneNumber(formatted);
     if (error) setError(null); // Clear error on change
+    // Show recent numbers when user focuses input
+    if (!showRecentNumbers && recentNumbers.length > 0) {
+      setShowRecentNumbers(true);
+    }
   };
 
   // Fetch payment methods for the organization
@@ -129,6 +323,10 @@ export default function PublicStorefrontPage() {
         setFilterByProvider('all');
         // Fetch payment methods for this organization
         await fetchPaymentMethods();
+        // Save to recent numbers
+        saveRecentNumber(phoneNumber.trim());
+        // Hide recent numbers dropdown
+        setShowRecentNumbers(false);
       } else {
         // API returns RFC 7807 Problem Details format with "detail" field
         setError(data.detail || data.error || data.message || 'Failed to lookup phone number');
@@ -145,6 +343,12 @@ export default function PublicStorefrontPage() {
     setShowPaymentModal(true);
     setPaymentStatus('idle');
     setEstimatedReceive(null);
+
+    // Set default payment method to the first available method
+    if (paymentMethods?.methods?.length > 0) {
+      setPaymentMethod(paymentMethods.methods[0].provider as 'stripe' | 'paypal' | 'pgpay');
+    }
+
     // Initialize custom amount for variable-value products
     if (product.isVariableValue && product.minAmount) {
       setCustomAmount(product.minAmount.toString());
@@ -262,23 +466,60 @@ export default function PublicStorefrontPage() {
     setPaymentStatus('processing');
 
     try {
-      // Simulate payment processing (replace with actual payment API call)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call actual payment API endpoint
+      const response = await fetch('/api/v1/payments/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgSlug,
+          phoneNumber: lookupData.phoneNumber,
+          product: selectedProduct, // Send full product object
+          customerEmail,
+          paymentMethod,
+          amount: selectedProduct.isVariableValue ? parseFloat(customAmount) : selectedProduct.pricing.finalPrice,
+          sendValue: selectedProduct.isVariableValue ? parseFloat(customAmount) : undefined,
+        }),
+      });
 
-      // TODO: Call actual payment API endpoint
-      // const response = await fetch('/api/v1/payments/process', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     orgSlug,
-      //     phoneNumber: lookupData.phoneNumber,
-      //     productSkuCode: selectedProduct.skuCode,
-      //     customerEmail,
-      //     paymentMethod,
-      //     amount: selectedProduct.pricing.finalPrice,
-      //   }),
-      // });
+      const data = await response.json();
 
+      if (!response.ok) {
+        const errorMessage = data.detail || data.error || data.message || 'Payment failed';
+        console.error('Payment API error:', data);
+        throw new Error(errorMessage);
+      }
+
+      // Save customer email for future use (encrypted)
+      await saveCustomerEmail(customerEmail);
+
+      // Check if payment requires redirect (PGPay)
+      if (data.requiresRedirect && data.data?.checkoutUrl) {
+        console.log('Redirecting to payment gateway', {
+          checkoutUrl: data.data.checkoutUrl,
+          orderId: data.data.orderId,
+        });
+
+        // Store order ID in session storage for callback
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('pendingOrderId', data.data.orderId);
+          sessionStorage.setItem('pendingPhoneNumber', lookupData.phoneNumber);
+        }
+
+        toast({
+          title: 'Redirecting to Payment Gateway',
+          description: 'Please complete your payment...',
+          variant: 'default',
+        });
+
+        // Redirect to payment gateway
+        setTimeout(() => {
+          window.location.href = data.data.checkoutUrl;
+        }, 1000);
+
+        return;
+      }
+
+      // For direct payments (non-redirect)
       setPaymentStatus('success');
 
       // Determine what value was received
@@ -288,7 +529,9 @@ export default function PublicStorefrontPage() {
 
       toast({
         title: 'Top-up Successful!',
-        description: `${receivedAmount} has been sent to ${lookupData.phoneNumber}`,
+        description: data.data?.validateOnly
+          ? 'Transaction validated successfully (test mode)'
+          : `${receivedAmount} has been sent to ${lookupData.phoneNumber}`,
         variant: 'success',
       });
 
@@ -296,7 +539,7 @@ export default function PublicStorefrontPage() {
       setTimeout(() => {
         setShowPaymentModal(false);
         setSelectedProduct(null);
-        setCustomerEmail('');
+        // Don't clear email - it's saved for next time
         setPaymentStatus('idle');
       }, 3000);
 
@@ -394,352 +637,443 @@ export default function PublicStorefrontPage() {
   const primaryColor = lookupData?.branding?.primaryColor || '#3b82f6';
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="border-b bg-card">
-        <div className="container max-w-5xl mx-auto px-4 py-12">
-          <div className="text-center space-y-4 mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="border-b bg-card sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+        <div className="container max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold">
               {lookupData?.branding?.businessName || 'Mobile Top-Up'}
             </h1>
-            <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-              {lookupData?.branding?.description ||
-                'Send mobile top-ups worldwide instantly'}
-            </p>
-          </div>
-
-          {/* Search Box */}
-          <Card className="max-w-xl mx-auto shadow-sm">
-            <CardContent className="pt-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="tel"
-                    placeholder="+1234567890"
-                    className="w-full pl-10 pr-4 py-2.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-                    value={phoneNumber}
-                    onChange={handlePhoneChange}
-                    onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
-                  {error}
-                </div>
-              )}
-
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={handleLookup}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                    Looking up...
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-4 w-4 mr-2" />
-                    Find Top-ups
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Results Section */}
-      {lookupData && (
-        <div className="container max-w-5xl mx-auto px-4 py-8">
-          {/* Discount Banner */}
-          {lookupData.discount && (
-            <Card className="mb-6 border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Tag className="h-5 w-5 text-primary" />
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-lg mb-1">
-                      Special Offer!
-                    </p>
-                    <p className="text-muted-foreground mb-2">
-                      {lookupData.discount.description}
-                    </p>
-                    <div className="inline-flex items-center px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm font-medium">
-                      {lookupData.discount.type === 'percentage'
-                        ? `Save ${lookupData.discount.value}%`
-                        : `Save $${lookupData.discount.value}`}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Country & Operator Info */}
-          <div className="mb-8 space-y-4">
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted rounded-full">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{lookupData.country.name}</span>
-              </div>
-
-              {lookupData.detectedOperators && lookupData.detectedOperators.length > 0 && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full">
-                  <Phone className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    {lookupData.detectedOperators.filter((op: any) => op.name).map((op: any) => op.name).join(', ')}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="text-center space-y-1">
-              <h2 className="text-2xl font-semibold">
-                Available Top-ups
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {lookupData.phoneNumber.substring(0, 5)}...{lookupData.phoneNumber.substring(lookupData.phoneNumber.length - 4)} • {lookupData.products.length} products
-              </p>
-            </div>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="mb-6 flex justify-center">
-            <div className="inline-flex items-center gap-1 p-1 bg-muted rounded-lg">
-              <button
-                onClick={() => {
-                  setFilterByType('all');
-                  setCurrentPage(1);
-                }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  filterByType === 'all'
-                    ? 'bg-background shadow-sm'
-                    : 'hover:bg-background/50'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => {
-                  setFilterByType('prepaid');
-                  setCurrentPage(1);
-                }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  filterByType === 'prepaid'
-                    ? 'bg-background shadow-sm'
-                    : 'hover:bg-background/50'
-                }`}
-              >
-                Top-up
-              </button>
-              <button
-                onClick={() => {
-                  setFilterByType('plan');
-                  setCurrentPage(1);
-                }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  filterByType === 'plan'
-                    ? 'bg-background shadow-sm'
-                    : 'hover:bg-background/50'
-                }`}
-              >
-                Plans
-              </button>
-            </div>
-          </div>
-
-          {/* Search and Filters */}
-          <div className="mb-6 space-y-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Search */}
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring transition-all text-sm"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-
-              {/* Provider Filter */}
-              <select
-                className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-                value={filterByProvider}
-                onChange={(e) => {
-                  setFilterByProvider(e.target.value);
-                  setCurrentPage(1);
-                }}
-              >
-                <option value="all">All Providers</option>
-                {lookupData?.operators?.map((operator: any) => (
-                  <option key={operator.code} value={operator.code}>
-                    {operator.name}
-                  </option>
-                ))}
-              </select>
-
-              {/* Sort */}
-              <select
-                className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-                value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value as any);
-                  setCurrentPage(1);
-                }}
-              >
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="value-asc">Value: Low to High</option>
-                <option value="value-desc">Value: High to Low</option>
-              </select>
-            </div>
-
-            {/* Results count */}
-            {(searchQuery || filterByProvider !== 'all') && (
-              <div className="flex items-center justify-between text-sm">
-                <p className="text-muted-foreground">
-                  Showing {filteredAndSortedProducts.length} of {lookupData.products.length} products
-                </p>
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setFilterByProvider('all');
-                  }}
-                  className="text-primary hover:underline text-sm font-medium"
-                >
-                  Clear filters
-                </button>
+            {lookupData && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Phone className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {lookupData.phoneNumber.substring(0, 5)}...{lookupData.phoneNumber.substring(lookupData.phoneNumber.length - 4)}
+                </span>
               </div>
             )}
           </div>
+        </div>
+      </header>
 
-          {/* Products List */}
-          <div className="grid gap-3">
-            {paginatedProducts.map((product: any) => {
-              return (
-                <Card
-                  key={product.skuCode}
-                  className="cursor-pointer hover:shadow-md transition-all group"
-                  onClick={() => handleProductSelect(product)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      {/* Left: Product Info */}
-                      <div className="flex-1 space-y-1">
-                        {product.pricing.discountApplied && (
-                          <div className="inline-flex items-center gap-1.5 mb-1">
-                            <span className="text-xs font-medium text-muted-foreground line-through">
-                              ${product.pricing.priceBeforeDiscount.toFixed(2)}
-                            </span>
-                            <span className="inline-flex items-center px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                              Save {((product.pricing.priceBeforeDiscount - product.pricing.finalPrice) / product.pricing.priceBeforeDiscount * 100).toFixed(0)}%
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-baseline gap-2">
-                          {product.isVariableValue ? (
-                            <p className="text-lg font-semibold">
-                              ${product.minAmount.toFixed(2)} - ${product.maxAmount.toFixed(2)}
-                            </p>
-                          ) : (
-                            <p className="text-lg font-semibold">
-                              {product.benefitAmount} {product.benefitUnit}
-                            </p>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {product.providerName} • {product.name}
-                        </p>
+      {/* Main Content - Typeform Style */}
+      <main className="flex-1 flex items-center justify-center px-4 py-8">
+        {!lookupData ? (
+          /* Step 1: Phone Number Entry - Full Focus */
+          <div className="w-full max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-center space-y-3">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                <Phone className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Enter phone number
+              </h2>
+              <p className="text-muted-foreground text-lg">
+                {lookupData?.branding?.description || 'We\'ll find the best top-up options for you'}
+              </p>
+            </div>
+
+            <Card className="shadow-lg">
+              <CardContent className="pt-6 space-y-6">
+                <div className="space-y-3" ref={phoneInputContainerRef}>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <input
+                      type="tel"
+                      placeholder="+1 234 567 8900"
+                      className="w-full pl-12 pr-4 py-4 text-lg border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                      value={phoneNumber}
+                      onChange={handlePhoneChange}
+                      onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
+                      onFocus={() => recentNumbers.length > 0 && setShowRecentNumbers(true)}
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Recent Numbers Dropdown */}
+                  {showRecentNumbers && recentNumbers.length > 0 && (
+                    <div
+                      className="border rounded-lg bg-card shadow-sm animate-in slide-in-from-top-2 duration-200"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="p-2 border-b">
+                        <p className="text-xs font-medium text-muted-foreground px-2">Recent Numbers</p>
                       </div>
-
-                      {/* Right: Price Button */}
-                      <div className="flex-shrink-0">
-                        <Button size="lg" className="group-hover:scale-105 transition-transform">
-                          ${product.pricing.finalPrice.toFixed(2)}
-                        </Button>
+                      <div className="p-1">
+                        {recentNumbers.map((number, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => {
+                              setPhoneNumber(number);
+                              setShowRecentNumbers(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted transition-colors text-left"
+                          >
+                            <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm font-medium">{number}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                  )}
 
-          {filteredAndSortedProducts.length === 0 && (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  {lookupData.products.length === 0
-                    ? 'No products available for this number at the moment.'
-                    : 'No products match your search criteria. Try adjusting your filters.'}
-                </p>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Include country code (e.g., +1 for USA, +509 for Haiti)
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm animate-in slide-in-from-top-2">
+                    <div className="flex items-start gap-2">
+                      <XCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>{error}</span>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  className="w-full h-12 text-base"
+                  size="lg"
+                  onClick={handleLookup}
+                  disabled={loading || !phoneNumber.trim()}
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2" />
+                      Finding top-ups...
+                    </>
+                  ) : (
+                    <>
+                      Continue
+                      <Search className="h-5 w-5 ml-2" />
+                    </>
+                  )}
+                </Button>
+
+                <div className="text-center text-xs text-muted-foreground">
+                  Press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Enter ↵</kbd>
+                </div>
               </CardContent>
             </Card>
-          )}
+          </div>
+        ) : (
+          /* Step 2: Product Selection - Full Focus */
+          <div className="w-full max-w-5xl mx-auto space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Progress Indicator */}
+            <div className="flex items-center gap-2 text-sm justify-center">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">✓</div>
+                <span className="text-muted-foreground">Phone verified</span>
+              </div>
+              <div className="h-px bg-border flex-1 max-w-[60px]"></div>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full border-2 border-primary flex items-center justify-center text-xs font-medium">2</div>
+                <span className="font-medium">Choose top-up</span>
+              </div>
+            </div>
 
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
+            {/* Header Section with Country/Operator Info */}
+            <div className="text-center space-y-3">
+              {/* Discount Banner */}
+              {lookupData.discount && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-medium animate-in slide-in-from-top-2">
+                  <Tag className="h-3.5 w-3.5" />
+                  <span>{lookupData.discount.description}</span>
+                  <span className="px-1.5 py-0.5 bg-primary text-primary-foreground rounded text-[10px]">
+                    {lookupData.discount.type === 'percentage'
+                      ? `-${lookupData.discount.value}%`
+                      : `-$${lookupData.discount.value}`}
+                  </span>
+                </div>
+              )}
 
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
+              <h2 className="text-2xl md:text-3xl font-bold">
+                Choose your top-up
+              </h2>
 
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "ghost"}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
+              {/* Country & Operator Pills */}
+              <div className="flex items-center justify-center gap-2 flex-wrap text-xs">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-full">
+                  <span className="text-base" title={lookupData.country.code}>{getCountryFlag(lookupData.country.code)}</span>
+                  <span>{lookupData.country.name}</span>
+                </div>
+                {lookupData.detectedOperators && lookupData.detectedOperators.length > 0 && (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary rounded-full">
+                    <Wifi className="h-3.5 w-3.5" />
+                    <span>
+                      {lookupData.detectedOperators.filter((op: any) => op.name).map((op: any) => op.name).join(', ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tab Navigation with Filter Toggle - Compact */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 flex justify-center">
+                <div className="inline-flex items-center gap-1 p-1 bg-muted rounded-lg">
+                  <button
+                    onClick={() => {
+                      setFilterByType('all');
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                      filterByType === 'all'
+                        ? 'bg-background shadow-sm'
+                        : 'hover:bg-background/50'
+                    }`}
+                  >
+                    All ({lookupData.products.length})
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFilterByType('prepaid');
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                      filterByType === 'prepaid'
+                        ? 'bg-background shadow-sm'
+                        : 'hover:bg-background/50'
+                    }`}
+                  >
+                    Top-up
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFilterByType('plan');
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                      filterByType === 'plan'
+                        ? 'bg-background shadow-sm'
+                        : 'hover:bg-background/50'
+                    }`}
+                  >
+                    Plans
+                  </button>
+                </div>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
+              {/* Filter Toggle Button */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                aria-label={showFilters ? 'Hide filters' : 'Show filters'}
               >
-                Next
-              </Button>
+                <SlidersHorizontal className={`h-4 w-4 transition-colors ${showFilters ? 'text-primary' : 'text-muted-foreground'}`} />
+              </button>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Compact Filters Row - Collapsible */}
+            {showFilters && (
+              <Card className="shadow-sm animate-in slide-in-from-top-2 duration-200">
+                <CardContent className="p-3">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {/* Search */}
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        className="w-full pl-8 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring transition-all text-xs"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Provider Filter */}
+                    {lookupData?.operators && lookupData.operators.length > 1 && (
+                      <select
+                        className="px-2.5 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-xs"
+                        value={filterByProvider}
+                        onChange={(e) => {
+                          setFilterByProvider(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <option value="all">All Providers</option>
+                        {lookupData.operators.map((operator: any) => (
+                          <option key={operator.code} value={operator.code}>
+                            {operator.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
+                    {/* Sort */}
+                    <select
+                      className="px-2.5 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-xs"
+                      value={sortBy}
+                      onChange={(e) => {
+                        setSortBy(e.target.value as any);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <option value="price-asc">Price ↑</option>
+                      <option value="price-desc">Price ↓</option>
+                      <option value="value-asc">Value ↑</option>
+                      <option value="value-desc">Value ↓</option>
+                    </select>
+
+                    {/* Clear Filters */}
+                    {(searchQuery || filterByProvider !== 'all') && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setFilterByProvider('all');
+                        }}
+                        className="px-2.5 py-2 text-xs font-medium text-primary hover:bg-primary/10 rounded-md transition-colors whitespace-nowrap"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Results count */}
+                  {(searchQuery || filterByProvider !== 'all') && (
+                    <p className="mt-2 text-xs text-muted-foreground text-center">
+                      {filteredAndSortedProducts.length} of {lookupData.products.length} products
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Products List - Compact Grid */}
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto px-1">
+              {paginatedProducts.length > 0 ? (
+                paginatedProducts.map((product: any) => (
+                  <Card
+                    key={product.skuCode}
+                    className="cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all group"
+                    onClick={() => handleProductSelect(product)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Left: Product Info */}
+                        <div className="flex-1 min-w-0">
+                          {product.pricing.discountApplied && (
+                            <div className="inline-flex items-center gap-1.5 mb-0.5">
+                              <span className="text-[10px] font-medium text-muted-foreground line-through">
+                                ${product.pricing.priceBeforeDiscount.toFixed(2)}
+                              </span>
+                              <span className="inline-flex items-center px-1.5 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-medium">
+                                Save {((product.pricing.priceBeforeDiscount - product.pricing.finalPrice) / product.pricing.priceBeforeDiscount * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-baseline gap-1.5">
+                            {product.isVariableValue ? (
+                              <div className="flex items-center gap-1">
+                                <Banknote className="h-4 w-4 text-primary" />
+                                <p className="font-semibold text-sm">
+                                  ${product.minAmount.toFixed(2)} - ${product.maxAmount.toFixed(2)}
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="font-semibold">
+                                {product.benefitAmount} {product.benefitUnit}
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {product.name}
+                          </p>
+                        </div>
+
+                        {/* Right: Price Button */}
+                        <div className="flex-shrink-0">
+                          <Button size="sm" className="group-hover:scale-105 transition-transform font-semibold">
+                            ${product.pricing.finalPrice.toFixed(2)}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      {lookupData.products.length === 0
+                        ? 'No products available for this number.'
+                        : 'No products match your filters.'}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Pagination - Compact */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 px-2 text-xs"
+                >
+                  Prev
+                </Button>
+
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="h-8 w-8 p-0 text-xs"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 px-2 text-xs"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+
+            {/* Back Button */}
+            <div className="text-center pt-2">
+              <button
+                onClick={() => {
+                  setLookupData(null);
+                  setPhoneNumber('');
+                  setError(null);
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ← Change phone number
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
 
       {/* Features Section */}
       {!lookupData && (
@@ -892,61 +1226,96 @@ export default function PublicStorefrontPage() {
 
                   {/* Payment Method Selection - Only show if payment methods are available */}
                   {paymentMethods?.available && paymentMethods?.methods?.length > 0 ? (
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Payment Method
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('stripe')}
-                          disabled={isProcessing}
-                          className={`p-3 border-2 rounded-lg flex flex-col items-center gap-1 transition-colors ${
-                            paymentMethod === 'stripe'
-                              ? 'border-primary bg-primary/5'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <CreditCard className="h-5 w-5" />
-                          <span className="text-xs font-medium">Card</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('paypal')}
-                          disabled={isProcessing}
-                          className={`p-3 border-2 rounded-lg flex flex-col items-center gap-1 transition-colors ${
-                            paymentMethod === 'paypal'
-                              ? 'border-primary bg-primary/5'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <DollarSign className="h-5 w-5" />
-                          <span className="text-xs font-medium">PayPal</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('pgpay')}
-                          disabled={isProcessing}
-                          className={`p-3 border-2 rounded-lg flex flex-col items-center gap-1 transition-colors ${
-                            paymentMethod === 'pgpay'
-                              ? 'border-primary bg-primary/5'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <Phone className="h-5 w-5" />
-                          <span className="text-xs font-medium">PGPay</span>
-                        </button>
+                    paymentMethods.methods.length > 1 ? (
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Payment Method
+                        </label>
+                        <div className={`grid gap-2 ${paymentMethods.methods.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                          {paymentMethods.methods.map((method: any) => {
+                            const providerConfig = {
+                              stripe: { icon: CreditCard, label: 'Card' },
+                              paypal: { icon: DollarSign, label: 'PayPal' },
+                              pgpay: { icon: Banknote, label: 'PGPay' },
+                            }[method.provider as 'stripe' | 'paypal' | 'pgpay'];
+
+                            if (!providerConfig) return null;
+
+                            const Icon = providerConfig.icon;
+
+                            return (
+                              <button
+                                key={method.provider}
+                                type="button"
+                                onClick={() => setPaymentMethod(method.provider as 'stripe' | 'paypal' | 'pgpay')}
+                                disabled={isProcessing}
+                                className={`p-3 border-2 rounded-lg flex flex-col items-center gap-1 transition-colors ${
+                                  paymentMethod === method.provider
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                <Icon className="h-5 w-5" />
+                                <span className="text-xs font-medium">{providerConfig.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      // Single payment method - show as readonly badge
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Payment Method
+                        </label>
+                        {(() => {
+                          const method = paymentMethods.methods[0];
+                          const providerConfig = {
+                            stripe: { icon: CreditCard, label: 'Card' },
+                            paypal: { icon: DollarSign, label: 'PayPal' },
+                            pgpay: { icon: Banknote, label: 'PGPay' },
+                          }[method.provider as 'stripe' | 'paypal' | 'pgpay'];
+
+                          if (!providerConfig) return null;
+
+                          const Icon = providerConfig.icon;
+
+                          return (
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/5 border-2 border-primary rounded-lg">
+                              <Icon className="h-5 w-5 text-primary" />
+                              <span className="text-sm font-medium">{providerConfig.label}</span>
+                              <CheckCircle className="h-4 w-4 text-primary ml-1" />
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )
                   ) : (
                     /* Payment Methods Error Banner */
-                    <div className="p-3 bg-red-50 border-2 border-red-400 rounded-lg">
+                    <div className={`p-3 border-2 rounded-lg ${
+                      paymentMethods?.inactiveCount > 0
+                        ? 'bg-amber-50 border-amber-400'
+                        : 'bg-red-50 border-red-400'
+                    }`}>
                       <div className="flex items-start gap-2">
-                        <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        {paymentMethods?.inactiveCount > 0 ? (
+                          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        )}
                         <div>
-                          <p className="font-semibold text-red-900 text-sm">Payment Methods Not Available</p>
-                          <p className="text-xs text-red-800 mt-1">
-                            This merchant has not configured any payment methods yet. Please contact support for assistance.
+                          <p className={`font-semibold text-sm ${
+                            paymentMethods?.inactiveCount > 0 ? 'text-amber-900' : 'text-red-900'
+                          }`}>
+                            {paymentMethods?.inactiveCount > 0
+                              ? 'Payment Methods Pending Activation'
+                              : 'Payment Methods Not Available'}
+                          </p>
+                          <p className={`text-xs mt-1 ${
+                            paymentMethods?.inactiveCount > 0 ? 'text-amber-800' : 'text-red-800'
+                          }`}>
+                            {paymentMethods?.message ||
+                              'This merchant has not configured any payment methods yet. Please contact support for assistance.'}
                           </p>
                         </div>
                       </div>
@@ -987,16 +1356,7 @@ export default function PublicStorefrontPage() {
                       (selectedProduct?.isVariableValue && !estimatedReceive && customAmount !== '') ||
                       (!paymentMethods?.available || paymentMethods?.methods?.length === 0)
                     }
-                    style={{ backgroundColor: primaryColor }}
-                    className={`flex-1 ${
-                      isProcessing ||
-                      !!amountError ||
-                      (selectedProduct?.isVariableValue && isEstimating) ||
-                      (selectedProduct?.isVariableValue && !estimatedReceive && customAmount !== '') ||
-                      (!paymentMethods?.available || paymentMethods?.methods?.length === 0)
-                        ? 'opacity-50 cursor-not-allowed'
-                        : ''
-                    }`}
+                    className="flex-1"
                   >
                     {isProcessing ? (
                       <div className="flex items-center gap-2">
@@ -1060,7 +1420,6 @@ export default function PublicStorefrontPage() {
                 </Button>
                 <Button
                   onClick={() => setPaymentStatus('idle')}
-                  style={{ backgroundColor: primaryColor }}
                 >
                   Try Again
                 </Button>

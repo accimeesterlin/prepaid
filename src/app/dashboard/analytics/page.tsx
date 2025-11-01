@@ -1,7 +1,7 @@
 'use client';
 
 import { TrendingUp, Download } from 'lucide-react';
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@pg-prepaid/ui';
+import { Button, Card, CardContent } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 
 export default function AnalyticsPage() {

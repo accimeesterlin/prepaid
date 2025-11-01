@@ -4,7 +4,7 @@ import { Discount } from '@pg-prepaid/db';
 import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
-import { verifyAuthMiddleware } from '@/lib/auth-middleware';
+import { requireAuth } from '@/lib/auth-middleware';
 
 /**
  * GET /api/v1/discounts/[id]
@@ -12,18 +12,16 @@ import { verifyAuthMiddleware } from '@/lib/auth-middleware';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await verifyAuthMiddleware(request);
-    if (!session) {
-      return createErrorResponse('Unauthorized', 401);
-    }
+    const { id } = await params;
+    const session = await requireAuth(request);
 
     await dbConnection.connect();
 
     const discount = await Discount.findOne({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -44,18 +42,16 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await verifyAuthMiddleware(request);
-    if (!session) {
-      return createErrorResponse('Unauthorized', 401);
-    }
+    const { id } = await params;
+    const session = await requireAuth(request);
 
     await dbConnection.connect();
 
     const discount = await Discount.findOne({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -145,18 +141,16 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await verifyAuthMiddleware(request);
-    if (!session) {
-      return createErrorResponse('Unauthorized', 401);
-    }
+    const { id } = await params;
+    const session = await requireAuth(request);
 
     await dbConnection.connect();
 
     const discount = await Discount.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -166,7 +160,7 @@ export async function DELETE(
 
     logger.info('Deleted discount', {
       orgId: session.orgId,
-      discountId: params.id,
+      discountId: id,
     });
 
     return createSuccessResponse({ message: 'Discount deleted successfully' });

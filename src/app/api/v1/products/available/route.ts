@@ -60,18 +60,18 @@ export async function GET(request: NextRequest) {
         // Transform to simplified format
         products = dingProducts.map((p) => {
           const providerInfo = providerMap.get(p.ProviderCode);
-          const isAirtime = !!p.BenefitTypes.Airtime;
-          const isData = !!p.BenefitTypes.Data;
+          const isAirtime = !!p.BenefitTypes?.Airtime;
+          const isData = !!p.BenefitTypes?.Data;
 
           let denominationAmount = 0;
           let denominationUnit = '';
 
-          if (isAirtime && p.BenefitTypes.Airtime) {
-            denominationAmount = p.BenefitTypes.Airtime.Amount;
-            denominationUnit = p.BenefitTypes.Airtime.CurrencyCode;
-          } else if (isData && p.BenefitTypes.Data) {
-            denominationAmount = p.BenefitTypes.Data.Amount;
-            denominationUnit = p.BenefitTypes.Data.Unit;
+          if (isAirtime && p.BenefitTypes?.Airtime) {
+            denominationAmount = p.BenefitTypes.Airtime.Amount || 0;
+            denominationUnit = p.BenefitTypes.Airtime.CurrencyCode || '';
+          } else if (isData && p.BenefitTypes?.Data) {
+            denominationAmount = p.BenefitTypes.Data.Amount || 0;
+            denominationUnit = p.BenefitTypes.Data.Unit || '';
           }
 
           return {
@@ -85,12 +85,12 @@ export async function GET(request: NextRequest) {
             type: isAirtime ? 'airtime' : 'data',
             benefitAmount: denominationAmount,
             benefitUnit: denominationUnit,
-            costPrice: p.Price.Amount,
-            costCurrency: p.Price.CurrencyCode,
-            receiveValue: p.ReceiveValue.Amount,
-            receiveCurrency: p.ReceiveValue.CurrencyCode,
-            validityPeriod: p.ValidityPeriodIso,
-            logo: providerInfo?.LogoUrl,
+            costPrice: p.Price?.Amount || 0,
+            costCurrency: p.Price?.CurrencyCode || 'USD',
+            receiveValue: p.ReceiveValue?.Amount || 0,
+            receiveCurrency: p.ReceiveValue?.CurrencyCode || 'USD',
+            validityPeriod: p.ValidityPeriodIso || '',
+            logo: providerInfo?.LogoUrl || '',
           };
         });
 

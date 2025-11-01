@@ -13,6 +13,7 @@ export {
 export { Alert, AlertTitle, AlertDescription } from './components/alert';
 export {
   Dialog,
+  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,

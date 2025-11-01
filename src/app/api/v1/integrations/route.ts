@@ -4,7 +4,7 @@ import { dbConnection } from '@pg-prepaid/db/connection';
 import { Integration } from '@pg-prepaid/db';
 
 // GET all integrations for the organization
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await getSession();
     if (!session) {

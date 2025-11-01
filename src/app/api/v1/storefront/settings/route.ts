@@ -48,6 +48,15 @@ export async function GET(request: NextRequest) {
           paypal: false,
           pgpay: false,
         },
+        productTypes: {
+          plansEnabled: true,
+          topupsEnabled: true,
+        },
+        balanceThreshold: {
+          enabled: false,
+          minimumBalance: 100,
+          currency: 'USD',
+        },
       });
     }
 
@@ -71,7 +80,7 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
 
-    let settings = await StorefrontSettings.findOne({ orgId: session.orgId });
+    const settings = await StorefrontSettings.findOne({ orgId: session.orgId });
 
     if (!settings) {
       return createErrorResponse('Storefront settings not found', 404);
@@ -133,6 +142,30 @@ export async function PATCH(request: NextRequest) {
         settings.paymentMethods.paypal = body.paymentMethods.paypal;
       if (body.paymentMethods.pgpay !== undefined)
         settings.paymentMethods.pgpay = body.paymentMethods.pgpay;
+    }
+
+    if (body.productTypes) {
+      // Validate at least one product type is enabled
+      const plansEnabled = body.productTypes.plansEnabled ?? settings.productTypes?.plansEnabled ?? true;
+      const topupsEnabled = body.productTypes.topupsEnabled ?? settings.productTypes?.topupsEnabled ?? true;
+
+      if (!plansEnabled && !topupsEnabled) {
+        return createErrorResponse('At least one product type must be enabled', 400);
+      }
+
+      if (body.productTypes.plansEnabled !== undefined)
+        settings.productTypes.plansEnabled = body.productTypes.plansEnabled;
+      if (body.productTypes.topupsEnabled !== undefined)
+        settings.productTypes.topupsEnabled = body.productTypes.topupsEnabled;
+    }
+
+    if (body.balanceThreshold) {
+      if (body.balanceThreshold.enabled !== undefined)
+        settings.balanceThreshold.enabled = body.balanceThreshold.enabled;
+      if (body.balanceThreshold.minimumBalance !== undefined)
+        settings.balanceThreshold.minimumBalance = body.balanceThreshold.minimumBalance;
+      if (body.balanceThreshold.currency)
+        settings.balanceThreshold.currency = body.balanceThreshold.currency;
     }
 
     if (body.legal) {

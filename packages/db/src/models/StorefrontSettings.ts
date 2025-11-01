@@ -4,6 +4,20 @@ export interface IStorefrontSettings extends Document {
   orgId: string;
   isActive: boolean;
 
+  // Methods
+  isCountryEnabled(countryCode: string): boolean;
+  calculateFinalPrice(
+    costPrice: number,
+    countryCode?: string
+  ): {
+    costPrice: number;
+    markup: number;
+    priceBeforeDiscount: number;
+    discount: number;
+    finalPrice: number;
+    discountApplied: boolean;
+  };
+
   // Available countries
   countries: {
     enabled: string[]; // ISO country codes to enable
@@ -47,6 +61,24 @@ export interface IStorefrontSettings extends Document {
     stripe: boolean;
     paypal: boolean;
     pgpay: boolean;
+  };
+
+  // Product type configuration
+  productTypes: {
+    plansEnabled: boolean; // Enable fixed-value plans
+    topupsEnabled: boolean; // Enable variable-value top-ups
+  };
+
+  // Balance threshold for blocking purchases
+  balanceThreshold: {
+    enabled: boolean;
+    minimumBalance: number; // Minimum DingConnect balance required
+    currency: string;
+  };
+
+  // Top-up processing settings
+  topupSettings: {
+    validateOnly: boolean; // If true, only validate transfers without actually sending them
   };
 
   // Terms and policies
@@ -151,6 +183,37 @@ const StorefrontSettingsSchema = new Schema<IStorefrontSettings>(
         default: false,
       },
       pgpay: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    productTypes: {
+      plansEnabled: {
+        type: Boolean,
+        default: true,
+      },
+      topupsEnabled: {
+        type: Boolean,
+        default: true,
+      },
+    },
+    balanceThreshold: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      minimumBalance: {
+        type: Number,
+        default: 100,
+        min: 0,
+      },
+      currency: {
+        type: String,
+        default: 'USD',
+      },
+    },
+    topupSettings: {
+      validateOnly: {
         type: Boolean,
         default: false,
       },

@@ -33,20 +33,24 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Organization not found', 404);
     }
 
-    // Get active payment providers for this organization
+    // Get payment providers for this organization (active and inactive)
+    // We include inactive providers that are configured so merchants know they need to test them
     const paymentProviders = await PaymentProvider.find({
       orgId,
-      status: 'active',
-    }).select('provider environment settings.acceptedCurrencies settings.minAmount settings.maxAmount');
+      status: { $in: ['active', 'inactive'] }, // Exclude only 'error' status
+    }).select('provider environment status settings.acceptedCurrencies settings.minAmount settings.maxAmount');
 
     logger.info('Payment providers found', {
       orgId,
       count: paymentProviders.length,
-      providers: paymentProviders.map(p => p.provider),
+      providers: paymentProviders.map(p => ({ provider: p.provider, status: p.status })),
     });
 
+    // Filter to only active providers for customer-facing
+    const activeProviders = paymentProviders.filter(p => p.status === 'active');
+
     // Map to public-facing format (don't expose credentials)
-    const availableMethods = paymentProviders.map(p => ({
+    const availableMethods = activeProviders.map(p => ({
       provider: p.provider,
       environment: p.environment,
       acceptedCurrencies: p.settings.acceptedCurrencies,
@@ -54,9 +58,16 @@ export async function GET(request: NextRequest) {
       maxAmount: p.settings.maxAmount,
     }));
 
+    // Check if there are any configured but not active providers
+    const inactiveProviders = paymentProviders.filter(p => p.status === 'inactive');
+
     return createSuccessResponse({
       available: availableMethods.length > 0,
       methods: availableMethods,
+      inactiveCount: inactiveProviders.length,
+      message: inactiveProviders.length > 0
+        ? `${inactiveProviders.length} payment method(s) configured but not yet tested. Test them in dashboard to activate.`
+        : undefined,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

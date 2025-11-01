@@ -12,15 +12,16 @@ import { requireAuth } from '@/lib/auth-middleware';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await requireAuth(request);
 
     await dbConnection.connect();
 
     const pricingRule = await PricingRule.findOne({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -41,15 +42,16 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await requireAuth(request);
 
     await dbConnection.connect();
 
     const pricingRule = await PricingRule.findOne({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -133,15 +135,16 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await requireAuth(request);
 
     await dbConnection.connect();
 
     const pricingRule = await PricingRule.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       orgId: session.orgId,
     });
 
@@ -151,7 +154,7 @@ export async function DELETE(
 
     logger.info('Deleted pricing rule', {
       orgId: session.orgId,
-      pricingRuleId: params.id,
+      pricingRuleId: id,
     });
 
     return createSuccessResponse({ message: 'Pricing rule deleted successfully' });

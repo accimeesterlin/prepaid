@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plug, Check, AlertCircle, Save, TestTube, Link as LinkIcon, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, AlertCircle, Save, TestTube, Link as LinkIcon, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Button,
   Card,
