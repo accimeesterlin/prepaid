@@ -14,14 +14,107 @@ function PaymentSuccessContent() {
 
   useEffect(() => {
     const orderIdParam = searchParams.get('orderId');
+    // PGPay returns 'token' not 'pgPayToken' in the success redirect
+    const pgPayToken = searchParams.get('token') || searchParams.get('pgPayToken');
+    const paymentStatus = searchParams.get('status');
+
     setOrderId(orderIdParam);
 
-    // Simulate verification delay
-    // In production, you might want to poll an API endpoint to check transaction status
-    setTimeout(() => {
-      setStatus('success');
-      setMessage('Your payment has been received! Your top-up will be processed shortly.');
-    }, 2000);
+    if (!orderIdParam) {
+      setStatus('error');
+      setMessage('No order ID provided');
+      return;
+    }
+
+    // Log the received parameters for debugging
+    console.log('Payment success params:', {
+      orderId: orderIdParam,
+      token: pgPayToken?.substring(0, 20) + '...',
+      status: paymentStatus,
+    });
+
+    // Track retry attempts to prevent infinite loops
+    let retryCount = 0;
+    const MAX_RETRIES = 20; // 20 retries * 3 seconds = 60 seconds max
+
+    // Verify the payment
+    const verifyPayment = async () => {
+      try {
+        console.log('Calling verification API...', { orderId: orderIdParam, hasToken: !!pgPayToken });
+
+        const response = await fetch('/api/v1/payments/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: orderIdParam, pgPayToken }),
+        });
+
+        console.log('Verification response:', { status: response.status, ok: response.ok });
+
+        const result = await response.json();
+
+        console.log('Verification result:', result);
+
+        // Log webhook errors if present
+        if (result.webhookError) {
+          console.error('Webhook error:', result.webhookError);
+        }
+
+        if (response.ok && result.success) {
+          console.log('Verification successful, status:', result.status);
+
+          if (result.status === 'completed') {
+            setStatus('success');
+            setMessage('Your payment has been confirmed and your top-up has been delivered!');
+          } else if (result.status === 'processing') {
+            setStatus('success');
+            setMessage('Your payment is confirmed. Your top-up is being processed and will be delivered shortly.');
+          } else if (result.status === 'paid') {
+            setStatus('success');
+            setMessage('Your payment has been confirmed! Your top-up is being sent now.');
+          } else if (result.status === 'failed') {
+            // Payment was confirmed but top-up failed
+            setStatus('error');
+            // Generic customer-facing message - don't expose internal issues
+            setMessage('We were unable to complete your top-up at this time. Your payment will be refunded within 3-5 business days. Please contact support if you have any questions.');
+          } else if (result.status === 'pending') {
+            // Payment is still pending - check retry count
+            retryCount++;
+            if (retryCount >= MAX_RETRIES) {
+              console.error('Max retries reached. Transaction stuck in pending state.');
+              setStatus('error');
+              setMessage('Payment verification is taking longer than expected. Please check your email for confirmation or contact support with your order ID.');
+            } else {
+              console.log(`Status pending, retry ${retryCount}/${MAX_RETRIES}, polling again in 3s`);
+              setMessage(`Verifying payment... (${retryCount}/${MAX_RETRIES})`);
+              setTimeout(verifyPayment, 3000);
+            }
+          } else {
+            // Unknown status - still retry with limit
+            retryCount++;
+            if (retryCount >= MAX_RETRIES) {
+              console.error('Max retries reached. Unknown status:', result.status);
+              setStatus('error');
+              setMessage('Payment verification timeout. Please contact support with your order ID.');
+            } else {
+              console.log(`Unknown status: ${result.status}, retry ${retryCount}/${MAX_RETRIES}, polling again in 3s`);
+              setTimeout(verifyPayment, 3000);
+            }
+          }
+        } else {
+          console.error('Verification failed:', result);
+          setStatus('error');
+          setMessage(result.message || 'Payment verification failed. Please contact support.');
+        }
+      } catch (error) {
+        console.error('Verification error:', error);
+        setStatus('error');
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setMessage(`Unable to verify payment: ${errorMessage}. Please contact support with your order ID.`);
+      }
+    };
+
+    // Start verification after a short delay
+    setTimeout(verifyPayment, 1000);
   }, [searchParams]);
 
   return (

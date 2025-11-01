@@ -77,8 +77,9 @@ export interface DingConnectBalance {
 export interface SendTransferRequest {
   SkuCode: string;
   SendValue?: number;
+  SendCurrencyIso?: string; // For variable-value products
   ReceiveValue?: number;
-  ReceiveCurrencyIso?: string;
+  ReceiveCurrencyIso?: string; // For fixed-value products
   AccountNumber: string;
   ValidateOnly?: boolean;
   DistributorRef?: string;
@@ -133,6 +134,8 @@ export class DingConnectService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
+    const requestBody = options.body;
+
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -143,8 +146,27 @@ export class DingConnectService {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      throw new Error(`DingConnect API Error: ${error.message || response.statusText}`);
+      let errorDetails: any = { message: 'Unknown error' };
+      let responseText = '';
+
+      try {
+        responseText = await response.text();
+        errorDetails = JSON.parse(responseText);
+      } catch (e) {
+        errorDetails = { message: responseText || response.statusText };
+      }
+
+      // Enhanced error with full details
+      const errorMessage = [
+        `DingConnect API Error: ${response.status} ${response.statusText}`,
+        `URL: ${endpoint}`,
+        `Request: ${requestBody || 'none'}`,
+        `Response: ${JSON.stringify(errorDetails)}`,
+        `Message: ${errorDetails.message || errorDetails.ErrorMessage || 'Unknown error'}`,
+        errorDetails.ErrorCodes ? `Error Codes: ${JSON.stringify(errorDetails.ErrorCodes)}` : '',
+      ].filter(Boolean).join(' | ');
+
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();

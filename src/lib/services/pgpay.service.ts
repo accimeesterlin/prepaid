@@ -33,6 +33,7 @@ export interface PGPayPaymentResponse {
   amount: number;
   currency: string;
   status: string;
+  redirectUrl: string; // PGPay returns the checkout URL
   // Additional fields returned by PGPay
   [key: string]: any;
 }

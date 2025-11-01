@@ -102,18 +102,23 @@ export async function POST(request: NextRequest) {
       orgId,
       provider: 'dingconnect',
       status: 'active',
-    });
+    }).select('+credentials.apiKey');
 
     if (!integration) {
       logger.error('DingConnect integration not found', { orgId });
       throw new PaymentError(400, 'DingConnect integration not configured');
     }
 
+    if (!integration.credentials?.apiKey) {
+      logger.error('DingConnect API key not found', { orgId });
+      throw new PaymentError(400, 'DingConnect API key not configured');
+    }
+
     logger.info('Integration found', { orgId, provider: integration.provider });
 
     // Initialize DingConnect service
     const dingConnect = createDingConnectService({
-      apiKey: integration.credentials.apiKey as string,
+      apiKey: integration.credentials.apiKey,
     });
 
     // Check DingConnect balance
@@ -125,17 +130,37 @@ export async function POST(request: NextRequest) {
         currency: balance.CurrencyCode,
       });
 
-      // Check if balance is sufficient (estimate cost as 90% of sell price)
-      const estimatedCost = finalAmount * 0.9;
+      // Check if balance is sufficient
+      // For variable-value products, use the full amount as estimate (safer)
+      // For fixed-value products, estimate 90% of sell price
+      const estimatedCost = productData.isVariableValue
+        ? finalAmount  // Use full amount for variable-value (includes fees)
+        : finalAmount * 0.9;  // 90% for fixed-value
+
       if (balance.AccountBalance < estimatedCost) {
-        logger.error('Insufficient DingConnect balance', {
+        logger.error('CRITICAL: Insufficient DingConnect balance - URGENT ACTION REQUIRED', {
           orgId,
           currentBalance: balance.AccountBalance,
           estimatedCost,
+          requiredAmount: finalAmount,
           currency: balance.CurrencyCode,
+          isVariableValue: productData.isVariableValue,
+          deficit: estimatedCost - balance.AccountBalance,
+          alert: 'PROVIDER ACCOUNT NEEDS IMMEDIATE FUNDING',
         });
-        throw new PaymentError(400, 'Insufficient balance in DingConnect account. Please contact support.');
+        // Customer-facing generic error - don't expose internal balance issues
+        throw new PaymentError(
+          503,
+          'Service temporarily unavailable. Please try again later or contact support if the issue persists.'
+        );
       }
+
+      logger.info('DingConnect balance sufficient', {
+        orgId,
+        balance: balance.AccountBalance,
+        estimatedCost,
+        remaining: balance.AccountBalance - estimatedCost,
+      });
     } catch (error) {
       if (error instanceof PaymentError) {
         throw error; // Re-throw PaymentError as-is
@@ -146,6 +171,19 @@ export async function POST(request: NextRequest) {
       });
       throw new PaymentError(500, 'Failed to verify account balance');
     }
+
+    // For variable-value products, use sendValue or fall back to finalAmount
+    const actualSendValue = productData.isVariableValue
+      ? (sendValue || finalAmount)  // Use sendValue if provided, otherwise use finalAmount
+      : undefined;
+
+    logger.info('Transaction metadata preparation', {
+      isVariableValue: productData.isVariableValue,
+      sendValue,
+      finalAmount,
+      actualSendValue,
+      skuCode: productData.skuCode,
+    });
 
     // Create transaction record
     const transaction = new Transaction({
@@ -170,10 +208,11 @@ export async function POST(request: NextRequest) {
         userAgent: request.headers.get('user-agent') || 'unknown',
         retryCount: 0,
         // Store product details for webhook processing
-        productSkuCode: (productData.providerCode || productData.skuCode) as string,
+        // Use skuCode directly (not providerCode which may have 'ding-' prefix)
+        productSkuCode: productData.skuCode as string,
         productName: productData.name as string,
-        isVariableValue: productData.isVariableValue as boolean,
-        sendValue: productData.isVariableValue ? (sendValue as number) : undefined,
+        isVariableValue: !!productData.isVariableValue,  // Ensure boolean
+        sendValue: actualSendValue,  // Use calculated value
         benefitAmount: productData.benefitAmount as number,
         benefitUnit: productData.benefitUnit as string,
         pgpayToken: undefined,
@@ -220,9 +259,10 @@ export async function POST(request: NextRequest) {
       });
 
       // Build success and error callback URLs
+      // Don't add orderId to URL - PGPay will add it along with token and status
       const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3002';
-      const successUrl = `${baseUrl}/payment/success?orderId=${transaction.orderId}`;
-      const errorUrl = `${baseUrl}/payment/cancel?orderId=${transaction.orderId}`;
+      const successUrl = `${baseUrl}/payment/success`;
+      const errorUrl = `${baseUrl}/payment/cancel`;
       const webhookUrl = `${baseUrl}/api/v1/webhooks/pgpay`;
 
       logger.info('Creating PGPay payment session', {
@@ -251,12 +291,18 @@ export async function POST(request: NextRequest) {
             transactionId: transaction._id?.toString(),
             productSkuCode: productData.skuCode as string,
             phoneNumber,
+            // Pass critical fields for webhook processing
+            isVariableValue: !!productData.isVariableValue,
+            sendValue: actualSendValue,
+            benefitAmount: productData.benefitAmount,
+            benefitUnit: productData.benefitUnit,
           },
         });
 
         logger.info('PGPay payment session created', {
           orderId: transaction.orderId,
           pgpayToken: pgpayResponse.token?.substring(0, 10) + '...',
+          redirectUrl: pgpayResponse.redirectUrl,
         });
 
         // Store PGPay token in transaction metadata
@@ -265,21 +311,18 @@ export async function POST(request: NextRequest) {
         transaction.status = 'pending' as typeof transaction.status;
         await transaction.save();
 
-        // Get checkout URL
-        const checkoutUrl = pgpay.getCheckoutUrl(pgpayResponse.token);
-
         logger.info('Returning PGPay checkout URL', {
           orderId: transaction.orderId,
-          checkoutUrl,
+          redirectUrl: pgpayResponse.redirectUrl,
         });
 
-        // Return checkout URL for redirect
+        // Return checkout URL for redirect (use redirectUrl from PGPay response)
         return createSuccessResponse({
           success: true,
           requiresRedirect: true,
           data: {
             orderId: transaction.orderId,
-            checkoutUrl,
+            checkoutUrl: pgpayResponse.redirectUrl, // Use PGPay's redirectUrl
             pgpayToken: pgpayResponse.token,
             message: 'Redirecting to payment gateway...',
           },
