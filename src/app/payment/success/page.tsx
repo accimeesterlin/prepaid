@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { CheckCircle, Loader2, AlertCircle, Beaker } from 'lucide-react';
 import { Button, Card, CardContent } from '@pg-prepaid/ui';
 
 function PaymentSuccessContent() {
@@ -11,6 +11,7 @@ function PaymentSuccessContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your payment...');
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [testMode, setTestMode] = useState(false);
 
   useEffect(() => {
     const orderIdParam = searchParams.get('orderId');
@@ -62,9 +63,16 @@ function PaymentSuccessContent() {
         if (response.ok && result.success) {
           console.log('Verification successful, status:', result.status);
 
+          // Set test mode flag from result
+          if (result.testMode) {
+            setTestMode(true);
+          }
+
           if (result.status === 'completed') {
             setStatus('success');
-            setMessage('Your payment has been confirmed and your top-up has been delivered!');
+            setMessage(result.testMode
+              ? 'Test transaction completed successfully. No actual top-up was sent.'
+              : 'Your payment has been confirmed and your top-up has been delivered!');
           } else if (result.status === 'processing') {
             setStatus('success');
             setMessage('Your payment is confirmed. Your top-up is being processed and will be delivered shortly.');
@@ -149,16 +157,40 @@ function PaymentSuccessContent() {
                   )}
                 </div>
 
+                {testMode && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+                    <div className="flex items-start gap-2 text-amber-800">
+                      <Beaker className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold">Test Mode Transaction</p>
+                        <p className="mt-1">
+                          This was a test transaction. No actual top-up was sent to the recipient.
+                          All records were created for testing purposes only.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
                   <p className="text-green-800">
                     <strong>What happens next?</strong>
                   </p>
-                  <ul className="list-disc list-inside text-green-700 mt-2 space-y-1 text-left">
-                    <li>Payment verification is complete</li>
-                    <li>Your top-up is being processed</li>
-                    <li>You&apos;ll receive an email confirmation shortly</li>
-                    <li>The top-up will be delivered within a few minutes</li>
-                  </ul>
+                  {testMode ? (
+                    <ul className="list-disc list-inside text-green-700 mt-2 space-y-1 text-left">
+                      <li>Payment verification is complete (test mode)</li>
+                      <li>Transaction recorded in database with test flag</li>
+                      <li>No actual top-up was sent</li>
+                      <li>You can review this test transaction in the dashboard</li>
+                    </ul>
+                  ) : (
+                    <ul className="list-disc list-inside text-green-700 mt-2 space-y-1 text-left">
+                      <li>Payment verification is complete</li>
+                      <li>Your top-up is being processed</li>
+                      <li>You&apos;ll receive an email confirmation shortly</li>
+                      <li>The top-up will be delivered within a few minutes</li>
+                    </ul>
+                  )}
                 </div>
 
                 <div className="flex gap-2">

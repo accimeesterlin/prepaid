@@ -21,6 +21,7 @@ import {
   Tag,
   Globe,
   DollarSign,
+  User,
 } from 'lucide-react';
 import { Button, Card } from '@pg-prepaid/ui';
 import { cn } from '@/lib/utils';
@@ -48,11 +49,14 @@ const navigation = [
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [organization, setOrganization] = useState<{ name: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; roles: string[] } | null>(null);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     fetchOrganization();
+    fetchUser();
   }, []);
 
   const fetchOrganization = async () => {
@@ -64,6 +68,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       }
     } catch (error) {
       console.error('Failed to fetch organization:', error);
+    }
+  };
+
+  const fetchUser = async () => {
+    try {
+      const response = await fetch('/api/v1/auth/me');
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
     }
   };
 
@@ -114,44 +130,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </Button>
           </div>
 
-          {/* Organization Switcher */}
-          <OrganizationSwitcher />
-
           {/* Navigation */}
           <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
+            {(() => {
+              // Find the best matching navigation item (most specific match)
+              const activeItem = navigation.find(nav => pathname === nav.href) ||
+                                 navigation.filter(nav => pathname.startsWith(nav.href + '/'))
+                                          .sort((a, b) => b.href.length - a.href.length)[0];
 
-          {/* User section */}
-          <div className="border-t p-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
+              return navigation.map((item) => {
+                const isActive = item.href === activeItem?.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.name}
+                  </Link>
+                );
+              });
+            })()}
+          </nav>
         </div>
       </aside>
 
@@ -170,11 +177,79 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <div className="flex-1" />
 
-          {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
-          </Button>
+          {/* Right side - Notifications, Organization Switcher, Profile */}
+          <div className="flex items-center gap-2">
+            {/* Notifications */}
+            <Button variant="ghost" size="sm" className="relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
+            </Button>
+
+            {/* Organization Switcher */}
+            <OrganizationSwitcher />
+
+            {/* Profile Dropdown */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                className="flex items-center gap-2"
+              >
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Button>
+
+              {/* Profile Dropdown Menu */}
+              {profileDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-64 rounded-md border bg-popover text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
+                    <div className="p-3 border-b">
+                      <p className="text-sm font-medium">{user?.email || 'Loading...'}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {user?.roles?.join(', ') || 'User'}
+                      </p>
+                    </div>
+                    <div className="p-1">
+                      <Link
+                        href="/dashboard/settings"
+                        className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent transition-colors"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </Link>
+                      <Link
+                        href="/dashboard/settings/organization"
+                        className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent transition-colors"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <Building2 className="h-4 w-4" />
+                        Organization
+                      </Link>
+                      <div className="border-t my-1" />
+                      <button
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          handleLogout();
+                        }}
+                        className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm text-destructive hover:bg-accent transition-colors"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </header>
 
         {/* Page content */}

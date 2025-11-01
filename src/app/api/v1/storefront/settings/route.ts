@@ -57,6 +57,9 @@ export async function GET(request: NextRequest) {
           minimumBalance: 100,
           currency: 'USD',
         },
+        topupSettings: {
+          validateOnly: true, // Default to test mode for safety
+        },
       });
     }
 
@@ -166,6 +169,11 @@ export async function PATCH(request: NextRequest) {
         settings.balanceThreshold.minimumBalance = body.balanceThreshold.minimumBalance;
       if (body.balanceThreshold.currency)
         settings.balanceThreshold.currency = body.balanceThreshold.currency;
+    }
+
+    if (body.topupSettings) {
+      if (body.topupSettings.validateOnly !== undefined)
+        settings.topupSettings.validateOnly = body.topupSettings.validateOnly;
     }
 
     if (body.legal) {

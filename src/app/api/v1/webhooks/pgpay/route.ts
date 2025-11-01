@@ -378,27 +378,22 @@ export async function POST(request: NextRequest) {
         exactRequestBody: transferRequest, // Log exact request for debugging
       });
 
-      const transferResult = await dingConnect.sendTransfer(
-        transferRequest as any
-      );
+      // In test mode, skip DingConnect API call entirely and mark as completed
+      if (validateOnly) {
+        logger.info("Test mode (validateOnly=true): Skipping DingConnect API call", {
+          orderId: transaction.orderId,
+          message: "Transaction will be marked as completed without real top-up"
+        });
 
-      logger.info("DingConnect transfer result", {
-        orderId: transaction.orderId,
-        transferId: transferResult.TransferId,
-        status: transferResult.Status,
-      });
-
-      // Update transaction with provider details
-      transaction.providerTransactionId = transferResult.TransferId?.toString();
-
-      if (transferResult.Status === "Completed" || validateOnly) {
         transaction.status = "completed";
         transaction.timeline.completedAt = new Date();
+        transaction.providerTransactionId = `TEST-${transaction.orderId}`;
+        (transaction.metadata as Record<string, unknown>).testMode = true;
 
-        logger.info("Transaction completed successfully", {
+        logger.info("Transaction completed successfully (TEST MODE)", {
           orderId: transaction.orderId,
-          transferId: transferResult.TransferId,
-          validateOnly,
+          transferId: `TEST-${transaction.orderId}`,
+          validateOnly: true,
         });
 
         // Create or update customer record
@@ -476,7 +471,107 @@ export async function POST(request: NextRequest) {
             totalRevenue: storefrontSettings.metadata.totalRevenue,
           });
         }
-      } else if (transferResult.Status === "Failed") {
+      } else {
+        // Production mode - call actual DingConnect API
+        const transferResult = await dingConnect.sendTransfer(
+          transferRequest as any
+        );
+
+        logger.info("DingConnect transfer result", {
+          orderId: transaction.orderId,
+          transferId: transferResult.TransferId,
+          status: transferResult.Status,
+        });
+
+        // Update transaction with provider details
+        transaction.providerTransactionId = transferResult.TransferId?.toString();
+
+        if (transferResult.Status === "Completed") {
+          transaction.status = "completed";
+          transaction.timeline.completedAt = new Date();
+
+          logger.info("Transaction completed successfully", {
+            orderId: transaction.orderId,
+            transferId: transferResult.TransferId,
+            validateOnly: false,
+          });
+
+          // Create or update customer record
+          try {
+            const existingCustomer = await Customer.findOne({
+              orgId: transaction.orgId,
+              phoneNumber: transaction.recipient.phoneNumber,
+            });
+
+            if (existingCustomer) {
+              // Update existing customer
+              existingCustomer.metadata = existingCustomer.metadata || {};
+              existingCustomer.metadata.totalPurchases =
+                (existingCustomer.metadata.totalPurchases || 0) + 1;
+              existingCustomer.metadata.totalSpent =
+                (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
+              existingCustomer.metadata.currency = transaction.currency;
+              existingCustomer.metadata.lastPurchaseAt = new Date();
+              await existingCustomer.save();
+
+              transaction.customerId = existingCustomer._id?.toString();
+
+              logger.info("Customer updated", {
+                customerId: existingCustomer._id?.toString(),
+                phoneNumber: phoneNumber.substring(0, 5) + "***",
+                totalPurchases: existingCustomer.metadata.totalPurchases,
+              });
+            } else {
+              // Create new customer
+              const newCustomer = await Customer.create({
+                orgId: transaction.orgId,
+                phoneNumber: transaction.recipient.phoneNumber,
+                email: transaction.recipient.email,
+                name: transaction.recipient.name,
+                metadata: {
+                  totalPurchases: 1,
+                  totalSpent: transaction.amount,
+                  currency: transaction.currency,
+                  lastPurchaseAt: new Date(),
+                },
+              });
+
+              transaction.customerId = newCustomer._id?.toString();
+
+              logger.info("New customer created", {
+                customerId: newCustomer._id?.toString(),
+                phoneNumber: phoneNumber.substring(0, 5) + "***",
+              });
+            }
+          } catch (customerError) {
+            logger.error("Failed to create/update customer", {
+              error:
+                customerError instanceof Error
+                  ? customerError.message
+                  : "Unknown error",
+              orderId: transaction.orderId,
+            });
+            // Don't fail the transaction if customer creation fails
+          }
+
+          // Update storefront metadata
+          if (storefrontSettings.metadata) {
+            const previousOrders = storefrontSettings.metadata.totalOrders || 0;
+            const previousRevenue = storefrontSettings.metadata.totalRevenue || 0;
+
+            storefrontSettings.metadata.totalOrders = previousOrders + 1;
+            storefrontSettings.metadata.totalRevenue =
+              previousRevenue + transaction.amount;
+            storefrontSettings.metadata.lastOrderAt = new Date();
+            await storefrontSettings.save();
+
+            logger.info("Storefront metadata updated", {
+              orgId: transaction.orgId,
+              totalOrders: storefrontSettings.metadata.totalOrders,
+              totalRevenue: storefrontSettings.metadata.totalRevenue,
+            });
+          }
+        } else if (transferResult.Status === "Failed") {
         transaction.status = "failed";
         transaction.timeline.failedAt = new Date();
         transaction.metadata.failureReason =
@@ -486,12 +581,13 @@ export async function POST(request: NextRequest) {
           orderId: transaction.orderId,
           errorMessage: transferResult.ErrorMessage,
         });
-      } else {
-        // Processing status remains
-        logger.info("Transaction still processing", {
-          orderId: transaction.orderId,
-          status: transferResult.Status,
-        });
+        } else {
+          // Processing status remains
+          logger.info("Transaction still processing", {
+            orderId: transaction.orderId,
+            status: transferResult.Status,
+          });
+        }
       }
 
       await transaction.save();

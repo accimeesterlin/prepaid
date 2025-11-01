@@ -215,7 +215,7 @@ const StorefrontSettingsSchema = new Schema<IStorefrontSettings>(
     topupSettings: {
       validateOnly: {
         type: Boolean,
-        default: false,
+        default: true, // Default to test mode for safety
       },
     },
     legal: {

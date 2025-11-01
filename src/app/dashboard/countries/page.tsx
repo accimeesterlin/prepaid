@@ -6,42 +6,94 @@ import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, toas
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { cn } from '@/lib/utils';
 
-// Common countries for top-up services
-const AVAILABLE_COUNTRIES = [
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'PG', name: 'Papua New Guinea', flag: '🇵🇬' },
-  { code: 'HT', name: 'Haiti', flag: '🇭🇹' },
-  { code: 'JM', name: 'Jamaica', flag: '🇯🇲' },
-  { code: 'AF', name: 'Afghanistan', flag: '🇦🇫' },
-  { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
-  { code: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
-  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
-  { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
-  { code: 'DO', name: 'Dominican Republic', flag: '🇩🇴' },
-  { code: 'GT', name: 'Guatemala', flag: '🇬🇹' },
-  { code: 'HN', name: 'Honduras', flag: '🇭🇳' },
-  { code: 'PE', name: 'Peru', flag: '🇵🇪' },
-  { code: 'VE', name: 'Venezuela', flag: '🇻🇪' },
-  { code: 'CU', name: 'Cuba', flag: '🇨🇺' },
-  { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
-  { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
-  { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
-  { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
-  { code: 'ET', name: 'Ethiopia', flag: '🇪🇹' },
-].sort((a, b) => a.name.localeCompare(b.name));
+// Helper to get country flag emoji from ISO code
+const getCountryFlag = (countryCode: string): string => {
+  if (!countryCode || countryCode.length !== 2) return '🌍';
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map((char) => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+};
+
+// ISO 3166-1 alpha-2 country codes with names
+const COUNTRY_NAMES: Record<string, string> = {
+  'AF': 'Afghanistan', 'AL': 'Albania', 'DZ': 'Algeria', 'AS': 'American Samoa',
+  'AD': 'Andorra', 'AO': 'Angola', 'AI': 'Anguilla', 'AQ': 'Antarctica',
+  'AG': 'Antigua and Barbuda', 'AR': 'Argentina', 'AM': 'Armenia', 'AW': 'Aruba',
+  'AU': 'Australia', 'AT': 'Austria', 'AZ': 'Azerbaijan', 'BS': 'Bahamas',
+  'BH': 'Bahrain', 'BD': 'Bangladesh', 'BB': 'Barbados', 'BY': 'Belarus',
+  'BE': 'Belgium', 'BZ': 'Belize', 'BJ': 'Benin', 'BM': 'Bermuda',
+  'BT': 'Bhutan', 'BO': 'Bolivia', 'BA': 'Bosnia and Herzegovina', 'BW': 'Botswana',
+  'BR': 'Brazil', 'BN': 'Brunei', 'BG': 'Bulgaria', 'BF': 'Burkina Faso',
+  'BI': 'Burundi', 'KH': 'Cambodia', 'CM': 'Cameroon', 'CA': 'Canada',
+  'CV': 'Cape Verde', 'KY': 'Cayman Islands', 'CF': 'Central African Republic', 'TD': 'Chad',
+  'CL': 'Chile', 'CN': 'China', 'CO': 'Colombia', 'KM': 'Comoros',
+  'CG': 'Congo', 'CD': 'Congo (DRC)', 'CK': 'Cook Islands', 'CR': 'Costa Rica',
+  'CI': 'Côte d\'Ivoire', 'HR': 'Croatia', 'CU': 'Cuba', 'CW': 'Curaçao',
+  'CY': 'Cyprus', 'CZ': 'Czech Republic', 'DK': 'Denmark', 'DJ': 'Djibouti',
+  'DM': 'Dominica', 'DO': 'Dominican Republic', 'EC': 'Ecuador', 'EG': 'Egypt',
+  'SV': 'El Salvador', 'GQ': 'Equatorial Guinea', 'ER': 'Eritrea', 'EE': 'Estonia',
+  'ET': 'Ethiopia', 'FJ': 'Fiji', 'FI': 'Finland', 'FR': 'France',
+  'GF': 'French Guiana', 'PF': 'French Polynesia', 'GA': 'Gabon', 'GM': 'Gambia',
+  'GE': 'Georgia', 'DE': 'Germany', 'GH': 'Ghana', 'GI': 'Gibraltar',
+  'GR': 'Greece', 'GL': 'Greenland', 'GD': 'Grenada', 'GP': 'Guadeloupe',
+  'GU': 'Guam', 'GT': 'Guatemala', 'GG': 'Guernsey', 'GN': 'Guinea',
+  'GW': 'Guinea-Bissau', 'GY': 'Guyana', 'HT': 'Haiti', 'HN': 'Honduras',
+  'HK': 'Hong Kong', 'HU': 'Hungary', 'IS': 'Iceland', 'IN': 'India',
+  'ID': 'Indonesia', 'IR': 'Iran', 'IQ': 'Iraq', 'IE': 'Ireland',
+  'IM': 'Isle of Man', 'IL': 'Israel', 'IT': 'Italy', 'JM': 'Jamaica',
+  'JP': 'Japan', 'JE': 'Jersey', 'JO': 'Jordan', 'KZ': 'Kazakhstan',
+  'KE': 'Kenya', 'KI': 'Kiribati', 'KP': 'Korea (North)', 'KR': 'Korea (South)',
+  'KW': 'Kuwait', 'KG': 'Kyrgyzstan', 'LA': 'Laos', 'LV': 'Latvia',
+  'LB': 'Lebanon', 'LS': 'Lesotho', 'LR': 'Liberia', 'LY': 'Libya',
+  'LI': 'Liechtenstein', 'LT': 'Lithuania', 'LU': 'Luxembourg', 'MO': 'Macao',
+  'MK': 'Macedonia', 'MG': 'Madagascar', 'MW': 'Malawi', 'MY': 'Malaysia',
+  'MV': 'Maldives', 'ML': 'Mali', 'MT': 'Malta', 'MH': 'Marshall Islands',
+  'MQ': 'Martinique', 'MR': 'Mauritania', 'MU': 'Mauritius', 'YT': 'Mayotte',
+  'MX': 'Mexico', 'FM': 'Micronesia', 'MD': 'Moldova', 'MC': 'Monaco',
+  'MN': 'Mongolia', 'ME': 'Montenegro', 'MS': 'Montserrat', 'MA': 'Morocco',
+  'MZ': 'Mozambique', 'MM': 'Myanmar', 'NA': 'Namibia', 'NR': 'Nauru',
+  'NP': 'Nepal', 'NL': 'Netherlands', 'NC': 'New Caledonia', 'NZ': 'New Zealand',
+  'NI': 'Nicaragua', 'NE': 'Niger', 'NG': 'Nigeria', 'NU': 'Niue',
+  'NF': 'Norfolk Island', 'MP': 'Northern Mariana Islands', 'NO': 'Norway', 'OM': 'Oman',
+  'PK': 'Pakistan', 'PW': 'Palau', 'PS': 'Palestine', 'PA': 'Panama',
+  'PG': 'Papua New Guinea', 'PY': 'Paraguay', 'PE': 'Peru', 'PH': 'Philippines',
+  'PL': 'Poland', 'PT': 'Portugal', 'PR': 'Puerto Rico', 'QA': 'Qatar',
+  'RE': 'Réunion', 'RO': 'Romania', 'RU': 'Russia', 'RW': 'Rwanda',
+  'WS': 'Samoa', 'SM': 'San Marino', 'ST': 'São Tomé and Príncipe', 'SA': 'Saudi Arabia',
+  'SN': 'Senegal', 'RS': 'Serbia', 'SC': 'Seychelles', 'SL': 'Sierra Leone',
+  'SG': 'Singapore', 'SX': 'Sint Maarten', 'SK': 'Slovakia', 'SI': 'Slovenia',
+  'SB': 'Solomon Islands', 'SO': 'Somalia', 'ZA': 'South Africa', 'SS': 'South Sudan',
+  'ES': 'Spain', 'LK': 'Sri Lanka', 'SD': 'Sudan', 'SR': 'Suriname',
+  'SZ': 'Swaziland', 'SE': 'Sweden', 'CH': 'Switzerland', 'SY': 'Syria',
+  'TW': 'Taiwan', 'TJ': 'Tajikistan', 'TZ': 'Tanzania', 'TH': 'Thailand',
+  'TL': 'Timor-Leste', 'TG': 'Togo', 'TO': 'Tonga', 'TT': 'Trinidad and Tobago',
+  'TN': 'Tunisia', 'TR': 'Turkey', 'TM': 'Turkmenistan', 'TC': 'Turks and Caicos Islands',
+  'TV': 'Tuvalu', 'UG': 'Uganda', 'UA': 'Ukraine', 'AE': 'United Arab Emirates',
+  'GB': 'United Kingdom', 'US': 'United States', 'UY': 'Uruguay', 'UZ': 'Uzbekistan',
+  'VU': 'Vanuatu', 'VA': 'Vatican City', 'VE': 'Venezuela', 'VN': 'Vietnam',
+  'VG': 'Virgin Islands (British)', 'VI': 'Virgin Islands (US)', 'WF': 'Wallis and Futuna', 'YE': 'Yemen',
+  'ZM': 'Zambia', 'ZW': 'Zimbabwe',
+};
+
+interface Country {
+  code: string;
+  name: string;
+  flag: string;
+}
 
 export default function CountriesPage() {
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [availableCountries, setAvailableCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(false);
 
   useEffect(() => {
     fetchSettings();
+    fetchAvailableCountries();
   }, []);
 
   const fetchSettings = async () => {
@@ -55,6 +107,64 @@ export default function CountriesPage() {
       console.error('Failed to fetch settings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailableCountries = async () => {
+    setLoadingCountries(true);
+    try {
+      // Fetch all providers to get unique country list
+      const response = await fetch('/api/v1/integrations/providers');
+      if (response.ok) {
+        const data = await response.json();
+
+        // Extract unique countries from providers
+        const countryCodes = new Set<string>();
+        if (data.providers && Array.isArray(data.providers)) {
+          data.providers.forEach((provider: any) => {
+            if (provider.CountryIso) {
+              countryCodes.add(provider.CountryIso);
+            }
+          });
+        }
+
+        // Map country codes to full country objects
+        const countries: Country[] = Array.from(countryCodes)
+          .map(code => ({
+            code,
+            name: COUNTRY_NAMES[code] || code,
+            flag: getCountryFlag(code),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setAvailableCountries(countries);
+      } else {
+        // Fallback to using all countries from COUNTRY_NAMES if API fails
+        const fallbackCountries: Country[] = Object.entries(COUNTRY_NAMES)
+          .map(([code, name]) => ({
+            code,
+            name,
+            flag: getCountryFlag(code),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setAvailableCountries(fallbackCountries);
+      }
+    } catch (error) {
+      console.error('Failed to fetch countries:', error);
+
+      // Fallback to using all countries from COUNTRY_NAMES
+      const fallbackCountries: Country[] = Object.entries(COUNTRY_NAMES)
+        .map(([code, name]) => ({
+          code,
+          name,
+          flag: getCountryFlag(code),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      setAvailableCountries(fallbackCountries);
+    } finally {
+      setLoadingCountries(false);
     }
   };
 
@@ -118,7 +228,7 @@ export default function CountriesPage() {
       countries: {
         ...settings?.countries,
         allEnabled: !settings?.countries?.allEnabled,
-        enabled: settings?.countries?.allEnabled ? [] : AVAILABLE_COUNTRIES.map(c => c.code),
+        enabled: settings?.countries?.allEnabled ? [] : availableCountries.map(c => c.code),
       },
     });
   };
@@ -127,22 +237,24 @@ export default function CountriesPage() {
     return settings?.countries?.allEnabled || settings?.countries?.enabled?.includes(countryCode);
   };
 
-  const filteredCountries = AVAILABLE_COUNTRIES.filter(country =>
+  const filteredCountries = availableCountries.filter(country =>
     country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     country.code.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const enabledCount = settings?.countries?.allEnabled
-    ? AVAILABLE_COUNTRIES.length
+    ? availableCountries.length
     : (settings?.countries?.enabled?.length || 0);
 
-  if (loading) {
+  if (loading || loadingCountries) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading country settings...</p>
+            <p className="text-muted-foreground">
+              {loadingCountries ? 'Loading available countries...' : 'Loading country settings...'}
+            </p>
           </div>
         </div>
       </DashboardLayout>

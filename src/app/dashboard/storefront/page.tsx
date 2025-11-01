@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Store, Copy, CheckCircle, ExternalLink, Save } from 'lucide-react';
+import Link from 'next/link';
+import { Store, Copy, CheckCircle, ExternalLink, Save, Settings } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, toast } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 
@@ -111,10 +112,18 @@ export default function StorefrontPage() {
               Configure your public-facing storefront for selling top-ups
             </p>
           </div>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/settings/storefront">
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Advanced Settings
+              </Button>
+            </Link>
+            <Button onClick={handleSave} disabled={saving}>
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
         </div>
 
         {/* Storefront URL Card */}

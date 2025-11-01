@@ -2,12 +2,15 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { Search, Phone, DollarSign, Zap, Shield, Filter, Tag, SlidersHorizontal, Globe, CreditCard, CheckCircle, XCircle, Wifi, Banknote, AlertCircle } from 'lucide-react';
+import { Search, Phone, DollarSign, Zap, Shield, Filter, Tag, SlidersHorizontal, Globe, CreditCard, CheckCircle, XCircle, Wifi, Banknote, AlertCircle, Beaker } from 'lucide-react';
 import { Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, toast } from '@pg-prepaid/ui';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export default function PublicStorefrontPage() {
   const params = useParams();
   const orgSlug = params.orgSlug as string;
+  const { t } = useLanguage();
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
@@ -44,16 +47,16 @@ export default function PublicStorefrontPage() {
     const cleaned = phone.replace(/\D/g, '');
 
     if (cleaned.length < 10) {
-      return { valid: false, error: 'Phone number is too short (minimum 10 digits)' };
+      return { valid: false, error: t('storefront.phoneNumberTooShort') };
     }
 
     if (cleaned.length > 15) {
-      return { valid: false, error: 'Phone number is too long (maximum 15 digits)' };
+      return { valid: false, error: t('storefront.phoneNumberTooLong') };
     }
 
     // Basic international format check
     if (!cleaned.match(/^\d{10,15}$/)) {
-      return { valid: false, error: 'Invalid phone number format' };
+      return { valid: false, error: t('storefront.invalidPhoneFormat') };
     }
 
     return { valid: true };
@@ -288,14 +291,14 @@ export default function PublicStorefrontPage() {
     const trimmed = phoneNumber.trim();
 
     if (!trimmed) {
-      setError('Please enter a phone number');
+      setError(t('storefront.enterValidPhoneNumber'));
       return;
     }
 
     // Validate phone number
     const validation = validatePhoneNumber(trimmed);
     if (!validation.valid) {
-      setError(validation.error || 'Invalid phone number');
+      setError(validation.error || t('storefront.invalidPhoneNumber'));
       return;
     }
 
@@ -329,10 +332,10 @@ export default function PublicStorefrontPage() {
         setShowRecentNumbers(false);
       } else {
         // API returns RFC 7807 Problem Details format with "detail" field
-        setError(data.detail || data.error || data.message || 'Failed to lookup phone number');
+        setError(data.detail || data.error || data.message || t('storefront.lookupFailed'));
       }
     } catch (err: any) {
-      setError('An error occurred. Please try again.');
+      setError(t('storefront.errorOccurred'));
     } finally {
       setLoading(false);
     }
@@ -412,10 +415,10 @@ export default function PublicStorefrontPage() {
         setAmountError('');
       } else if (amount < selectedProduct.minAmount) {
         setEstimatedReceive(null);
-        setAmountError(`Minimum amount is $${selectedProduct.minAmount.toFixed(2)}`);
+        setAmountError(t('storefront.enterAmountMin', { min: selectedProduct.minAmount.toFixed(2) }));
       } else if (amount > selectedProduct.maxAmount) {
         setEstimatedReceive(null);
-        setAmountError(`Maximum amount is $${selectedProduct.maxAmount.toFixed(2)}`);
+        setAmountError(t('storefront.enterAmountMax', { max: selectedProduct.maxAmount.toFixed(2) }));
       } else {
         // Valid range - clear error and fetch estimate
         setAmountError('');
@@ -435,8 +438,8 @@ export default function PublicStorefrontPage() {
   const handlePayment = async () => {
     if (!customerEmail) {
       toast({
-        title: 'Email Required',
-        description: 'Please enter your email address to continue.',
+        title: t('storefront.emailRequired'),
+        description: t('storefront.emailRequiredDesc'),
         variant: 'error',
       });
       return;
@@ -448,15 +451,15 @@ export default function PublicStorefrontPage() {
     if (selectedProduct.isVariableValue) {
       const amount = parseFloat(customAmount);
       if (isNaN(amount) || amount <= 0) {
-        setAmountError('Please enter a valid amount');
+        setAmountError(t('storefront.enterAmountValid'));
         return;
       }
       if (amount < selectedProduct.minAmount) {
-        setAmountError(`Amount must be at least $${selectedProduct.minAmount.toFixed(2)}`);
+        setAmountError(t('storefront.enterAmountMin', { min: selectedProduct.minAmount.toFixed(2) }));
         return;
       }
       if (amount > selectedProduct.maxAmount) {
-        setAmountError(`Amount cannot exceed $${selectedProduct.maxAmount.toFixed(2)}`);
+        setAmountError(t('storefront.enterAmountMax', { max: selectedProduct.maxAmount.toFixed(2) }));
         return;
       }
       setAmountError('');
@@ -506,8 +509,8 @@ export default function PublicStorefrontPage() {
         }
 
         toast({
-          title: 'Redirecting to Payment Gateway',
-          description: 'Please complete your payment...',
+          title: t('storefront.redirectingToPayment'),
+          description: t('storefront.completePaymentDesc'),
           variant: 'default',
         });
 
@@ -528,10 +531,10 @@ export default function PublicStorefrontPage() {
         : `${selectedProduct.benefitAmount} ${selectedProduct.benefitUnit}`;
 
       toast({
-        title: 'Top-up Successful!',
+        title: t('storefront.paymentSuccessful'),
         description: data.data?.validateOnly
-          ? 'Transaction validated successfully (test mode)'
-          : `${receivedAmount} has been sent to ${lookupData.phoneNumber}`,
+          ? t('storefront.transactionValidated')
+          : t('storefront.topupSuccessToast', { amount: receivedAmount, phone: lookupData.phoneNumber }),
         variant: 'success',
       });
 
@@ -546,8 +549,8 @@ export default function PublicStorefrontPage() {
     } catch (error: any) {
       setPaymentStatus('error');
       toast({
-        title: 'Payment Failed',
-        description: error.message || 'Something went wrong. Please try again.',
+        title: t('storefront.paymentFailed'),
+        description: error.message || t('storefront.paymentFailedDesc'),
         variant: 'error',
       });
     } finally {
@@ -643,19 +646,36 @@ export default function PublicStorefrontPage() {
         <div className="container max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold">
-              {lookupData?.branding?.businessName || 'Mobile Top-Up'}
+              {lookupData?.branding?.businessName || t('storefront.title')}
             </h1>
-            {lookupData && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Phone className="h-4 w-4" />
-                <span className="hidden sm:inline">
-                  {lookupData.phoneNumber.substring(0, 5)}...{lookupData.phoneNumber.substring(lookupData.phoneNumber.length - 4)}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher />
+              {lookupData && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {lookupData.phoneNumber.substring(0, 5)}...{lookupData.phoneNumber.substring(lookupData.phoneNumber.length - 4)}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
+
+      {/* Test Mode Banner */}
+      {lookupData?.testMode && (
+        <div className="border-b bg-amber-50 border-amber-200">
+          <div className="container max-w-6xl mx-auto px-4 py-2">
+            <div className="flex items-center justify-center gap-2 text-amber-800">
+              <Beaker className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                {t('storefront.testModeBanner')}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content - Typeform Style */}
       <main className="flex-1 flex items-center justify-center px-4 py-8">
@@ -667,10 +687,10 @@ export default function PublicStorefrontPage() {
                 <Phone className="h-8 w-8 text-primary" />
               </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Enter phone number
+                {t('storefront.phoneLabel')}
               </h2>
               <p className="text-muted-foreground text-lg">
-                {lookupData?.branding?.description || 'We\'ll find the best top-up options for you'}
+                {lookupData?.branding?.description || t('storefront.subtitle')}
               </p>
             </div>
 
@@ -681,7 +701,7 @@ export default function PublicStorefrontPage() {
                     <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input
                       type="tel"
-                      placeholder="+1 234 567 8900"
+                      placeholder={t('storefront.phonePlaceholder')}
                       className="w-full pl-12 pr-4 py-4 text-lg border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                       value={phoneNumber}
                       onChange={handlePhoneChange}
@@ -698,7 +718,7 @@ export default function PublicStorefrontPage() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="p-2 border-b">
-                        <p className="text-xs font-medium text-muted-foreground px-2">Recent Numbers</p>
+                        <p className="text-xs font-medium text-muted-foreground px-2">{t('storefront.recentNumbers')}</p>
                       </div>
                       <div className="p-1">
                         {recentNumbers.map((number, index) => (
@@ -720,7 +740,7 @@ export default function PublicStorefrontPage() {
                   )}
 
                   <p className="text-xs text-muted-foreground text-center">
-                    Include country code (e.g., +1 for USA, +509 for Haiti)
+                    {t('storefront.phonePlaceholder')}
                   </p>
                 </div>
 
@@ -742,18 +762,18 @@ export default function PublicStorefrontPage() {
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2" />
-                      Finding top-ups...
+                      {t('storefront.searching')}
                     </>
                   ) : (
                     <>
-                      Continue
+                      {t('storefront.continue')}
                       <Search className="h-5 w-5 ml-2" />
                     </>
                   )}
                 </Button>
 
                 <div className="text-center text-xs text-muted-foreground">
-                  Press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Enter ↵</kbd>
+                  {t('storefront.pressEnter')} <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Enter ↵</kbd>
                 </div>
               </CardContent>
             </Card>
@@ -765,12 +785,12 @@ export default function PublicStorefrontPage() {
             <div className="flex items-center gap-2 text-sm justify-center">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium">✓</div>
-                <span className="text-muted-foreground">Phone verified</span>
+                <span className="text-muted-foreground">{t('storefront.phoneVerified')}</span>
               </div>
               <div className="h-px bg-border flex-1 max-w-[60px]"></div>
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full border-2 border-primary flex items-center justify-center text-xs font-medium">2</div>
-                <span className="font-medium">Choose top-up</span>
+                <span className="font-medium">{t('storefront.chooseTopup')}</span>
               </div>
             </div>
 
@@ -790,7 +810,7 @@ export default function PublicStorefrontPage() {
               )}
 
               <h2 className="text-2xl md:text-3xl font-bold">
-                Choose your top-up
+                {t('storefront.chooseYourTopup')}
               </h2>
 
               {/* Country & Operator Pills */}
@@ -825,7 +845,7 @@ export default function PublicStorefrontPage() {
                         : 'hover:bg-background/50'
                     }`}
                   >
-                    All ({lookupData.products.length})
+                    {t('storefront.all')} ({lookupData.products.length})
                   </button>
                   <button
                     onClick={() => {
@@ -838,7 +858,7 @@ export default function PublicStorefrontPage() {
                         : 'hover:bg-background/50'
                     }`}
                   >
-                    Top-up
+                    {t('storefront.topup')}
                   </button>
                   <button
                     onClick={() => {
@@ -851,7 +871,7 @@ export default function PublicStorefrontPage() {
                         : 'hover:bg-background/50'
                     }`}
                   >
-                    Plans
+                    {t('storefront.plans')}
                   </button>
                 </div>
               </div>
@@ -860,7 +880,7 @@ export default function PublicStorefrontPage() {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="p-2 rounded-lg hover:bg-muted transition-colors"
-                aria-label={showFilters ? 'Hide filters' : 'Show filters'}
+                aria-label={showFilters ? t('storefront.clear') : t('storefront.searchPlaceholder')}
               >
                 <SlidersHorizontal className={`h-4 w-4 transition-colors ${showFilters ? 'text-primary' : 'text-muted-foreground'}`} />
               </button>
@@ -876,7 +896,7 @@ export default function PublicStorefrontPage() {
                       <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <input
                         type="text"
-                        placeholder="Search..."
+                        placeholder={t('storefront.searchPlaceholder')}
                         className="w-full pl-8 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring transition-all text-xs"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -893,7 +913,7 @@ export default function PublicStorefrontPage() {
                           setCurrentPage(1);
                         }}
                       >
-                        <option value="all">All Providers</option>
+                        <option value="all">{t('storefront.allProviders')}</option>
                         {lookupData.operators.map((operator: any) => (
                           <option key={operator.code} value={operator.code}>
                             {operator.name}
@@ -911,10 +931,10 @@ export default function PublicStorefrontPage() {
                         setCurrentPage(1);
                       }}
                     >
-                      <option value="price-asc">Price ↑</option>
-                      <option value="price-desc">Price ↓</option>
-                      <option value="value-asc">Value ↑</option>
-                      <option value="value-desc">Value ↓</option>
+                      <option value="price-asc">{t('storefront.priceAsc')}</option>
+                      <option value="price-desc">{t('storefront.priceDesc')}</option>
+                      <option value="value-asc">{t('storefront.valueAsc')}</option>
+                      <option value="value-desc">{t('storefront.valueDesc')}</option>
                     </select>
 
                     {/* Clear Filters */}
@@ -926,7 +946,7 @@ export default function PublicStorefrontPage() {
                         }}
                         className="px-2.5 py-2 text-xs font-medium text-primary hover:bg-primary/10 rounded-md transition-colors whitespace-nowrap"
                       >
-                        Clear
+                        {t('storefront.clear')}
                       </button>
                     )}
                   </div>
@@ -934,7 +954,7 @@ export default function PublicStorefrontPage() {
                   {/* Results count */}
                   {(searchQuery || filterByProvider !== 'all') && (
                     <p className="mt-2 text-xs text-muted-foreground text-center">
-                      {filteredAndSortedProducts.length} of {lookupData.products.length} products
+                      {t('storefront.productsCount', { filtered: filteredAndSortedProducts.length, total: lookupData.products.length })}
                     </p>
                   )}
                 </CardContent>
@@ -998,8 +1018,8 @@ export default function PublicStorefrontPage() {
                   <CardContent className="py-8 text-center">
                     <p className="text-sm text-muted-foreground">
                       {lookupData.products.length === 0
-                        ? 'No products available for this number.'
-                        : 'No products match your filters.'}
+                        ? t('storefront.noProductsForNumber')
+                        : t('storefront.noProductsMatchFilters')}
                     </p>
                   </CardContent>
                 </Card>
@@ -1016,7 +1036,7 @@ export default function PublicStorefrontPage() {
                   disabled={currentPage === 1}
                   className="h-8 px-2 text-xs"
                 >
-                  Prev
+                  {t('storefront.prev')}
                 </Button>
 
                 <div className="flex items-center gap-0.5">
@@ -1053,7 +1073,7 @@ export default function PublicStorefrontPage() {
                   disabled={currentPage === totalPages}
                   className="h-8 px-2 text-xs"
                 >
-                  Next
+                  {t('storefront.next')}
                 </Button>
               </div>
             )}
@@ -1068,7 +1088,7 @@ export default function PublicStorefrontPage() {
                 }}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                ← Change phone number
+                {t('storefront.changePhoneNumber')}
               </button>
             </div>
           </div>
@@ -1084,9 +1104,9 @@ export default function PublicStorefrontPage() {
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                   <Zap className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="font-semibold">Instant Delivery</h3>
+                <h3 className="font-semibold">{t('storefront.instantDelivery')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  99% of top-ups delivered within 3 seconds
+                  {t('storefront.instantDeliveryDesc')}
                 </p>
               </div>
 
@@ -1094,9 +1114,9 @@ export default function PublicStorefrontPage() {
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                   <Shield className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="font-semibold">Secure & Safe</h3>
+                <h3 className="font-semibold">{t('storefront.secureSafe')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Your payment information is encrypted and secure
+                  {t('storefront.secureSafeDesc')}
                 </p>
               </div>
 
@@ -1104,9 +1124,9 @@ export default function PublicStorefrontPage() {
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                   <DollarSign className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="font-semibold">Best Rates</h3>
+                <h3 className="font-semibold">{t('storefront.bestRates')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Competitive pricing with special offers
+                  {t('storefront.bestRatesDesc')}
                 </p>
               </div>
             </div>
@@ -1120,10 +1140,18 @@ export default function PublicStorefrontPage() {
           {paymentStatus === 'idle' || paymentStatus === 'processing' ? (
             <>
               <DialogHeader>
-                <DialogTitle>Complete Your Purchase</DialogTitle>
+                <DialogTitle>{t('storefront.completePayment')}</DialogTitle>
                 <DialogDescription>
-                  You're about to send a top-up to {lookupData?.phoneNumber}
+                  {t('storefront.sendingTo', { phone: lookupData?.phoneNumber })}
                 </DialogDescription>
+                {lookupData?.testMode && (
+                  <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
+                    <Beaker className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-xs font-medium">
+                      {t('storefront.testModeModal')}
+                    </span>
+                  </div>
+                )}
               </DialogHeader>
 
               {selectedProduct && (
@@ -1133,7 +1161,7 @@ export default function PublicStorefrontPage() {
                     <h4 className="font-semibold mb-2">{selectedProduct.name}</h4>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Provider:</span>
+                        <span className="text-gray-600">{t('storefront.provider')}</span>
                         <span className="font-medium">{selectedProduct.providerName}</span>
                       </div>
 
@@ -1141,7 +1169,7 @@ export default function PublicStorefrontPage() {
                       {selectedProduct.isVariableValue ? (
                         <div className="space-y-2 py-2">
                           <label className="block text-sm font-medium text-gray-700">
-                            Enter Amount (${selectedProduct.minAmount.toFixed(2)} - ${selectedProduct.maxAmount.toFixed(2)})
+                            {t('storefront.enterAmount', { min: selectedProduct.minAmount.toFixed(2), max: selectedProduct.maxAmount.toFixed(2) })}
                           </label>
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
@@ -1171,24 +1199,24 @@ export default function PublicStorefrontPage() {
                           )}
                           {/* Estimated Receive Value */}
                           <div className="flex justify-between items-center text-sm pt-2">
-                            <span className="text-gray-600">They receive:</span>
+                            <span className="text-gray-600">{t('storefront.theyReceive')}</span>
                             {isEstimating ? (
                               <span className="flex items-center gap-1 text-gray-500">
                                 <div className="animate-spin rounded-full h-3 w-3 border-2 border-gray-400 border-t-transparent" />
-                                Calculating...
+                                {t('storefront.calculating')}
                               </span>
                             ) : estimatedReceive && estimatedReceive.value !== undefined ? (
                               <span className="font-medium text-green-600">
                                 {estimatedReceive.value.toFixed(2)} {estimatedReceive.currency}
                               </span>
                             ) : customAmount && parseFloat(customAmount) > 0 ? (
-                              <span className="text-gray-400">Enter valid amount</span>
+                              <span className="text-gray-400">{t('storefront.enterValidAmount')}</span>
                             ) : null}
                           </div>
                         </div>
                       ) : (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">They receive:</span>
+                          <span className="text-gray-600">{t('storefront.theyReceive')}</span>
                           <span className="font-medium text-green-600">
                             {selectedProduct.benefitAmount} {selectedProduct.benefitUnit}
                           </span>
@@ -1196,7 +1224,7 @@ export default function PublicStorefrontPage() {
                       )}
 
                       <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t">
-                        <span>Total:</span>
+                        <span>{t('storefront.total')}</span>
                         <span>
                           ${selectedProduct.isVariableValue && customAmount
                             ? parseFloat(customAmount).toFixed(2)
@@ -1209,18 +1237,18 @@ export default function PublicStorefrontPage() {
                   {/* Customer Email */}
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Email Address
+                      {t('storefront.emailAddress')}
                     </label>
                     <input
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder={t('storefront.emailPlaceholderShort')}
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
                       disabled={isProcessing}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      We'll send your receipt to this email
+                      {t('storefront.receiptEmail')}
                     </p>
                   </div>
 
@@ -1229,14 +1257,14 @@ export default function PublicStorefrontPage() {
                     paymentMethods.methods.length > 1 ? (
                       <div>
                         <label className="block text-sm font-medium mb-2">
-                          Payment Method
+                          {t('storefront.paymentMethod')}
                         </label>
                         <div className={`grid gap-2 ${paymentMethods.methods.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                           {paymentMethods.methods.map((method: any) => {
                             const providerConfig = {
-                              stripe: { icon: CreditCard, label: 'Card' },
-                              paypal: { icon: DollarSign, label: 'PayPal' },
-                              pgpay: { icon: Banknote, label: 'PGPay' },
+                              stripe: { icon: CreditCard, label: t('storefront.card') },
+                              paypal: { icon: DollarSign, label: t('storefront.paypal') },
+                              pgpay: { icon: Banknote, label: t('storefront.pgpay') },
                             }[method.provider as 'stripe' | 'paypal' | 'pgpay'];
 
                             if (!providerConfig) return null;
@@ -1266,14 +1294,14 @@ export default function PublicStorefrontPage() {
                       // Single payment method - show as readonly badge
                       <div>
                         <label className="block text-sm font-medium mb-2">
-                          Payment Method
+                          {t('storefront.paymentMethod')}
                         </label>
                         {(() => {
                           const method = paymentMethods.methods[0];
                           const providerConfig = {
-                            stripe: { icon: CreditCard, label: 'Card' },
-                            paypal: { icon: DollarSign, label: 'PayPal' },
-                            pgpay: { icon: Banknote, label: 'PGPay' },
+                            stripe: { icon: CreditCard, label: t('storefront.card') },
+                            paypal: { icon: DollarSign, label: t('storefront.paypal') },
+                            pgpay: { icon: Banknote, label: t('storefront.pgpay') },
                           }[method.provider as 'stripe' | 'paypal' | 'pgpay'];
 
                           if (!providerConfig) return null;
@@ -1308,14 +1336,13 @@ export default function PublicStorefrontPage() {
                             paymentMethods?.inactiveCount > 0 ? 'text-amber-900' : 'text-red-900'
                           }`}>
                             {paymentMethods?.inactiveCount > 0
-                              ? 'Payment Methods Pending Activation'
-                              : 'Payment Methods Not Available'}
+                              ? t('storefront.paymentMethodsPending')
+                              : t('storefront.paymentMethodsNotAvailable')}
                           </p>
                           <p className={`text-xs mt-1 ${
                             paymentMethods?.inactiveCount > 0 ? 'text-amber-800' : 'text-red-800'
                           }`}>
-                            {paymentMethods?.message ||
-                              'This merchant has not configured any payment methods yet. Please contact support for assistance.'}
+                            {paymentMethods?.message || t('storefront.paymentMethodsNotConfigured')}
                           </p>
                         </div>
                       </div>
@@ -1329,11 +1356,11 @@ export default function PublicStorefrontPage() {
                 {(amountError || (selectedProduct?.isVariableValue && isEstimating) || (!paymentMethods?.available || paymentMethods?.methods?.length === 0)) && (
                   <p className="text-xs text-gray-500 text-center w-full">
                     {amountError
-                      ? 'Please enter a valid amount within the allowed range'
+                      ? t('storefront.enterValidAmountRange')
                       : isEstimating
-                      ? 'Calculating price estimate...'
+                      ? t('storefront.calculatingEstimate')
                       : (!paymentMethods?.available || paymentMethods?.methods?.length === 0)
-                      ? 'Payment methods not configured'
+                      ? t('storefront.paymentMethodsNotConfiguredShort')
                       : ''}
                   </p>
                 )}
@@ -1345,7 +1372,7 @@ export default function PublicStorefrontPage() {
                     disabled={isProcessing}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('storefront.cancel')}
                   </Button>
                   <Button
                     onClick={handlePayment}
@@ -1361,17 +1388,19 @@ export default function PublicStorefrontPage() {
                     {isProcessing ? (
                       <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                        Processing...
+                        {t('storefront.processing')}
                       </div>
                     ) : isEstimating ? (
                       <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                        Calculating...
+                        {t('storefront.calculating')}
                       </div>
                     ) : (
-                      `Pay $${selectedProduct?.isVariableValue && customAmount
-                        ? parseFloat(customAmount).toFixed(2)
-                        : selectedProduct?.pricing.finalPrice.toFixed(2)}`
+                      t('storefront.pay', {
+                        amount: selectedProduct?.isVariableValue && customAmount
+                          ? parseFloat(customAmount).toFixed(2)
+                          : selectedProduct?.pricing.finalPrice.toFixed(2)
+                      })
                     )}
                   </Button>
                 </div>
@@ -1383,9 +1412,9 @@ export default function PublicStorefrontPage() {
                 <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
                   <CheckCircle className="h-10 w-10 text-green-600" />
                 </div>
-                <DialogTitle className="text-2xl mb-2">Payment Successful!</DialogTitle>
+                <DialogTitle className="text-2xl mb-2">{t('storefront.paymentSuccessful')}</DialogTitle>
                 <DialogDescription>
-                  Your top-up has been sent successfully
+                  {t('storefront.topupSentSuccess')}
                 </DialogDescription>
                 <div className="mt-4 p-4 bg-green-50 rounded-lg text-sm">
                   <p className="font-medium">
@@ -1393,7 +1422,7 @@ export default function PublicStorefrontPage() {
                       ? `${estimatedReceive.value.toFixed(2)} ${estimatedReceive.currency}`
                       : `${selectedProduct?.benefitAmount} ${selectedProduct?.benefitUnit}`}
                   </p>
-                  <p className="text-gray-600">sent to {lookupData?.phoneNumber}</p>
+                  <p className="text-gray-600">{t('storefront.sentTo', { phone: lookupData?.phoneNumber })}</p>
                 </div>
               </div>
             </>
@@ -1403,9 +1432,9 @@ export default function PublicStorefrontPage() {
                 <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
                   <XCircle className="h-10 w-10 text-red-600" />
                 </div>
-                <DialogTitle className="text-2xl mb-2">Payment Failed</DialogTitle>
+                <DialogTitle className="text-2xl mb-2">{t('storefront.paymentFailed')}</DialogTitle>
                 <DialogDescription>
-                  Something went wrong with your payment
+                  {t('storefront.paymentFailedDesc')}
                 </DialogDescription>
               </div>
               <DialogFooter>
@@ -1416,12 +1445,12 @@ export default function PublicStorefrontPage() {
                     setPaymentStatus('idle');
                   }}
                 >
-                  Close
+                  {t('storefront.close')}
                 </Button>
                 <Button
                   onClick={() => setPaymentStatus('idle')}
                 >
-                  Try Again
+                  {t('storefront.tryAgainBtn')}
                 </Button>
               </DialogFooter>
             </>
@@ -1435,7 +1464,7 @@ export default function PublicStorefrontPage() {
           <div className="text-center space-y-2 text-sm text-muted-foreground">
             {lookupData?.branding?.supportEmail && (
               <p>
-                Support:{' '}
+                {t('storefront.support')}{' '}
                 <a
                   href={`mailto:${lookupData.branding.supportEmail}`}
                   className="text-primary hover:underline"
@@ -1446,7 +1475,7 @@ export default function PublicStorefrontPage() {
             )}
             {lookupData?.branding?.supportPhone && (
               <p>
-                Phone:{' '}
+                {t('storefront.phone')}{' '}
                 <a
                   href={`tel:${lookupData.branding.supportPhone}`}
                   className="text-primary hover:underline"
@@ -1456,7 +1485,7 @@ export default function PublicStorefrontPage() {
               </p>
             )}
             <p className="pt-4 border-t">
-              Powered by {lookupData?.branding?.businessName || 'Mobile Top-Up Platform'}
+              {t('storefront.poweredByBrand', { brand: lookupData?.branding?.businessName || t('storefront.title') })}
             </p>
           </div>
         </div>

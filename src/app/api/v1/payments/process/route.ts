@@ -121,13 +121,17 @@ export async function POST(request: NextRequest) {
       apiKey: integration.credentials.apiKey,
     });
 
-    // Check DingConnect balance
+    // ===================================================================
+    // CRITICAL: Check DingConnect balance BEFORE allowing payment
+    // This prevents users from paying when we can't fulfill the top-up
+    // ===================================================================
     try {
       const balance = await dingConnect.getBalance();
-      logger.info('DingConnect balance check', {
+      logger.info('DingConnect balance check - BEFORE payment creation', {
         orgId,
         balance: balance.AccountBalance,
         currency: balance.CurrencyCode,
+        requestedAmount: finalAmount,
       });
 
       // Check if balance is sufficient
@@ -138,7 +142,7 @@ export async function POST(request: NextRequest) {
         : finalAmount * 0.9;  // 90% for fixed-value
 
       if (balance.AccountBalance < estimatedCost) {
-        logger.error('CRITICAL: Insufficient DingConnect balance - URGENT ACTION REQUIRED', {
+        logger.error('CRITICAL: Insufficient DingConnect balance - BLOCKING PAYMENT CREATION', {
           orgId,
           currentBalance: balance.AccountBalance,
           estimatedCost,
@@ -146,30 +150,34 @@ export async function POST(request: NextRequest) {
           currency: balance.CurrencyCode,
           isVariableValue: productData.isVariableValue,
           deficit: estimatedCost - balance.AccountBalance,
-          alert: 'PROVIDER ACCOUNT NEEDS IMMEDIATE FUNDING',
+          alert: 'PROVIDER ACCOUNT NEEDS IMMEDIATE FUNDING - USER BLOCKED FROM PAYING',
+          action: 'Payment creation blocked - user will NOT be redirected to pay',
         });
         // Customer-facing generic error - don't expose internal balance issues
+        // This throws BEFORE creating transaction or payment session
         throw new PaymentError(
           503,
           'Service temporarily unavailable. Please try again later or contact support if the issue persists.'
         );
       }
 
-      logger.info('DingConnect balance sufficient', {
+      logger.info('DingConnect balance sufficient - ALLOWING payment creation', {
         orgId,
         balance: balance.AccountBalance,
         estimatedCost,
         remaining: balance.AccountBalance - estimatedCost,
+        action: 'Proceeding with payment creation',
       });
     } catch (error) {
       if (error instanceof PaymentError) {
-        throw error; // Re-throw PaymentError as-is
+        throw error; // Re-throw PaymentError as-is (already has user message)
       }
-      logger.error('Failed to check DingConnect balance', {
+      logger.error('Failed to check DingConnect balance - BLOCKING payment as precaution', {
         error: error instanceof Error ? error.message : 'Unknown error',
         orgId,
+        action: 'Payment creation blocked due to balance check failure',
       });
-      throw new PaymentError(500, 'Failed to verify account balance');
+      throw new PaymentError(500, 'Unable to verify service availability. Please try again later.');
     }
 
     // For variable-value products, use sendValue or fall back to finalAmount

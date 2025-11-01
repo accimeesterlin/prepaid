@@ -214,11 +214,11 @@ export function OrganizationSwitcher() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-3 px-3 py-2 border-b">
+      <div className="flex items-center gap-2 px-3 py-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
           <Building2 className="h-4 w-4 text-muted-foreground" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[120px]">
           <div className="h-4 w-32 bg-muted animate-pulse rounded" />
         </div>
       </div>
@@ -227,12 +227,12 @@ export function OrganizationSwitcher() {
 
   return (
     <>
-      <div className="border-b p-2">
+      <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
           disabled={switching}
           className={cn(
-            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+            "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             switching && "opacity-50 cursor-not-allowed"
@@ -241,11 +241,11 @@ export function OrganizationSwitcher() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
             <Building2 className="h-4 w-4 text-primary" />
           </div>
-          <div className="flex-1 text-left">
-            <p className="text-sm font-medium leading-none">
+          <div className="flex-1 text-left min-w-[120px]">
+            <p className="text-sm font-medium leading-none truncate">
               {currentOrg?.name || 'Select Organization'}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1 truncate">
               {currentOrg?.roles.join(', ') || 'No organization'}
             </p>
           </div>
@@ -259,7 +259,7 @@ export function OrganizationSwitcher() {
               className="fixed inset-0 z-[60]"
               onClick={() => setIsOpen(false)}
             />
-            <div className="absolute left-2 right-2 top-[72px] z-[70] mt-1 rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+            <div className="absolute right-0 top-full z-[70] mt-2 w-80 rounded-md border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95">
               <div className="p-1">
                 {organizations.length === 0 ? (
                   <div className="px-3 py-6 text-center text-sm text-muted-foreground">

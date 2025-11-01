@@ -374,6 +374,7 @@ export async function POST(request: NextRequest) {
           type: storefrontSettings.discount.type,
           value: storefrontSettings.discount.value,
         } : null,
+        testMode: storefrontSettings.topupSettings?.validateOnly || false,
       });
     } catch (error: any) {
       logger.error('Error looking up phone number with DingConnect', {

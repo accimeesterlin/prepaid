@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
         success: true,
         status: "completed",
         message: "Payment already processed",
+        testMode: (transaction.metadata as any)?.testMode || false,
         transaction: {
           orderId: transaction.orderId,
           status: transaction.status,
@@ -127,6 +128,7 @@ export async function POST(request: NextRequest) {
             status: updatedTransaction.status,
             message: `Payment verification in progress. Status: ${updatedTransaction.status}`,
             webhookError: webhookResult.detail || webhookResult.message,
+            testMode: (updatedTransaction.metadata as any)?.testMode || false,
             transaction: {
               orderId: updatedTransaction.orderId,
               status: updatedTransaction.status,
@@ -148,6 +150,7 @@ export async function POST(request: NextRequest) {
           success: true,
           status: updatedTransaction.status,
           message: webhookResult.message || "Payment verification completed",
+          testMode: (updatedTransaction.metadata as any)?.testMode || false,
           transaction: {
             orderId: updatedTransaction.orderId,
             status: updatedTransaction.status,
@@ -171,6 +174,7 @@ export async function POST(request: NextRequest) {
       success: true,
       status: transaction.status,
       message: "Transaction status retrieved",
+      testMode: (transaction.metadata as any)?.testMode || false,
       transaction: {
         orderId: transaction.orderId,
         status: transaction.status,
@@ -215,6 +219,7 @@ export async function GET(request: NextRequest) {
     return createSuccessResponse({
       success: true,
       status: transaction.status,
+      testMode: (transaction.metadata as any)?.testMode || false,
       transaction: {
         orderId: transaction.orderId,
         status: transaction.status,
