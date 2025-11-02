@@ -73,6 +73,22 @@ export async function PATCH(
       pricingRule.description = body.description?.trim() || '';
     }
 
+    // Handle new format fields (percentageMarkup/fixedMarkup)
+    if (body.percentageMarkup !== undefined) {
+      if (body.percentageMarkup < 0) {
+        return createErrorResponse('Percentage markup must be positive', 400);
+      }
+      pricingRule.percentageMarkup = body.percentageMarkup > 0 ? body.percentageMarkup : undefined;
+    }
+
+    if (body.fixedMarkup !== undefined) {
+      if (body.fixedMarkup < 0) {
+        return createErrorResponse('Fixed markup must be positive', 400);
+      }
+      pricingRule.fixedMarkup = body.fixedMarkup > 0 ? body.fixedMarkup : undefined;
+    }
+
+    // Handle legacy format fields (type/value)
     if (body.type !== undefined) {
       if (!['percentage', 'fixed'].includes(body.type)) {
         return createErrorResponse('Invalid pricing type', 400);

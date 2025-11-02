@@ -42,7 +42,8 @@
       "Bash(curl -s \"http://localhost:3002/api/v1/payments/verify?orderId=ORD-1762016146697-GBWHUP3DN\")",
       "Bash(curl -s -X POST http://localhost:3002/api/v1/payments/verify -H 'Content-Type: application/json' -d '{\n  \"\"\"\"orderId\"\"\"\": \"\"\"\"ORD-1762016146697-GBWHUP3DN\"\"\"\",\n  \"\"\"\"pgPayToken\"\"\"\": \"\"\"\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmRlcklkIjoiT1JELTE3NjIwMTYxNDY2OTctR0JXSFVQM0ROIiwiaWF0IjoxNzYyMDE2MTUzLCJleHAiOjE3NjIwMTk3NTN9.aElUPjs6Nbg7bXG53m4jNTNtEhO0sAnBWOln-7c9cxQ\"\"\"\"\n}')",
       "Bash(curl -s -X POST http://localhost:3002/api/v1/payments/verify -H 'Content-Type: application/json' -d '{\n  \"\"\"\"orderId\"\"\"\": \"\"\"\"ORD-1762016849673-5J4S157WG\"\"\"\",\n  \"\"\"\"pgPayToken\"\"\"\": \"\"\"\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmRlcklkIjoiT1JELTE3NjIwMTY4NDk2NzMtNUo0UzE1N1dHIiwiaWF0IjoxNzYyMDE2ODU0LCJleHAiOjE3NjIwMjA0NTR9.E7gBjcAnIluEEQlTfqXV8Iho1J7r0_d6vdtuuX5xFXc\"\"\"\"\n}')",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

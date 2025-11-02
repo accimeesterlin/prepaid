@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { dbConnection } from '@pg-prepaid/db/connection';
-import { Integration, StorefrontSettings, Org, Organization } from '@pg-prepaid/db';
+import { Integration, StorefrontSettings, Org, Organization, Discount, PricingRule } from '@pg-prepaid/db';
 import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
@@ -222,7 +222,33 @@ export async function POST(request: NextRequest) {
         throw new Error(`Failed to lookup phone number: ${error.message}`);
       }
 
-      // Apply pricing from storefront settings
+      // Fetch active pricing rules for this organization
+      const pricingRules = await PricingRule.find({
+        orgId,
+        isActive: true,
+      }).sort({ priority: -1 }); // Sort by priority descending (highest first)
+
+      logger.info('Fetched pricing rules', {
+        rulesCount: pricingRules.length,
+        priorities: pricingRules.map(r => `${r.name}:${r.priority}`).join(', '),
+      });
+
+      // Find the best applicable pricing rule for this country
+      let applicablePricingRule = null;
+      for (const rule of pricingRules) {
+        if (rule.isApplicableToCountry(detectedCountry)) {
+          applicablePricingRule = rule;
+          break; // Already sorted by priority, so first match is best
+        }
+      }
+
+      logger.info('Applicable pricing rule', {
+        ruleName: applicablePricingRule?.name || 'None (using StorefrontSettings)',
+        ruleType: applicablePricingRule?.type,
+        ruleValue: applicablePricingRule?.value,
+      });
+
+      // Apply pricing from storefront settings or pricing rules
       logger.info('Applying pricing to products', { productsCount: products.length });
       let productsWithPricing: ProductInfo[];
       try {
@@ -302,10 +328,63 @@ export async function POST(request: NextRequest) {
               }
             }
 
-            const pricing = storefrontSettings.calculateFinalPrice(
-              costPrice,
-              detectedCountry
-            );
+            // Calculate pricing using PricingRule (no fallback to legacy StorefrontSettings)
+            let pricing;
+            if (applicablePricingRule) {
+              // Use PricingRule to calculate markup
+              const markup = applicablePricingRule.calculateMarkup(costPrice);
+              const priceAfterMarkup = costPrice + markup;
+
+              // Manually apply discount from StorefrontSettings (without applying markup again)
+              let finalPrice = priceAfterMarkup;
+              let discountAmount = 0;
+              let discountApplied = false;
+
+              if (storefrontSettings.discount.enabled) {
+                const now = new Date();
+                const isDateValid =
+                  (!storefrontSettings.discount.startDate || storefrontSettings.discount.startDate <= now) &&
+                  (!storefrontSettings.discount.endDate || storefrontSettings.discount.endDate >= now);
+
+                const isCountryValid =
+                  !storefrontSettings.discount.applicableCountries ||
+                  storefrontSettings.discount.applicableCountries.length === 0 ||
+                  storefrontSettings.discount.applicableCountries.includes(detectedCountry);
+
+                const isAmountValid =
+                  !storefrontSettings.discount.minPurchaseAmount ||
+                  priceAfterMarkup >= storefrontSettings.discount.minPurchaseAmount;
+
+                if (isDateValid && isCountryValid && isAmountValid) {
+                  if (storefrontSettings.discount.type === 'percentage') {
+                    discountAmount = priceAfterMarkup * (storefrontSettings.discount.value / 100);
+                  } else {
+                    discountAmount = storefrontSettings.discount.value;
+                  }
+                  finalPrice = Math.max(0, priceAfterMarkup - discountAmount);
+                  discountApplied = true;
+                }
+              }
+
+              pricing = {
+                costPrice,
+                markup: Math.round(markup * 100) / 100,
+                priceBeforeDiscount: Math.round(priceAfterMarkup * 100) / 100,
+                discount: Math.round(discountAmount * 100) / 100,
+                finalPrice: Math.round(finalPrice * 100) / 100,
+                discountApplied,
+              };
+            } else {
+              // No pricing rule found - use cost price as final price (0% markup)
+              pricing = {
+                costPrice,
+                markup: 0,
+                priceBeforeDiscount: costPrice,
+                discount: 0,
+                finalPrice: costPrice,
+                discountApplied: false,
+              };
+            }
 
             return {
               skuCode: product.SkuCode,
@@ -339,6 +418,28 @@ export async function POST(request: NextRequest) {
       const MAX_PRODUCTS_PER_REQUEST = 100;
       const limitedProducts = productsWithPricing.slice(0, MAX_PRODUCTS_PER_REQUEST);
 
+      // Fetch active discounts from Discount collection
+      const activeDiscounts = await Discount.find({
+        orgId,
+        isActive: true,
+      }).sort({ value: -1 }); // Sort by value descending to get best discount first
+
+      // Filter valid discounts (check date ranges, usage limits, etc.)
+      const validDiscounts = activeDiscounts.filter(discount => discount.isValid());
+
+      // Find best applicable discount for this country
+      let bestDiscount = null;
+      for (const discount of validDiscounts) {
+        if (
+          !discount.applicableCountries ||
+          discount.applicableCountries.length === 0 ||
+          discount.applicableCountries.includes(detectedCountry)
+        ) {
+          bestDiscount = discount;
+          break; // Already sorted by value, so first match is best
+        }
+      }
+
       logger.info('Phone lookup successful', {
         orgSlug,
         orgId,
@@ -348,6 +449,8 @@ export async function POST(request: NextRequest) {
         providersCount: providers.length,
         productsReturned: limitedProducts.length,
         totalProducts: productsWithPricing.length,
+        activeDiscountsCount: validDiscounts.length,
+        bestDiscountName: bestDiscount?.name,
       });
 
       return createSuccessResponse({
@@ -369,11 +472,19 @@ export async function POST(request: NextRequest) {
         products: limitedProducts,
         totalProducts: productsWithPricing.length,
         branding: storefrontSettings.branding,
-        discount: storefrontSettings.discount.enabled ? {
+        discount: bestDiscount ? {
+          id: bestDiscount._id,
+          name: bestDiscount.name,
+          description: bestDiscount.description,
+          type: bestDiscount.type,
+          value: bestDiscount.value,
+          minPurchaseAmount: bestDiscount.minPurchaseAmount,
+          maxDiscountAmount: bestDiscount.maxDiscountAmount,
+        } : (storefrontSettings.discount.enabled ? {
           description: storefrontSettings.discount.description,
           type: storefrontSettings.discount.type,
           value: storefrontSettings.discount.value,
-        } : null,
+        } : null),
         testMode: storefrontSettings.topupSettings?.validateOnly || false,
       });
     } catch (error: any) {

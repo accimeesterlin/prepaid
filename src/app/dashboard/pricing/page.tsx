@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DollarSign, Plus, Edit, Trash2, Save, ChevronUp, ChevronDown } from 'lucide-react';
+import { DollarSign, Plus, Edit, Trash2, Save, ChevronUp, ChevronDown, Info } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, toast, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { cn } from '@/lib/utils';
@@ -10,8 +10,11 @@ interface PricingRule {
   _id: string;
   name: string;
   description?: string;
-  type: 'percentage' | 'fixed';
-  value: number;
+  percentageMarkup?: number;
+  fixedMarkup?: number;
+  // Legacy fields
+  type?: 'percentage' | 'fixed';
+  value?: number;
   priority: number;
   isActive: boolean;
   applicableCountries?: string[];
@@ -38,13 +41,14 @@ export default function PricingPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showFeesTip, setShowFeesTip] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    type: 'percentage' as 'percentage' | 'fixed',
-    value: 0,
+    percentageMarkup: '',
+    fixedMarkup: '',
     priority: 0,
     isActive: true,
     scopeType: 'all' as 'all' | 'regions' | 'countries',
@@ -83,8 +87,8 @@ export default function PricingPage() {
     setFormData({
       name: '',
       description: '',
-      type: 'percentage',
-      value: 0,
+      percentageMarkup: '',
+      fixedMarkup: '',
       priority: 0,
       isActive: true,
       scopeType: 'all',
@@ -112,11 +116,28 @@ export default function PricingPage() {
       scopeType = 'countries';
     }
 
+    // Handle both new and legacy fields
+    let percentageMarkup = '';
+    let fixedMarkup = '';
+
+    if (rule.percentageMarkup !== undefined || rule.fixedMarkup !== undefined) {
+      // New format
+      percentageMarkup = rule.percentageMarkup?.toString() || '';
+      fixedMarkup = rule.fixedMarkup?.toString() || '';
+    } else if (rule.type && rule.value !== undefined) {
+      // Legacy format - convert to new format
+      if (rule.type === 'percentage') {
+        percentageMarkup = rule.value.toString();
+      } else {
+        fixedMarkup = rule.value.toString();
+      }
+    }
+
     setFormData({
       name: rule.name,
       description: rule.description || '',
-      type: rule.type,
-      value: rule.value,
+      percentageMarkup,
+      fixedMarkup,
       priority: rule.priority,
       isActive: rule.isActive,
       scopeType,
@@ -139,10 +160,13 @@ export default function PricingPage() {
       return;
     }
 
-    if (formData.value <= 0) {
+    const percentageValue = formData.percentageMarkup ? parseFloat(formData.percentageMarkup) : 0;
+    const fixedValue = formData.fixedMarkup ? parseFloat(formData.fixedMarkup) : 0;
+
+    if (percentageValue <= 0 && fixedValue <= 0) {
       toast({
         title: 'Error',
-        description: 'Pricing value must be greater than 0',
+        description: 'At least one pricing value (percentage or fixed) must be greater than 0',
         variant: 'error',
       });
       return;
@@ -153,8 +177,8 @@ export default function PricingPage() {
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        type: formData.type,
-        value: formData.value,
+        percentageMarkup: percentageValue > 0 ? percentageValue : undefined,
+        fixedMarkup: fixedValue > 0 ? fixedValue : undefined,
         priority: formData.priority,
         isActive: formData.isActive,
         applicableRegions: formData.scopeType === 'regions' ? formData.applicableRegions : [],
@@ -432,7 +456,16 @@ export default function PricingPage() {
                     <div className="p-4 bg-primary/5 rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">Markup</div>
                       <div className="text-2xl font-bold text-primary">
-                        {rule.type === 'percentage' ? `${rule.value}%` : `$${rule.value}`}
+                        {rule.percentageMarkup !== undefined || rule.fixedMarkup !== undefined ? (
+                          <>
+                            {rule.percentageMarkup && rule.percentageMarkup > 0 && `${rule.percentageMarkup}%`}
+                            {rule.percentageMarkup && rule.percentageMarkup > 0 && rule.fixedMarkup && rule.fixedMarkup > 0 && ' + '}
+                            {rule.fixedMarkup && rule.fixedMarkup > 0 && `$${rule.fixedMarkup}`}
+                          </>
+                        ) : (
+                          // Legacy display
+                          rule.type === 'percentage' ? `${rule.value}%` : `$${rule.value}`
+                        )}
                       </div>
                     </div>
 
@@ -511,41 +544,68 @@ export default function PricingPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Markup Type</label>
-                  <select
-                    className="w-full px-3 py-2 border rounded-lg"
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as 'percentage' | 'fixed' })}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="text-sm font-medium">Fees Configuration</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowFeesTip(!showFeesTip)}
+                    className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors"
                   >
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed Amount ($)</option>
-                  </select>
+                    <Info className="h-3 w-3 text-blue-600" />
+                  </button>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Markup Value</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="10"
-                    value={formData.value}
-                    onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
+                {showFeesTip && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3 animate-in slide-in-from-top-2">
+                    <p className="text-sm text-blue-800">
+                      <strong>Tip:</strong> You can use percentage markup, fixed markup, or both together.
+                      For example: 20% + $0.50 will apply 20% of the cost price then add $0.50.
+                    </p>
+                  </div>
+                )}
 
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Priority</label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="0"
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-2 block">Percentage Markup (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="e.g., 20 or 150"
+                      value={formData.percentageMarkup}
+                      onChange={(e) => setFormData({ ...formData, percentageMarkup: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Optional - Applied as % of cost price</p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-2 block">Fixed Markup ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="e.g., 0.50"
+                      value={formData.fixedMarkup}
+                      onChange={(e) => setFormData({ ...formData, fixedMarkup: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Optional - Added as fixed amount</p>
+                  </div>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Priority</label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="0"
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Higher priority rules are applied first (e.g., 100 before 50)</p>
               </div>
 
               {/* Scope Selection */}

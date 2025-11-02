@@ -4,8 +4,15 @@ export interface IPricingRule extends Document {
   orgId: string;
   name: string;
   description?: string;
-  type: 'percentage' | 'fixed';
-  value: number;
+
+  // Pricing - can use percentage, fixed, or both
+  percentageMarkup?: number; // Percentage markup (e.g., 20 for 20%)
+  fixedMarkup?: number; // Fixed amount markup (e.g., 0.50 for $0.50)
+
+  // Legacy fields (kept for backward compatibility)
+  type?: 'percentage' | 'fixed';
+  value?: number;
+
   priority: number; // Higher priority rules are applied first
   isActive: boolean;
 
@@ -55,15 +62,22 @@ const PricingRuleSchema = new Schema<IPricingRule>(
       type: String,
       trim: true,
     },
+    // New fields - can use one or both
+    percentageMarkup: {
+      type: Number,
+      min: 0,
+    },
+    fixedMarkup: {
+      type: Number,
+      min: 0,
+    },
+    // Legacy fields (kept for backward compatibility)
     type: {
       type: String,
-      required: true,
       enum: ['percentage', 'fixed'],
-      default: 'percentage',
     },
     value: {
       type: Number,
-      required: true,
       min: 0,
     },
     priority: {
@@ -149,10 +163,25 @@ PricingRuleSchema.methods.calculateMarkup = function (amount: number): number {
 
   let markup = 0;
 
-  if (this.type === 'percentage') {
-    markup = amount * (this.value / 100);
-  } else {
-    markup = this.value;
+  // Use new fields if available
+  if (this.percentageMarkup !== undefined || this.fixedMarkup !== undefined) {
+    // Apply percentage markup first
+    if (this.percentageMarkup && this.percentageMarkup > 0) {
+      markup += amount * (this.percentageMarkup / 100);
+    }
+
+    // Add fixed markup
+    if (this.fixedMarkup && this.fixedMarkup > 0) {
+      markup += this.fixedMarkup;
+    }
+  }
+  // Fall back to legacy fields for backward compatibility
+  else if (this.type && this.value !== undefined) {
+    if (this.type === 'percentage') {
+      markup = amount * (this.value / 100);
+    } else {
+      markup = this.value;
+    }
   }
 
   return Math.round(markup * 100) / 100; // Round to 2 decimal places

@@ -286,10 +286,29 @@ export default function CountriesPage() {
               Countries Overview
             </CardTitle>
             <CardDescription>
-              You are currently serving {enabledCount} {enabledCount === 1 ? 'country' : 'countries'}
+              Manage which countries can access your storefront
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Statistics */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-600 font-medium mb-1">Total Available</p>
+                <p className="text-3xl font-bold text-blue-900">{availableCountries.length}</p>
+                <p className="text-xs text-blue-600 mt-1">countries with support</p>
+              </div>
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-600 font-medium mb-1">Currently Enabled</p>
+                <p className="text-3xl font-bold text-green-900">{enabledCount}</p>
+                <p className="text-xs text-green-600 mt-1">
+                  {enabledCount === availableCountries.length
+                    ? 'all countries enabled'
+                    : `${Math.round((enabledCount / availableCountries.length) * 100)}% of available`}
+                </p>
+              </div>
+            </div>
+
+            {/* Enable All Toggle */}
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
               <div>
                 <p className="font-medium">Enable All Countries</p>
@@ -310,10 +329,19 @@ export default function CountriesPage() {
         {/* Search and Country Selection */}
         <Card>
           <CardHeader>
-            <CardTitle>Select Countries</CardTitle>
-            <CardDescription>
-              Choose specific countries you want to serve
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Select Countries</CardTitle>
+                <CardDescription>
+                  Choose specific countries you want to serve
+                </CardDescription>
+              </div>
+              {searchQuery && (
+                <div className="text-sm text-muted-foreground">
+                  Showing {filteredCountries.length} of {availableCountries.length} countries
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Search Bar */}

@@ -330,179 +330,51 @@ export default function StorefrontSettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Pricing */}
-        <Card>
+        {/* Pricing & Discounts - Managed via dedicated pages */}
+        <Card className="border-blue-200 bg-blue-50/50">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              <CardTitle>Pricing & Markup</CardTitle>
+              <DollarSign className="h-5 w-5 text-blue-600" />
+              <CardTitle>Pricing & Discounts</CardTitle>
             </div>
             <CardDescription>
-              Set how much markup to add on top of provider costs
+              Configure flexible pricing rules and discount codes
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Markup Type</label>
-                <select
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  value={settings.pricing.markupType}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      pricing: { ...settings.pricing, markupType: e.target.value },
-                    })
-                  }
-                >
-                  <option value="percentage">Percentage (%)</option>
-                  <option value="fixed">Fixed Amount</option>
-                </select>
+          <CardContent className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-1">
+                <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <DollarSign className="h-4 w-4 text-blue-600" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Markup Value
-                  {settings.pricing.markupType === 'percentage' ? ' (%)' : ` (${settings.pricing.currency})`}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  value={settings.pricing.markupValue}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      pricing: { ...settings.pricing, markupValue: parseFloat(e.target.value) },
-                    })
-                  }
-                />
+              <div className="flex-1">
+                <h4 className="font-medium text-sm mb-1">Pricing Rules</h4>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Create flexible pricing rules with percentage and fixed markups, target specific countries or regions, and set priority-based pricing.
+                </p>
+                <a href="/dashboard/pricing" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                  Manage Pricing Rules →
+                </a>
               </div>
             </div>
 
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium mb-1">Example Calculation:</p>
-              <p className="text-xs text-muted-foreground">
-                Provider cost: $10.00<br />
-                Your markup: {settings.pricing.markupType === 'percentage'
-                  ? `${settings.pricing.markupValue}% = $${(10 * settings.pricing.markupValue / 100).toFixed(2)}`
-                  : `$${settings.pricing.markupValue.toFixed(2)}`
-                }<br />
-                Customer pays: $
-                {settings.pricing.markupType === 'percentage'
-                  ? (10 + 10 * settings.pricing.markupValue / 100).toFixed(2)
-                  : (10 + settings.pricing.markupValue).toFixed(2)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Discount */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-primary" />
-              <CardTitle>Discount Offers</CardTitle>
-            </div>
-            <CardDescription>
-              Optionally offer discounts to attract customers
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={settings.discount.enabled}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    discount: { ...settings.discount, enabled: e.target.checked },
-                  })
-                }
-                className="h-4 w-4"
-              />
-              <label className="text-sm font-medium">Enable discount offers</label>
-            </div>
-
-            {settings.discount.enabled && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Discount Type</label>
-                    <select
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={settings.discount.type || 'percentage'}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          discount: { ...settings.discount, type: e.target.value },
-                        })
-                      }
-                    >
-                      <option value="percentage">Percentage (%)</option>
-                      <option value="fixed">Fixed Amount</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Discount Value</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={settings.discount.value || 0}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          discount: { ...settings.discount, value: parseFloat(e.target.value) },
-                        })
-                      }
-                    />
-                  </div>
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-1">
+                <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Tag className="h-4 w-4 text-blue-600" />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Minimum Purchase Amount (Optional)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="e.g., 20"
-                    value={settings.discount.minPurchaseAmount || ''}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        discount: {
-                          ...settings.discount,
-                          minPurchaseAmount: e.target.value ? parseFloat(e.target.value) : undefined,
-                        },
-                      })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Discount Description (shown to customers)
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="e.g., Special launch offer!"
-                    value={settings.discount.description || ''}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        discount: { ...settings.discount, description: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-              </>
-            )}
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-sm mb-1">Discount Codes</h4>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Create promotional discount codes with usage limits, expiration dates, and country restrictions.
+                </p>
+                <a href="/dashboard/discounts" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                  Manage Discounts →
+                </a>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

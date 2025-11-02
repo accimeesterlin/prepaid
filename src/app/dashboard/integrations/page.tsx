@@ -36,6 +36,7 @@ const integrationConfigs = {
     name: 'DingConnect',
     description: 'Connect to DingConnect API for mobile top-ups and airtime distribution',
     icon: '📱',
+    category: 'Top-up Providers',
     docsUrl: 'https://www.dingconnect.com/Api',
     fields: [
       {
@@ -52,6 +53,7 @@ const integrationConfigs = {
     name: 'Reloadly',
     description: 'Alternative provider for airtime and mobile data top-ups worldwide',
     icon: '🌍',
+    category: 'Top-up Providers',
     docsUrl: 'https://developers.reloadly.com/',
     fields: [
       {
@@ -77,6 +79,163 @@ const integrationConfigs = {
         placeholder: 'Select environment',
         required: true,
         helpText: 'Use sandbox for testing, production for live transactions',
+      },
+    ],
+  },
+  zeptomail: {
+    name: 'ZeptoMail',
+    description: 'Transactional email service for sending order confirmations and notifications',
+    icon: '✉️',
+    category: 'Email Providers',
+    docsUrl: 'https://www.zoho.com/zeptomail/help/',
+    fields: [
+      {
+        name: 'apiKey',
+        label: 'API Key',
+        type: 'password',
+        placeholder: 'Enter your ZeptoMail API key',
+        required: true,
+        helpText: 'Found in ZeptoMail Settings → API',
+      },
+      {
+        name: 'fromEmail',
+        label: 'From Email',
+        type: 'email',
+        placeholder: 'noreply@yourdomain.com',
+        required: true,
+        helpText: 'Email address to send from (must be verified)',
+      },
+      {
+        name: 'fromName',
+        label: 'From Name',
+        type: 'text',
+        placeholder: 'Your Company Name',
+        required: false,
+        helpText: 'Display name for outgoing emails',
+      },
+    ],
+  },
+  mailgun: {
+    name: 'Mailgun',
+    description: 'Powerful email API for sending transactional emails at scale',
+    icon: '📬',
+    category: 'Email Providers',
+    docsUrl: 'https://documentation.mailgun.com/',
+    fields: [
+      {
+        name: 'apiKey',
+        label: 'API Key',
+        type: 'password',
+        placeholder: 'Enter your Mailgun API key',
+        required: true,
+        helpText: 'Found in Mailgun Settings → API Keys',
+      },
+      {
+        name: 'domain',
+        label: 'Domain',
+        type: 'text',
+        placeholder: 'mg.yourdomain.com',
+        required: true,
+        helpText: 'Your verified sending domain',
+      },
+      {
+        name: 'fromEmail',
+        label: 'From Email',
+        type: 'email',
+        placeholder: 'noreply@yourdomain.com',
+        required: true,
+        helpText: 'Email address to send from',
+      },
+      {
+        name: 'fromName',
+        label: 'From Name',
+        type: 'text',
+        placeholder: 'Your Company Name',
+        required: false,
+        helpText: 'Display name for outgoing emails',
+      },
+    ],
+  },
+  sendgrid: {
+    name: 'SendGrid',
+    description: 'Reliable email delivery platform trusted by developers',
+    icon: '📧',
+    category: 'Email Providers',
+    docsUrl: 'https://docs.sendgrid.com/',
+    fields: [
+      {
+        name: 'apiKey',
+        label: 'API Key',
+        type: 'password',
+        placeholder: 'Enter your SendGrid API key',
+        required: true,
+        helpText: 'Found in SendGrid Settings → API Keys',
+      },
+      {
+        name: 'fromEmail',
+        label: 'From Email',
+        type: 'email',
+        placeholder: 'noreply@yourdomain.com',
+        required: true,
+        helpText: 'Email address to send from (must be verified)',
+      },
+      {
+        name: 'fromName',
+        label: 'From Name',
+        type: 'text',
+        placeholder: 'Your Company Name',
+        required: false,
+        helpText: 'Display name for outgoing emails',
+      },
+    ],
+  },
+  mailchimp: {
+    name: 'Mailchimp',
+    description: 'Marketing automation and email platform for customer engagement',
+    icon: '🐒',
+    category: 'Email Providers',
+    docsUrl: 'https://mailchimp.com/developer/',
+    fields: [
+      {
+        name: 'apiKey',
+        label: 'API Key',
+        type: 'password',
+        placeholder: 'Enter your Mailchimp API key',
+        required: true,
+        helpText: 'Found in Mailchimp Account → Extras → API Keys',
+      },
+      {
+        name: 'fromEmail',
+        label: 'From Email',
+        type: 'email',
+        placeholder: 'noreply@yourdomain.com',
+        required: true,
+        helpText: 'Email address to send from (must be verified)',
+      },
+      {
+        name: 'fromName',
+        label: 'From Name',
+        type: 'text',
+        placeholder: 'Your Company Name',
+        required: false,
+        helpText: 'Display name for outgoing emails',
+      },
+    ],
+  },
+  zapier: {
+    name: 'Zapier',
+    description: 'Connect to thousands of apps and automate workflows',
+    icon: '⚡',
+    category: 'Automation',
+    docsUrl: 'https://zapier.com/help/',
+    fields: [
+      {
+        name: 'apiKey',
+        label: 'Webhook URL',
+        type: 'text',
+        placeholder: 'https://hooks.zapier.com/hooks/catch/...',
+        required: true,
+        helpText: 'Create a Zap with a webhook trigger and paste the URL here',
       },
     ],
   },
@@ -148,6 +307,7 @@ export default function IntegrationsPage() {
       const config = integrationConfigs[selectedProvider as keyof typeof integrationConfigs];
       const credentials: Record<string, any> = {};
 
+      // Collect all credential fields
       config.fields.forEach((field) => {
         if (field.name !== 'environment') {
           credentials[field.name] = formData[field.name];
@@ -173,10 +333,19 @@ export default function IntegrationsPage() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        setTestMessage({
-          type: 'success',
-          text: `Connection successful! Balance: ${result.data.balance} ${result.data.currency}`,
-        });
+        // For top-up providers, show balance
+        if (result.data?.balance && result.data?.currency) {
+          setTestMessage({
+            type: 'success',
+            text: `Connection successful! Balance: ${result.data.balance} ${result.data.currency}`,
+          });
+        } else {
+          // For email providers and Zapier, just show success
+          setTestMessage({
+            type: 'success',
+            text: 'Connection successful! Credentials verified.',
+          });
+        }
       } else {
         setTestMessage({
           type: 'error',
@@ -203,6 +372,7 @@ export default function IntegrationsPage() {
       const config = integrationConfigs[selectedProvider as keyof typeof integrationConfigs];
       const credentials: Record<string, any> = {};
 
+      // Collect all credential fields
       config.fields.forEach((field) => {
         if (field.name !== 'environment') {
           credentials[field.name] = formData[field.name];
@@ -293,7 +463,7 @@ export default function IntegrationsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
           <p className="text-muted-foreground mt-1">
-            Connect external services to enable top-up functionality
+            Connect external services to enable top-up functionality, email notifications, and automation
           </p>
         </div>
 
@@ -370,48 +540,63 @@ export default function IntegrationsPage() {
           </CardContent>
         </Card>
 
-        {/* Integrations List */}
-        <div className="space-y-4">
-          {Object.entries(integrationConfigs).map(([providerId, config]) => {
-            const status = getIntegrationStatus(providerId);
+        {/* Integrations List - Grouped by Category */}
+        <div className="space-y-8">
+          {['Top-up Providers', 'Email Providers', 'Automation'].map((category) => {
+            const categoryIntegrations = Object.entries(integrationConfigs).filter(
+              ([_, config]) => config.category === category
+            );
+
+            if (categoryIntegrations.length === 0) return null;
+
             return (
-              <Card key={providerId}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="text-4xl">{config.icon}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <CardTitle>{config.name}</CardTitle>
-                          <span
-                            className={cn(
-                              'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
-                              getStatusColor(status.status)
-                            )}
-                          >
-                            {status.status === 'connected' && <Check className="h-3 w-3" />}
-                            {status.text}
-                          </span>
-                        </div>
-                        <CardDescription>{config.description}</CardDescription>
-                        <div className="mt-3">
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto text-xs"
-                            onClick={() => window.open(config.docsUrl, '_blank')}
-                          >
-                            <LinkIcon className="h-3 w-3 mr-1" />
-                            API Documentation
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <Button onClick={() => handleOpenModal(providerId)}>
-                      {status.status === 'connected' ? 'Reconfigure' : 'Configure'}
-                    </Button>
-                  </div>
-                </CardHeader>
-              </Card>
+              <div key={category}>
+                <h2 className="text-xl font-semibold mb-4">{category}</h2>
+                <div className="space-y-4">
+                  {categoryIntegrations.map(([providerId, config]) => {
+                    const status = getIntegrationStatus(providerId);
+                    return (
+                      <Card key={providerId}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-4 flex-1">
+                              <div className="text-4xl">{config.icon}</div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <CardTitle>{config.name}</CardTitle>
+                                  <span
+                                    className={cn(
+                                      'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
+                                      getStatusColor(status.status)
+                                    )}
+                                  >
+                                    {status.status === 'connected' && <Check className="h-3 w-3" />}
+                                    {status.text}
+                                  </span>
+                                </div>
+                                <CardDescription>{config.description}</CardDescription>
+                                <div className="mt-3">
+                                  <Button
+                                    variant="link"
+                                    className="p-0 h-auto text-xs"
+                                    onClick={() => window.open(config.docsUrl, '_blank')}
+                                  >
+                                    <LinkIcon className="h-3 w-3 mr-1" />
+                                    API Documentation
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                            <Button onClick={() => handleOpenModal(providerId)}>
+                              {status.status === 'connected' ? 'Reconfigure' : 'Configure'}
+                            </Button>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>

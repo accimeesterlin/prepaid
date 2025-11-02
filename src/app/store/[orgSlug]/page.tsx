@@ -1223,12 +1223,90 @@ export default function PublicStorefrontPage() {
                         </div>
                       )}
 
+                      {/* Pricing Breakdown - Show fees and discount, but NOT cost price (internal seller info) */}
+                      {(() => {
+                        if (!selectedProduct.pricing) return null;
+
+                        let breakdown;
+
+                        if (selectedProduct.isVariableValue && customAmount) {
+                          const amount = parseFloat(customAmount);
+                          if (isNaN(amount) || amount <= 0) return null;
+
+                          // Calculate markup percentage from original pricing (based on minAmount)
+                          const markupPercentage = (selectedProduct.pricing.markup / selectedProduct.pricing.costPrice) * 100;
+
+                          // Calculate markup for this amount - amount is the BASE (what they want to send)
+                          const markup = amount * (markupPercentage / 100);
+
+                          // Check if there was a discount applied (discount percentage stays the same)
+                          const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
+                            ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
+                            : 0;
+
+                          // Discount applies to (amount + markup)
+                          const discount = discountPercentage > 0 ? ((amount + markup) * discountPercentage / 100) : 0;
+
+                          breakdown = {
+                            markup,
+                            discount,
+                            discountApplied: discountPercentage > 0,
+                          };
+                        } else {
+                          breakdown = {
+                            markup: selectedProduct.pricing.markup,
+                            discount: selectedProduct.pricing.discount,
+                            discountApplied: selectedProduct.pricing.discountApplied,
+                          };
+                        }
+
+                        // Don't show breakdown if there's no fees or discount
+                        if (breakdown.markup <= 0 && (!breakdown.discountApplied || breakdown.discount <= 0)) return null;
+
+                        return (
+                          <div className="space-y-1 text-sm pt-2 mt-2 border-t">
+                            {breakdown.markup > 0 && (
+                              <div className="flex justify-between text-gray-600">
+                                <span>Fees:</span>
+                                <span>+${breakdown.markup.toFixed(2)}</span>
+                              </div>
+                            )}
+                            {breakdown.discountApplied && breakdown.discount > 0 && (
+                              <div className="flex justify-between text-green-600">
+                                <span>{t('storefront.discount')}</span>
+                                <span>-${breakdown.discount.toFixed(2)}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t">
                         <span>{t('storefront.total')}</span>
                         <span>
-                          ${selectedProduct.isVariableValue && customAmount
-                            ? parseFloat(customAmount).toFixed(2)
-                            : selectedProduct.pricing.finalPrice.toFixed(2)}
+                          ${(() => {
+                            if (selectedProduct.isVariableValue && customAmount) {
+                              const amount = parseFloat(customAmount);
+                              if (isNaN(amount) || amount <= 0) return '0.00';
+
+                              // Calculate markup percentage from original pricing
+                              const markupPercentage = (selectedProduct.pricing.markup / selectedProduct.pricing.costPrice) * 100;
+
+                              // Calculate markup for this amount
+                              const markup = amount * (markupPercentage / 100);
+
+                              // Calculate discount if applicable
+                              const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
+                                ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
+                                : 0;
+                              const discount = discountPercentage > 0 ? ((amount + markup) * discountPercentage / 100) : 0;
+
+                              // Total = amount + markup - discount
+                              const total = amount + markup - discount;
+                              return total.toFixed(2);
+                            }
+                            return selectedProduct.pricing.finalPrice.toFixed(2);
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -1397,9 +1475,26 @@ export default function PublicStorefrontPage() {
                       </div>
                     ) : (
                       t('storefront.pay', {
-                        amount: selectedProduct?.isVariableValue && customAmount
-                          ? parseFloat(customAmount).toFixed(2)
-                          : selectedProduct?.pricing.finalPrice.toFixed(2)
+                        amount: (() => {
+                          if (selectedProduct?.isVariableValue && customAmount) {
+                            const amount = parseFloat(customAmount);
+                            if (isNaN(amount) || amount <= 0) return '0.00';
+
+                            // Calculate markup percentage from original pricing
+                            const markupPercentage = (selectedProduct.pricing.markup / selectedProduct.pricing.costPrice) * 100;
+                            const markup = amount * (markupPercentage / 100);
+
+                            // Calculate discount if applicable
+                            const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
+                              ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
+                              : 0;
+                            const discount = discountPercentage > 0 ? ((amount + markup) * discountPercentage / 100) : 0;
+
+                            // Total = amount + markup - discount
+                            return (amount + markup - discount).toFixed(2);
+                          }
+                          return selectedProduct?.pricing.finalPrice.toFixed(2);
+                        })()
                       })
                     )}
                   </Button>

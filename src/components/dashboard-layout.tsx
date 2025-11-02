@@ -42,7 +42,6 @@ const navigation = [
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
   { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
   { name: 'Payment Settings', href: '/dashboard/settings/payment', icon: CreditCard },
-  { name: 'Organization', href: '/dashboard/settings/organization', icon: Building2 },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 

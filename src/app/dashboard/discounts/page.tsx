@@ -53,13 +53,22 @@ export default function DiscountsPage() {
       const response = await fetch('/api/v1/discounts');
       if (response.ok) {
         const data = await response.json();
-        setDiscounts(data.discounts);
+        console.log('Fetched discounts:', data);
+        setDiscounts(data.discounts || []);
+      } else {
+        const error = await response.json();
+        console.error('Failed to fetch discounts - API error:', error);
+        toast({
+          title: 'Error',
+          description: error.message || error.detail || 'Failed to load discounts',
+          variant: 'error',
+        });
       }
     } catch (error) {
       console.error('Failed to fetch discounts:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load discounts',
+        description: 'Failed to load discounts. Please check your connection.',
         variant: 'error',
       });
     } finally {

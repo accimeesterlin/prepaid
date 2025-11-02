@@ -2,7 +2,14 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IIntegration extends Document {
   orgId: string;
-  provider: 'dingconnect' | 'reloadly';
+  provider:
+    | 'dingconnect'
+    | 'reloadly'
+    | 'zeptomail'
+    | 'mailgun'
+    | 'sendgrid'
+    | 'mailchimp'
+    | 'zapier';
   status: 'active' | 'inactive' | 'error';
   environment?: 'sandbox' | 'production';
   credentials: {
@@ -11,6 +18,9 @@ export interface IIntegration extends Document {
     clientId?: string;
     clientSecret?: string;
     baseUrl?: string;
+    domain?: string; // For Mailgun domain
+    fromEmail?: string; // Default from email for email providers
+    fromName?: string; // Default from name for email providers
   };
   metadata: {
     lastSync?: Date;
@@ -18,6 +28,8 @@ export interface IIntegration extends Document {
     lastTestError?: string;
     accountBalance?: number;
     accountCurrency?: string;
+    emailsSent?: number; // For email providers
+    zapUrl?: string; // For Zapier webhook URL
   };
   settings: {
     autoSync: boolean;
@@ -38,7 +50,15 @@ const IntegrationSchema = new Schema<IIntegration>(
     provider: {
       type: String,
       required: true,
-      enum: ['dingconnect', 'reloadly'],
+      enum: [
+        'dingconnect',
+        'reloadly',
+        'zeptomail',
+        'mailgun',
+        'sendgrid',
+        'mailchimp',
+        'zapier',
+      ],
     },
     status: {
       type: String,
@@ -71,6 +91,15 @@ const IntegrationSchema = new Schema<IIntegration>(
       baseUrl: {
         type: String,
       },
+      domain: {
+        type: String,
+      },
+      fromEmail: {
+        type: String,
+      },
+      fromName: {
+        type: String,
+      },
     },
     metadata: {
       lastSync: Date,
@@ -78,6 +107,8 @@ const IntegrationSchema = new Schema<IIntegration>(
       lastTestError: String,
       accountBalance: Number,
       accountCurrency: String,
+      emailsSent: Number,
+      zapUrl: String,
     },
     settings: {
       autoSync: {
