@@ -113,7 +113,19 @@
     "errorOccurred": "Ocurrió un error. Por favor, intente de nuevo.",
     "enterAmountMin": "El monto debe ser al menos ${min}",
     "enterAmountMax": "El monto no puede exceder ${max}",
-    "enterAmountValid": "Por favor, ingrese un monto válido"
+    "enterAmountValid": "Por favor, ingrese un monto válido",
+    "discountCode": "Código de Descuento",
+    "optional": "Opcional",
+    "enterDiscountCode": "Ingrese el código",
+    "apply": "Aplicar",
+    "validating": "Verificando...",
+    "discountApplied": "¡Descuento Aplicado!",
+    "invalidDiscountCode": "Código de descuento inválido",
+    "errorValidatingDiscount": "Error al validar el código de descuento",
+    "fullName": "Nombre Completo",
+    "namePlaceholder": "Juan Pérez",
+    "nameRequired": "Nombre Requerido",
+    "nameRequiredDesc": "Por favor, ingrese su nombre completo para continuar."
   },
   "common": {
     "currency": "USD",

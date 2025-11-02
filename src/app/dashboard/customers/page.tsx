@@ -172,12 +172,20 @@ export default function CustomersPage() {
                       <h3 className="font-semibold text-sm truncate">{customer.name || 'Unnamed Customer'}</h3>
                       <div className="space-y-0.5 mt-1">
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Phone className="h-3 w-3" />
+                          <Phone className="h-3 w-3 flex-shrink-0" />
                           <span className="truncate">{customer.phoneNumber}</span>
                         </div>
+                        {customer.email && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            <span className="truncate">{customer.email}</span>
+                          </div>
+                        )}
                         {customer.country && (
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
+                            <MapPin className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">{customer.country}</span>
                           </div>
                         )}
@@ -227,17 +235,20 @@ export default function CustomersPage() {
                 </label>
                 <input
                   type="tel"
-                  placeholder="+675 1234 5678"
+                  placeholder="+1 (555) 123-4567"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter phone number with country code (e.g., +1 for USA)
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Name</label>
                 <input
                   type="text"
-                  placeholder="Customer name"
+                  placeholder="John Doe"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -247,46 +258,11 @@ export default function CustomersPage() {
                 <label className="block text-sm font-medium mb-2">Email</label>
                 <input
                   type="email"
-                  placeholder="customer@example.com"
+                  placeholder="john.doe@example.com"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
-              </div>
-              <div className="relative">
-                <label className="block text-sm font-medium mb-2">Country</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search or select country"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary pr-10"
-                    value={formData.country}
-                    onChange={(e) => {
-                      setFormData({ ...formData, country: e.target.value });
-                      setCountrySearch(e.target.value);
-                      setShowCountryDropdown(true);
-                    }}
-                    onFocus={() => setShowCountryDropdown(true)}
-                  />
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                </div>
-                {showCountryDropdown && filteredCountries.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {filteredCountries.map((country) => (
-                      <div
-                        key={country}
-                        className="px-4 py-2 hover:bg-muted cursor-pointer text-sm"
-                        onClick={() => {
-                          setFormData({ ...formData, country });
-                          setShowCountryDropdown(false);
-                          setCountrySearch('');
-                        }}
-                      >
-                        {country}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {message && (

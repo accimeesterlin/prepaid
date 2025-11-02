@@ -22,6 +22,7 @@ import {
   Globe,
   DollarSign,
   User,
+  Eye,
 } from 'lucide-react';
 import { Button, Card } from '@pg-prepaid/ui';
 import { cn } from '@/lib/utils';

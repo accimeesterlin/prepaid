@@ -113,7 +113,19 @@
     "errorOccurred": "An error occurred. Please try again.",
     "enterAmountMin": "Amount must be at least ${min}",
     "enterAmountMax": "Amount cannot exceed ${max}",
-    "enterAmountValid": "Please enter a valid amount"
+    "enterAmountValid": "Please enter a valid amount",
+    "discountCode": "Discount Code",
+    "optional": "Optional",
+    "enterDiscountCode": "Enter code",
+    "apply": "Apply",
+    "validating": "Checking...",
+    "discountApplied": "Discount Applied!",
+    "invalidDiscountCode": "Invalid discount code",
+    "errorValidatingDiscount": "Error validating discount code",
+    "fullName": "Full Name",
+    "namePlaceholder": "John Doe",
+    "nameRequired": "Name Required",
+    "nameRequiredDesc": "Please enter your full name to continue."
   },
   "common": {
     "currency": "USD",

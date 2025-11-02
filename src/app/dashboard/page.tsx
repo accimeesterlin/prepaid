@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Globe,
   Tag,
+  Eye,
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -247,6 +248,19 @@ export default function DashboardPage() {
               <CardDescription>Get started with your storefront</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                size="lg"
+                onClick={() => router.push('/dashboard/preview')}
+              >
+                <Eye className="h-5 w-5 mr-3" />
+                <div className="text-left flex-1">
+                  <div className="font-medium">Test Storefront</div>
+                  <div className="text-xs text-muted-foreground">Preview and test purchases</div>
+                </div>
+                <ArrowUpRight className="h-4 w-4 ml-2" />
+              </Button>
               <Button
                 variant="outline"
                 className="w-full justify-start"

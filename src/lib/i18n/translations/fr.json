@@ -113,7 +113,19 @@
     "errorOccurred": "Une erreur s'est produite. Veuillez réessayer.",
     "enterAmountMin": "Le montant doit être d'au moins ${min}",
     "enterAmountMax": "Le montant ne peut pas dépasser ${max}",
-    "enterAmountValid": "Veuillez entrer un montant valide"
+    "enterAmountValid": "Veuillez entrer un montant valide",
+    "discountCode": "Code Promo",
+    "optional": "Optionnel",
+    "enterDiscountCode": "Entrer le code",
+    "apply": "Appliquer",
+    "validating": "Vérification...",
+    "discountApplied": "Réduction Appliquée!",
+    "invalidDiscountCode": "Code promo invalide",
+    "errorValidatingDiscount": "Erreur lors de la validation du code promo",
+    "fullName": "Nom Complet",
+    "namePlaceholder": "Jean Dupont",
+    "nameRequired": "Nom Requis",
+    "nameRequiredDesc": "Veuillez entrer votre nom complet pour continuer."
   },
   "common": {
     "currency": "USD",

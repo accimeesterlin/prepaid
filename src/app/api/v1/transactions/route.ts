@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { dbConnection } from '@pg-prepaid/db/connection';
 import { Transaction } from '@pg-prepaid/db';
+import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/v1/transactions
@@ -64,5 +66,64 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get transactions error:', error);
     return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/v1/transactions?orderId=XXX
+ * Update transaction details (currently supports updating customer name)
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    await dbConnection.connect();
+
+    const { searchParams } = new URL(request.url);
+    const orderId = searchParams.get('orderId');
+
+    if (!orderId) {
+      return createErrorResponse('Missing orderId', 400);
+    }
+
+    const body = await request.json();
+    const { customerName } = body;
+
+    if (!customerName || typeof customerName !== 'string' || !customerName.trim()) {
+      return createErrorResponse('Invalid customer name', 400);
+    }
+
+    logger.info('Updating transaction with customer name', { orderId, customerName });
+
+    // Find transaction
+    const transaction = await Transaction.findOne({ orderId });
+
+    if (!transaction) {
+      logger.error('Transaction not found', { orderId });
+      return createErrorResponse('Transaction not found', 404);
+    }
+
+    // Update recipient name
+    transaction.recipient.name = customerName.trim();
+    await transaction.save();
+
+    logger.info('Transaction updated successfully', { orderId, customerName });
+
+    return createSuccessResponse({
+      success: true,
+      message: 'Customer name updated successfully',
+      transaction: {
+        orderId: transaction.orderId,
+        recipient: transaction.recipient,
+      },
+    });
+  } catch (error) {
+    logger.error('Transaction update error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    return createErrorResponse(
+      error instanceof Error ? error.message : 'Internal server error',
+      500
+    );
   }
 }

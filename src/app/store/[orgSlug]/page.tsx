@@ -31,6 +31,7 @@ export default function PublicStorefrontPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'pgpay'>('stripe');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [customAmount, setCustomAmount] = useState<string>('');
@@ -41,6 +42,12 @@ export default function PublicStorefrontPage() {
   // Payment methods state
   const [paymentMethods, setPaymentMethods] = useState<any>(null);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+
+  // Discount code state
+  const [discountCode, setDiscountCode] = useState<string>('');
+  const [discountData, setDiscountData] = useState<any>(null);
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
+  const [discountError, setDiscountError] = useState<string>('');
 
   // Phone number validation
   const validatePhoneNumber = (phone: string): { valid: boolean; error?: string } => {
@@ -359,6 +366,61 @@ export default function PublicStorefrontPage() {
       setCustomAmount('');
     }
     setAmountError('');
+
+    // Reset discount code state
+    setDiscountCode('');
+    setDiscountData(null);
+    setDiscountError('');
+  };
+
+  // Validate discount code
+  const validateDiscountCode = async (code: string) => {
+    if (!code.trim()) {
+      setDiscountData(null);
+      setDiscountError('');
+      return;
+    }
+
+    setIsValidatingDiscount(true);
+    setDiscountError('');
+
+    try {
+      const amount = selectedProduct?.isVariableValue && customAmount
+        ? parseFloat(customAmount)
+        : selectedProduct?.pricing.finalPrice || 0;
+
+      const response = await fetch('/api/v1/discounts/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: code.trim(),
+          orgSlug,
+          amount,
+          countryCode: lookupData?.country?.code,
+          productSkuCode: selectedProduct?.skuCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.valid) {
+        setDiscountData(data.discount);
+        setDiscountError('');
+        toast({
+          title: t('storefront.discountApplied'),
+          description: `${data.discount.name} - Save $${data.discount.discountAmount.toFixed(2)}`,
+          variant: 'success',
+        });
+      } else {
+        setDiscountData(null);
+        setDiscountError(data.detail || data.error || data.message || t('storefront.invalidDiscountCode'));
+      }
+    } catch (error: any) {
+      setDiscountData(null);
+      setDiscountError(t('storefront.errorValidatingDiscount'));
+    } finally {
+      setIsValidatingDiscount(false);
+    }
   };
 
   // Fetch price estimate from DingConnect
@@ -1261,7 +1323,7 @@ export default function PublicStorefrontPage() {
                         }
 
                         // Don't show breakdown if there's no fees or discount
-                        if (breakdown.markup <= 0 && (!breakdown.discountApplied || breakdown.discount <= 0)) return null;
+                        if (breakdown.markup <= 0 && (!breakdown.discountApplied || breakdown.discount <= 0) && !discountData) return null;
 
                         return (
                           <div className="space-y-1 text-sm pt-2 mt-2 border-t">
@@ -1275,6 +1337,12 @@ export default function PublicStorefrontPage() {
                               <div className="flex justify-between text-green-600">
                                 <span>{t('storefront.discount')}</span>
                                 <span>-${breakdown.discount.toFixed(2)}</span>
+                              </div>
+                            )}
+                            {discountData && (
+                              <div className="flex justify-between text-green-600 font-medium">
+                                <span>{t('storefront.discountCode')} ({discountData.code})</span>
+                                <span>-${discountData.discountAmount.toFixed(2)}</span>
                               </div>
                             )}
                           </div>
@@ -1301,11 +1369,13 @@ export default function PublicStorefrontPage() {
                                 : 0;
                               const discount = discountPercentage > 0 ? ((amount + markup) * discountPercentage / 100) : 0;
 
-                              // Total = amount + markup - discount
-                              const total = amount + markup - discount;
-                              return total.toFixed(2);
+                              // Total = amount + markup - discount - discountCode
+                              const total = amount + markup - discount - (discountData?.discountAmount || 0);
+                              return Math.max(0, total).toFixed(2);
                             }
-                            return selectedProduct.pricing.finalPrice.toFixed(2);
+                            const baseTotal = selectedProduct.pricing.finalPrice;
+                            const total = baseTotal - (discountData?.discountAmount || 0);
+                            return Math.max(0, total).toFixed(2);
                           })()}
                         </span>
                       </div>
@@ -1315,7 +1385,7 @@ export default function PublicStorefrontPage() {
                   {/* Customer Email */}
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      {t('storefront.emailAddress')}
+                      {t('storefront.emailAddress')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -1328,6 +1398,61 @@ export default function PublicStorefrontPage() {
                     <p className="text-xs text-gray-500 mt-1">
                       {t('storefront.receiptEmail')}
                     </p>
+                  </div>
+
+                  {/* Discount Code */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      {t('storefront.discountCode')} ({t('storefront.optional')})
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder={t('storefront.enterDiscountCode')}
+                        className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 uppercase ${
+                          discountError
+                            ? 'border-red-500 focus:ring-red-500'
+                            : discountData
+                            ? 'border-green-500 focus:ring-green-500'
+                            : 'focus:ring-primary'
+                        }`}
+                        value={discountCode}
+                        onChange={(e) => {
+                          setDiscountCode(e.target.value.toUpperCase());
+                          setDiscountError('');
+                          setDiscountData(null);
+                        }}
+                        disabled={isProcessing || isValidatingDiscount}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => validateDiscountCode(discountCode)}
+                        disabled={!discountCode.trim() || isProcessing || isValidatingDiscount}
+                        className="whitespace-nowrap"
+                      >
+                        {isValidatingDiscount ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent mr-2" />
+                            {t('storefront.validating')}
+                          </>
+                        ) : (
+                          t('storefront.apply')
+                        )}
+                      </Button>
+                    </div>
+                    {discountError && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-red-600">
+                        <XCircle className="h-3 w-3" />
+                        {discountError}
+                      </div>
+                    )}
+                    {discountData && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-green-600">
+                        <CheckCircle className="h-3 w-3" />
+                        {discountData.name} - Save ${discountData.discountAmount.toFixed(2)}
+                      </div>
+                    )}
                   </div>
 
                   {/* Payment Method Selection - Only show if payment methods are available */}
@@ -1490,10 +1615,11 @@ export default function PublicStorefrontPage() {
                               : 0;
                             const discount = discountPercentage > 0 ? ((amount + markup) * discountPercentage / 100) : 0;
 
-                            // Total = amount + markup - discount
-                            return (amount + markup - discount).toFixed(2);
+                            // Total = amount + markup - discount - discountCode
+                            return Math.max(0, amount + markup - discount - (discountData?.discountAmount || 0)).toFixed(2);
                           }
-                          return selectedProduct?.pricing.finalPrice.toFixed(2);
+                          const baseTotal = selectedProduct?.pricing.finalPrice || 0;
+                          return Math.max(0, baseTotal - (discountData?.discountAmount || 0)).toFixed(2);
                         })()
                       })
                     )}

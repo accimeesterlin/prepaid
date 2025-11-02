@@ -113,7 +113,19 @@
     "errorOccurred": "Gen yon erè ki fèt. Tanpri eseye ankò.",
     "enterAmountMin": "Montan dwe omwen ${min}",
     "enterAmountMax": "Montan pa ka depase ${max}",
-    "enterAmountValid": "Tanpri antre yon montan valid"
+    "enterAmountValid": "Tanpri antre yon montan valid",
+    "discountCode": "Kòd Rabè",
+    "optional": "Opsyonèl",
+    "enterDiscountCode": "Antre kòd",
+    "apply": "Aplike",
+    "validating": "Ap verifye...",
+    "discountApplied": "Rabè Aplike!",
+    "invalidDiscountCode": "Kòd rabè pa valid",
+    "errorValidatingDiscount": "Erè pou verifye kòd rabè",
+    "fullName": "Non Konplè",
+    "namePlaceholder": "Jan Pye",
+    "nameRequired": "Non Obligatwa",
+    "nameRequiredDesc": "Tanpri antre non konplè ou pou kontinye."
   },
   "common": {
     "currency": "USD",

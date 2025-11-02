@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, CreditCard, Bell, Shield, Plug, Store } from 'lucide-react';
+import { Building2, CreditCard, Bell, Shield, Plug, Store, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -14,6 +14,14 @@ const settingsSections = [
     href: '/dashboard/settings/organization',
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
+  },
+  {
+    title: 'Team Members',
+    description: 'Manage team access and balance limits',
+    icon: Users,
+    href: '/dashboard/settings/members',
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-100',
   },
   {
     title: 'Storefront',

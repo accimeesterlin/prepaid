@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
         testResult = await testDingConnect(credentials, environment);
       } else if (provider === 'reloadly') {
         testResult = await testReloadly(credentials, environment);
+      } else if (provider === 'zeptomail') {
+        testResult = await testZeptoMail(credentials);
       } else {
         return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
       }
@@ -151,5 +153,48 @@ async function testReloadly(credentials: any, environment: string) {
   return {
     balance: balanceData.balance,
     currency: balanceData.currencyCode,
+  };
+}
+
+// Test ZeptoMail connection
+async function testZeptoMail(credentials: any) {
+  const baseUrl = 'https://api.zeptomail.com/v1.1';
+
+  // Test with a simple API call to verify credentials
+  // Using the email/template endpoint with a GET request to check authentication
+  const response = await fetch(`${baseUrl}/email`, {
+    method: 'GET',
+    headers: {
+      'Authorization': credentials.apiKey,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = `ZeptoMail API error: ${response.status}`;
+
+    try {
+      const errorData = JSON.parse(errorText);
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch (e) {
+      // If parsing fails, use the raw text
+      if (errorText) {
+        errorMessage = errorText;
+      }
+    }
+
+    throw new Error(errorMessage);
+  }
+
+  // If successful, return success info
+  return {
+    success: true,
+    fromEmail: credentials.fromEmail,
+    message: 'ZeptoMail credentials verified successfully',
   };
 }

@@ -12,6 +12,9 @@ function PaymentSuccessContent() {
   const [message, setMessage] = useState('Verifying your payment...');
   const [orderId, setOrderId] = useState<string | null>(null);
   const [testMode, setTestMode] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [nameSaved, setNameSaved] = useState(false);
+  const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
     const orderIdParam = searchParams.get('orderId');
@@ -125,6 +128,32 @@ function PaymentSuccessContent() {
     setTimeout(verifyPayment, 1000);
   }, [searchParams]);
 
+  const handleSaveName = async () => {
+    if (!customerName.trim()) {
+      return;
+    }
+
+    setSavingName(true);
+
+    try {
+      const response = await fetch(`/api/v1/transactions?orderId=${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerName: customerName.trim() }),
+      });
+
+      if (response.ok) {
+        setNameSaved(true);
+      } else {
+        console.error('Failed to save customer name');
+      }
+    } catch (error) {
+      console.error('Error saving customer name:', error);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="max-w-md w-full">
@@ -168,6 +197,52 @@ function PaymentSuccessContent() {
                           All records were created for testing purposes only.
                         </p>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Name Capture Form */}
+                {!nameSaved && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                    <label className="block text-sm font-medium text-blue-900 mb-2">
+                      Your Name (Optional)
+                    </label>
+                    <p className="text-xs text-blue-700 mb-3">
+                      Help us personalize your experience by providing your name.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter your full name"
+                        className="flex-1 px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSaveName()}
+                        disabled={savingName}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSaveName}
+                        disabled={!customerName.trim() || savingName}
+                      >
+                        {savingName ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {nameSaved && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
+                    <div className="flex items-center gap-2 text-green-800">
+                      <CheckCircle className="h-5 w-5" />
+                      <span className="font-medium">Thank you, {customerName}!</span>
                     </div>
                   </div>
                 )}

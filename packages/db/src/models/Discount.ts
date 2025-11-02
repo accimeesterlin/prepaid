@@ -4,6 +4,7 @@ export interface IDiscount extends Document {
   orgId: string;
   name: string;
   description: string;
+  code?: string; // Optional discount code (e.g., "SAVE20", "WELCOME10") - if empty, it's an automatic discount
   type: 'percentage' | 'fixed';
   value: number;
   isActive: boolean;
@@ -12,8 +13,10 @@ export interface IDiscount extends Document {
   minPurchaseAmount?: number;
   maxDiscountAmount?: number;
   applicableCountries?: string[];
+  applicableProducts?: string[]; // Product SKU codes
   usageLimit?: number;
   usageCount: number;
+  maxUsesPerCustomer?: number; // Max uses per customer email
   createdAt: Date;
   updatedAt: Date;
 
@@ -21,6 +24,11 @@ export interface IDiscount extends Document {
   isValid(): boolean;
   canBeUsed(): boolean;
   calculateDiscount(amount: number): number;
+}
+
+// Static method to generate a random code
+export interface IDiscountModel extends mongoose.Model<IDiscount> {
+  generateCode(length?: number): string;
 }
 
 const DiscountSchema = new Schema<IDiscount>(
@@ -39,6 +47,13 @@ const DiscountSchema = new Schema<IDiscount>(
       type: String,
       required: true,
       trim: true,
+    },
+    code: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      sparse: true, // Allows multiple null values but unique non-null values
+      index: true,
     },
     type: {
       type: String,
@@ -78,6 +93,10 @@ const DiscountSchema = new Schema<IDiscount>(
       type: [String],
       default: [],
     },
+    applicableProducts: {
+      type: [String],
+      default: [],
+    },
     usageLimit: {
       type: Number,
       min: 0,
@@ -88,6 +107,11 @@ const DiscountSchema = new Schema<IDiscount>(
       default: 0,
       min: 0,
     },
+    maxUsesPerCustomer: {
+      type: Number,
+      min: 1,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -97,6 +121,7 @@ const DiscountSchema = new Schema<IDiscount>(
 // Compound index for efficient queries
 DiscountSchema.index({ orgId: 1, isActive: 1 });
 DiscountSchema.index({ orgId: 1, startDate: 1, endDate: 1 });
+DiscountSchema.index({ orgId: 1, code: 1 }, { unique: true, partialFilterExpression: { code: { $exists: true, $ne: null } } });
 
 // Check if discount is currently valid (date range and usage limit)
 DiscountSchema.methods.isValid = function (): boolean {
@@ -164,4 +189,14 @@ DiscountSchema.methods.calculateDiscount = function (amount: number): number {
   return Math.round(discount * 100) / 100; // Round to 2 decimal places
 };
 
-export const Discount = mongoose.models.Discount || mongoose.model<IDiscount>('Discount', DiscountSchema);
+// Static method to generate a random discount code
+DiscountSchema.statics.generateCode = function (length: number = 8): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excluding similar-looking characters (I, O, 0, 1, L)
+  let code = '';
+  for (let i = 0; i < length; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
+export const Discount = mongoose.models.Discount || (mongoose.model<IDiscount, IDiscountModel>('Discount', DiscountSchema));

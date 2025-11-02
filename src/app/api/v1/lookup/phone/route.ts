@@ -453,6 +453,9 @@ export async function POST(request: NextRequest) {
         bestDiscountName: bestDiscount?.name,
       });
 
+      // Get organization name for branding fallback
+      const organizationName = organization?.name || org?.name || '';
+
       return createSuccessResponse({
         phoneNumber: cleanPhone,
         country: {
@@ -471,7 +474,11 @@ export async function POST(request: NextRequest) {
         })),
         products: limitedProducts,
         totalProducts: productsWithPricing.length,
-        branding: storefrontSettings.branding,
+        branding: {
+          ...storefrontSettings.branding,
+          // Use businessName from settings, fallback to organization name
+          businessName: storefrontSettings.branding?.businessName || organizationName,
+        },
         discount: bestDiscount ? {
           id: bestDiscount._id,
           name: bestDiscount.name,

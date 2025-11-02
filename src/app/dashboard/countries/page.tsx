@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Globe, Save, Search } from 'lucide-react';
+import { Globe, Save, Search, Filter } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, toast } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { cn } from '@/lib/utils';
@@ -90,6 +90,7 @@ export default function CountriesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [availableCountries, setAvailableCountries] = useState<Country[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
+  const [showOnlyEnabled, setShowOnlyEnabled] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -237,10 +238,14 @@ export default function CountriesPage() {
     return settings?.countries?.allEnabled || settings?.countries?.enabled?.includes(countryCode);
   };
 
-  const filteredCountries = availableCountries.filter(country =>
-    country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    country.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCountries = availableCountries.filter(country => {
+    const matchesSearch = country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      country.code.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesFilter = !showOnlyEnabled || isCountryEnabled(country.code);
+
+    return matchesSearch && matchesFilter;
+  });
 
   const enabledCount = settings?.countries?.allEnabled
     ? availableCountries.length
@@ -344,16 +349,26 @@ export default function CountriesPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <input
-                type="text"
-                className="w-full pl-10 pr-4 py-2 border rounded-lg"
-                placeholder="Search countries..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            {/* Search Bar and Filter */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <input
+                  type="text"
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg"
+                  placeholder="Search countries..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Button
+                variant={showOnlyEnabled ? 'default' : 'outline'}
+                onClick={() => setShowOnlyEnabled(!showOnlyEnabled)}
+                className="whitespace-nowrap"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                {showOnlyEnabled ? 'Enabled Only' : 'All Countries'}
+              </Button>
             </div>
 
             {/* Country Grid */}

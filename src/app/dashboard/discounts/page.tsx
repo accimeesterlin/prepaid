@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Tag, Save, Plus, Edit, Trash2 } from 'lucide-react';
+import { Tag, Save, Plus, Edit, Trash2, Search, Filter, Copy, RefreshCw, Sparkles } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, toast, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ interface Discount {
   _id: string;
   name: string;
   description: string;
+  code?: string;
   type: 'percentage' | 'fixed';
   value: number;
   isActive: boolean;
@@ -18,7 +19,9 @@ interface Discount {
   minPurchaseAmount?: number;
   maxDiscountAmount?: number;
   applicableCountries?: string[];
+  applicableProducts?: string[];
   usageLimit?: number;
+  maxUsesPerCustomer?: number;
   usageCount: number;
 }
 
@@ -29,10 +32,19 @@ export default function DiscountsPage() {
   const [editingDiscount, setEditingDiscount] = useState<Discount | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [codeTypeFilter, setCodeTypeFilter] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    code: '',
+    autoGenerateCode: false,
     type: 'percentage' as 'percentage' | 'fixed',
     value: 0,
     isActive: true,
@@ -41,23 +53,30 @@ export default function DiscountsPage() {
     minPurchaseAmount: '',
     maxDiscountAmount: '',
     usageLimit: '',
+    maxUsesPerCustomer: '',
   });
 
   useEffect(() => {
     fetchDiscounts();
-  }, []);
+  }, [searchQuery, statusFilter, typeFilter, codeTypeFilter]);
 
   const fetchDiscounts = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/v1/discounts');
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (typeFilter !== 'all') params.append('type', typeFilter);
+      if (codeTypeFilter !== 'all') params.append('codeType', codeTypeFilter);
+
+      const url = `/api/v1/discounts${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url);
+
       if (response.ok) {
         const data = await response.json();
-        console.log('Fetched discounts:', data);
         setDiscounts(data.discounts || []);
       } else {
         const error = await response.json();
-        console.error('Failed to fetch discounts - API error:', error);
         toast({
           title: 'Error',
           description: error.message || error.detail || 'Failed to load discounts',
@@ -80,6 +99,8 @@ export default function DiscountsPage() {
     setFormData({
       name: '',
       description: '',
+      code: '',
+      autoGenerateCode: false,
       type: 'percentage',
       value: 0,
       isActive: true,
@@ -88,6 +109,7 @@ export default function DiscountsPage() {
       minPurchaseAmount: '',
       maxDiscountAmount: '',
       usageLimit: '',
+      maxUsesPerCustomer: '',
     });
     setEditingDiscount(null);
   };
@@ -102,6 +124,8 @@ export default function DiscountsPage() {
     setFormData({
       name: discount.name,
       description: discount.description,
+      code: discount.code || '',
+      autoGenerateCode: false,
       type: discount.type,
       value: discount.value,
       isActive: discount.isActive,
@@ -110,6 +134,7 @@ export default function DiscountsPage() {
       minPurchaseAmount: discount.minPurchaseAmount?.toString() || '',
       maxDiscountAmount: discount.maxDiscountAmount?.toString() || '',
       usageLimit: discount.usageLimit?.toString() || '',
+      maxUsesPerCustomer: discount.maxUsesPerCustomer?.toString() || '',
     });
     setIsDialogOpen(true);
   };
@@ -147,6 +172,8 @@ export default function DiscountsPage() {
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim(),
+        code: formData.code.trim() || undefined,
+        autoGenerateCode: formData.autoGenerateCode,
         type: formData.type,
         value: formData.value,
         isActive: formData.isActive,
@@ -155,6 +182,7 @@ export default function DiscountsPage() {
         minPurchaseAmount: formData.minPurchaseAmount ? parseFloat(formData.minPurchaseAmount) : null,
         maxDiscountAmount: formData.maxDiscountAmount ? parseFloat(formData.maxDiscountAmount) : null,
         usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : null,
+        maxUsesPerCustomer: formData.maxUsesPerCustomer ? parseInt(formData.maxUsesPerCustomer) : null,
       };
 
       const url = editingDiscount
@@ -182,7 +210,7 @@ export default function DiscountsPage() {
         const error = await response.json();
         toast({
           title: 'Error',
-          description: error.error || 'Failed to save discount',
+          description: error.error || error.detail || 'Failed to save discount',
           variant: 'error',
         });
       }
@@ -264,6 +292,15 @@ export default function DiscountsPage() {
     }
   };
 
+  const copyCodeToClipboard = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast({
+      title: 'Copied!',
+      description: `Discount code "${code}" copied to clipboard`,
+      variant: 'success',
+    });
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -281,11 +318,11 @@ export default function DiscountsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Discounts</h1>
             <p className="text-muted-foreground mt-1">
-              Create and manage promotional discounts for your storefront
+              Create and manage promotional discounts and discount codes
             </p>
           </div>
           <Button onClick={openCreateDialog}>
@@ -294,45 +331,161 @@ export default function DiscountsPage() {
           </Button>
         </div>
 
+        {/* Search and Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              {/* Search Bar */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, description, or code..."
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="sm:w-auto"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                  {(statusFilter !== 'all' || typeFilter !== 'all' || codeTypeFilter !== 'all') && (
+                    <span className="ml-2 px-1.5 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
+                      {[statusFilter !== 'all', typeFilter !== 'all', codeTypeFilter !== 'all'].filter(Boolean).length}
+                    </span>
+                  )}
+                </Button>
+              </div>
+
+              {/* Filters */}
+              {showFilters && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t animate-in slide-in-from-top-2">
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Status</label>
+                    <select
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="expired">Expired</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Type</label>
+                    <select
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value)}
+                    >
+                      <option value="all">All Types</option>
+                      <option value="percentage">Percentage</option>
+                      <option value="fixed">Fixed Amount</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Code Type</label>
+                    <select
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={codeTypeFilter}
+                      onChange={(e) => setCodeTypeFilter(e.target.value)}
+                    >
+                      <option value="all">All</option>
+                      <option value="coded">With Code</option>
+                      <option value="automatic">Automatic</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Results count */}
+              <div className="flex justify-between items-center text-sm text-muted-foreground">
+                <span>{discounts.length} discount{discounts.length !== 1 ? 's' : ''} found</span>
+                {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || codeTypeFilter !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setStatusFilter('all');
+                      setTypeFilter('all');
+                      setCodeTypeFilter('all');
+                    }}
+                    className="text-primary hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Discounts List */}
         {discounts.length === 0 ? (
           <Card>
             <CardContent className="py-12">
               <div className="text-center">
                 <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground font-medium">No discounts created yet</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Create your first discount to start offering promotions
+                <p className="text-muted-foreground font-medium">
+                  {searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || codeTypeFilter !== 'all'
+                    ? 'No discounts match your filters'
+                    : 'No discounts created yet'}
                 </p>
-                <Button onClick={openCreateDialog} className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Discount
-                </Button>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || codeTypeFilter !== 'all'
+                    ? 'Try adjusting your search or filters'
+                    : 'Create your first discount to start offering promotions'}
+                </p>
+                {!searchQuery && statusFilter === 'all' && typeFilter === 'all' && codeTypeFilter === 'all' && (
+                  <Button onClick={openCreateDialog} className="mt-4">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Discount
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {discounts.map((discount) => (
-              <Card key={discount._id} className={cn(!discount.isActive && 'opacity-60')}>
+              <Card key={discount._id} className={cn('hover:border-primary transition-colors', !discount.isActive && 'opacity-60')}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <CardTitle>{discount.name}</CardTitle>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <CardTitle className="truncate">{discount.name}</CardTitle>
                         {discount.isActive ? (
-                          <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded">
+                          <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded flex-shrink-0">
                             Active
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-xs font-medium rounded">
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-xs font-medium rounded flex-shrink-0">
                             Inactive
                           </span>
                         )}
                       </div>
                       <CardDescription className="mt-1">{discount.description}</CardDescription>
+                      {/* Discount Code */}
+                      {discount.code && (
+                        <div className="mt-2 inline-flex items-center gap-2 px-2.5 py-1 bg-primary/10 rounded-md">
+                          <code className="text-sm font-mono font-semibold text-primary">{discount.code}</code>
+                          <button
+                            onClick={() => copyCodeToClipboard(discount.code!)}
+                            className="text-primary hover:text-primary/80 transition-colors"
+                            title="Copy code"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -381,10 +534,16 @@ export default function DiscountsPage() {
                         </span>
                       </div>
                     )}
+                    {discount.maxUsesPerCustomer && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Per Customer:</span>
+                        <span className="font-medium">{discount.maxUsesPerCustomer} uses max</span>
+                      </div>
+                    )}
                     {(discount.startDate || discount.endDate) && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Valid:</span>
-                        <span className="font-medium">
+                        <span className="font-medium text-right">
                           {discount.startDate && new Date(discount.startDate).toLocaleDateString()}
                           {discount.startDate && discount.endDate && ' - '}
                           {discount.endDate && new Date(discount.endDate).toLocaleDateString()}
@@ -420,7 +579,7 @@ export default function DiscountsPage() {
               <DialogDescription>
                 {editingDiscount
                   ? 'Update the discount details below'
-                  : 'Fill in the details to create a new discount'}
+                  : 'Fill in the details to create a new discount or discount code'}
               </DialogDescription>
             </DialogHeader>
 
@@ -429,7 +588,7 @@ export default function DiscountsPage() {
                 <label className="text-sm font-medium mb-2 block">Discount Name</label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="e.g., Summer Sale"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -440,18 +599,47 @@ export default function DiscountsPage() {
                 <label className="text-sm font-medium mb-2 block">Description</label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="e.g., Get 10% off all top-ups!"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Discount Code Section */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Discount Code (Optional)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary uppercase"
+                    placeholder="e.g., SAVE20 or leave empty for automatic discount"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase(), autoGenerateCode: false })}
+                    disabled={formData.autoGenerateCode}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setFormData({ ...formData, autoGenerateCode: !formData.autoGenerateCode, code: formData.autoGenerateCode ? formData.code : '' })}
+                    className="flex items-center gap-2"
+                  >
+                    {formData.autoGenerateCode ? <RefreshCw className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                    {formData.autoGenerateCode ? 'Manual' : 'Generate'}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formData.autoGenerateCode
+                    ? 'A unique code will be automatically generated'
+                    : 'Leave empty for automatic discount (no code required). Or enter a custom code or click "Generate"'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Discount Type</label>
                   <select
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value as 'percentage' | 'fixed' })}
                   >
@@ -465,7 +653,7 @@ export default function DiscountsPage() {
                   <input
                     type="number"
                     step="0.01"
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="10"
                     value={formData.value}
                     onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
@@ -473,12 +661,12 @@ export default function DiscountsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Start Date (optional)</label>
                   <input
                     type="date"
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                   />
@@ -488,20 +676,20 @@ export default function DiscountsPage() {
                   <label className="text-sm font-medium mb-2 block">End Date (optional)</label>
                   <input
                     type="date"
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Min Purchase Amount (optional)</label>
+                  <label className="text-sm font-medium mb-2 block">Min Purchase Amount ($)</label>
                   <input
                     type="number"
                     step="0.01"
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="25.00"
                     value={formData.minPurchaseAmount}
                     onChange={(e) => setFormData({ ...formData, minPurchaseAmount: e.target.value })}
@@ -509,11 +697,11 @@ export default function DiscountsPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Max Discount Amount (optional)</label>
+                  <label className="text-sm font-medium mb-2 block">Max Discount Amount ($)</label>
                   <input
                     type="number"
                     step="0.01"
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="50.00"
                     value={formData.maxDiscountAmount}
                     onChange={(e) => setFormData({ ...formData, maxDiscountAmount: e.target.value })}
@@ -521,15 +709,28 @@ export default function DiscountsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Usage Limit (optional)</label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Leave empty for unlimited"
-                  value={formData.usageLimit}
-                  onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Total Usage Limit</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Unlimited"
+                    value={formData.usageLimit}
+                    onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Max Uses Per Customer</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Unlimited"
+                    value={formData.maxUsesPerCustomer}
+                    onChange={(e) => setFormData({ ...formData, maxUsesPerCustomer: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -546,7 +747,7 @@ export default function DiscountsPage() {
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>

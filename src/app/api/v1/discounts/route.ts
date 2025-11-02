@@ -8,19 +8,67 @@ import { requireAuth } from '@/lib/auth-middleware';
 
 /**
  * GET /api/v1/discounts
- * Get all discounts for the organization
+ * Get all discounts for the organization with search and filters
  */
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth(request);
-
     await dbConnection.connect();
 
-    const discounts = await Discount.find({ orgId: session.orgId }).sort({ createdAt: -1 });
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search') || '';
+    const status = searchParams.get('status') || 'all'; // all, active, inactive, expired
+    const type = searchParams.get('type') || 'all'; // all, percentage, fixed
+    const codeType = searchParams.get('codeType') || 'all'; // all, coded, automatic
+
+    // Build query
+    const query: any = { orgId: session.orgId };
+
+    // Search by name, description, or code
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { code: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    // Filter by status
+    const now = new Date();
+    if (status === 'active') {
+      query.isActive = true;
+      query.$and = [
+        { $or: [{ startDate: { $exists: false } }, { startDate: { $lte: now } }] },
+        { $or: [{ endDate: { $exists: false } }, { endDate: { $gte: now } }] },
+      ];
+    } else if (status === 'inactive') {
+      query.isActive = false;
+    } else if (status === 'expired') {
+      query.endDate = { $lt: now };
+    }
+
+    // Filter by type
+    if (type !== 'all') {
+      query.type = type;
+    }
+
+    // Filter by code type (coded vs automatic)
+    if (codeType === 'coded') {
+      query.code = { $exists: true, $ne: null };
+    } else if (codeType === 'automatic') {
+      query.$or = [
+        { code: { $exists: false } },
+        { code: null },
+        { code: '' },
+      ];
+    }
+
+    const discounts = await Discount.find(query).sort({ createdAt: -1 });
 
     logger.info('Fetched discounts', {
       orgId: session.orgId,
       count: discounts.length,
+      filters: { search, status, type, codeType },
     });
 
     return createSuccessResponse({ discounts });
@@ -32,18 +80,19 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/v1/discounts
- * Create a new discount
+ * Create a new discount (with optional code generation)
  */
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth(request);
-
     await dbConnection.connect();
 
     const body = await request.json();
     const {
       name,
       description,
+      code,
+      autoGenerateCode,
       type,
       value,
       isActive,
@@ -52,7 +101,9 @@ export async function POST(request: NextRequest) {
       minPurchaseAmount,
       maxDiscountAmount,
       applicableCountries,
+      applicableProducts,
       usageLimit,
+      maxUsesPerCustomer,
     } = body;
 
     // Validation
@@ -76,11 +127,37 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Percentage discount cannot exceed 100%', 400);
     }
 
+    // Generate code if requested
+    let discountCode = code?.trim().toUpperCase() || null;
+    if (autoGenerateCode && !discountCode) {
+      // Generate a unique code
+      let attempts = 0;
+      do {
+        discountCode = (Discount as any).generateCode(8);
+        const existing = await Discount.findOne({ orgId: session.orgId, code: discountCode });
+        if (!existing) break;
+        attempts++;
+      } while (attempts < 10);
+
+      if (attempts >= 10) {
+        return createErrorResponse('Failed to generate unique discount code. Please try again.', 500);
+      }
+    }
+
+    // If a code is provided, check uniqueness
+    if (discountCode) {
+      const existingCode = await Discount.findOne({ orgId: session.orgId, code: discountCode });
+      if (existingCode) {
+        return createErrorResponse('A discount with this code already exists', 400);
+      }
+    }
+
     // Create discount
     const discount = await Discount.create({
       orgId: session.orgId,
       name: name.trim(),
       description: description.trim(),
+      code: discountCode,
       type,
       value,
       isActive: isActive !== undefined ? isActive : true,
@@ -89,7 +166,9 @@ export async function POST(request: NextRequest) {
       minPurchaseAmount: minPurchaseAmount || null,
       maxDiscountAmount: maxDiscountAmount || null,
       applicableCountries: applicableCountries || [],
+      applicableProducts: applicableProducts || [],
       usageLimit: usageLimit || null,
+      maxUsesPerCustomer: maxUsesPerCustomer || null,
       usageCount: 0,
     });
 
@@ -97,6 +176,7 @@ export async function POST(request: NextRequest) {
       orgId: session.orgId,
       discountId: discount._id,
       name: discount.name,
+      code: discount.code,
     });
 
     return createSuccessResponse({ discount }, 201);

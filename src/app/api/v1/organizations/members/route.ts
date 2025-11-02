@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
             }
           : null,
         invitedAt: member.invitedAt,
+        balanceLimit: member.balanceLimit || undefined,
       };
     });
 

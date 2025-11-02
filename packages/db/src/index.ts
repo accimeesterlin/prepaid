@@ -11,5 +11,6 @@ export { Wallet, type IWallet } from './models/Wallet';
 export { WalletTransaction, type IWalletTransaction } from './models/WalletTransaction';
 export { PaymentProvider, type IPaymentProvider } from './models/PaymentProvider';
 export { StorefrontSettings, type IStorefrontSettings } from './models/StorefrontSettings';
-export { Discount, type IDiscount } from './models/Discount';
+export { Discount, type IDiscount, type IDiscountModel } from './models/Discount';
 export { PricingRule, type IPricingRule } from './models/PricingRule';
+export { BalanceHistory, type IBalanceHistory } from './models/BalanceHistory';
