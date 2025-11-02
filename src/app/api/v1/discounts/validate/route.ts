@@ -36,12 +36,30 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Purchase amount must be greater than 0', 400);
     }
 
-    // Find the organization
-    const { Organization } = await import('@pg-prepaid/db');
-    const org = await Organization.findOne({ slug: orgSlug });
+    // Find the organization (check both legacy Org and new Organization models)
+    const { Organization, Org } = await import('@pg-prepaid/db');
+
+    logger.info('Looking up organization', { orgSlug });
+
+    const legacyOrg = await Org.findOne({ slug: orgSlug });
+    const modernOrg = await Organization.findOne({ slug: orgSlug });
+    const org = legacyOrg || modernOrg;
+
     if (!org) {
-      return createErrorResponse('Organization not found', 404);
+      logger.error('Organization not found', {
+        orgSlug,
+        checkedLegacy: !!legacyOrg,
+        checkedModern: !!modernOrg,
+        message: 'No organization found with this slug in either Org or Organization collection.'
+      });
+      return createErrorResponse('Organization not found. Please contact support.', 404);
     }
+
+    logger.info('Organization found', {
+      orgId: String(org._id),
+      orgName: org.name,
+      source: legacyOrg ? 'legacy Org' : 'modern Organization'
+    });
 
     const orgId = String(org._id);
 

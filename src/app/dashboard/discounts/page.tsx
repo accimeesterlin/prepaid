@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Tag, Save, Plus, Edit, Trash2, Search, Filter, Copy, RefreshCw, Sparkles } from 'lucide-react';
+import { Tag, Save, Plus, Edit, Trash2, Search, Filter, Copy, RefreshCw, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, toast, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { cn } from '@/lib/utils';
@@ -38,13 +38,14 @@ export default function DiscountsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [codeTypeFilter, setCodeTypeFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     code: '',
-    autoGenerateCode: false,
+    autoGenerateCode: true, // Default to auto-generate
     type: 'percentage' as 'percentage' | 'fixed',
     value: 0,
     isActive: true,
@@ -100,7 +101,7 @@ export default function DiscountsPage() {
       name: '',
       description: '',
       code: '',
-      autoGenerateCode: false,
+      autoGenerateCode: true, // Default to auto-generate
       type: 'percentage',
       value: 0,
       isActive: true,
@@ -112,6 +113,7 @@ export default function DiscountsPage() {
       maxUsesPerCustomer: '',
     });
     setEditingDiscount(null);
+    setShowAdvanced(false); // Reset advanced options visibility
   };
 
   const openCreateDialog = () => {
@@ -452,7 +454,7 @@ export default function DiscountsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {discounts.map((discount) => (
               <Card key={discount._id} className={cn('hover:border-primary transition-colors', !discount.isActive && 'opacity-60')}>
                 <CardHeader>
@@ -584,60 +586,38 @@ export default function DiscountsPage() {
             </DialogHeader>
 
             <div className="space-y-4">
+              {/* Essential Fields */}
               <div>
-                <label className="text-sm font-medium mb-2 block">Discount Name</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Discount Name <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., Summer Sale"
+                  placeholder="e.g., Summer Sale 2024"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Description</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Description <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., Get 10% off all top-ups!"
+                  placeholder="e.g., Get 10% off all top-ups this summer!"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
 
-              {/* Discount Code Section */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Discount Code (Optional)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary uppercase"
-                    placeholder="e.g., SAVE20 or leave empty for automatic discount"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase(), autoGenerateCode: false })}
-                    disabled={formData.autoGenerateCode}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setFormData({ ...formData, autoGenerateCode: !formData.autoGenerateCode, code: formData.autoGenerateCode ? formData.code : '' })}
-                    className="flex items-center gap-2"
-                  >
-                    {formData.autoGenerateCode ? <RefreshCw className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                    {formData.autoGenerateCode ? 'Manual' : 'Generate'}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formData.autoGenerateCode
-                    ? 'A unique code will be automatically generated'
-                    : 'Leave empty for automatic discount (no code required). Or enter a custom code or click "Generate"'}
-                </p>
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Discount Type</label>
+                  <label className="text-sm font-medium mb-2 block">
+                    Discount Type <span className="text-red-500">*</span>
+                  </label>
                   <select
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     value={formData.type}
@@ -649,87 +629,66 @@ export default function DiscountsPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Discount Value</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="10"
-                    value={formData.value}
-                    onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
-                  />
+                  <label className="text-sm font-medium mb-2 block">
+                    Discount Value <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder={formData.type === 'percentage' ? '10' : '5.00'}
+                      value={formData.value || ''}
+                      onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      {formData.type === 'percentage' ? '%' : '$'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Start Date (optional)</label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">End Date (optional)</label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Min Purchase Amount ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="25.00"
-                    value={formData.minPurchaseAmount}
-                    onChange={(e) => setFormData({ ...formData, minPurchaseAmount: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Max Discount Amount ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="50.00"
-                    value={formData.maxDiscountAmount}
-                    onChange={(e) => setFormData({ ...formData, maxDiscountAmount: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Total Usage Limit</label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Unlimited"
-                    value={formData.usageLimit}
-                    onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Max Uses Per Customer</label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Unlimited"
-                    value={formData.maxUsesPerCustomer}
-                    onChange={(e) => setFormData({ ...formData, maxUsesPerCustomer: e.target.value })}
-                  />
+              {/* Code Generation Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <label className="text-sm font-medium text-blue-900">Discount Code</label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={formData.autoGenerateCode ? 'default' : 'outline'}
+                        onClick={() => setFormData({ ...formData, autoGenerateCode: !formData.autoGenerateCode, code: '' })}
+                        className="h-7 text-xs"
+                      >
+                        {formData.autoGenerateCode ? (
+                          <>
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            Auto-Generate
+                          </>
+                        ) : (
+                          <>
+                            <Edit className="h-3 w-3 mr-1" />
+                            Custom Code
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    {formData.autoGenerateCode ? (
+                      <p className="text-xs text-blue-700">
+                        A unique code will be automatically generated (e.g., SAVE20-ABC123)
+                      </p>
+                    ) : (
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase font-mono text-sm mt-2"
+                        placeholder="SUMMER2024"
+                        value={formData.code}
+                        onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -737,7 +696,7 @@ export default function DiscountsPage() {
                 <input
                   type="checkbox"
                   id="isActive"
-                  className="h-4 w-4"
+                  className="h-4 w-4 rounded border-gray-300"
                   checked={formData.isActive}
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 />
@@ -745,6 +704,112 @@ export default function DiscountsPage() {
                   Activate discount immediately
                 </label>
               </div>
+
+              {/* Advanced Options Toggle */}
+              <div className="border-t pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                >
+                  {showAdvanced ? (
+                    <>
+                      <ChevronDown className="h-4 w-4" />
+                      Hide Advanced Options
+                    </>
+                  ) : (
+                    <>
+                      <ChevronRight className="h-4 w-4" />
+                      Show Advanced Options
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Advanced Options */}
+              {showAdvanced && (
+                <div className="space-y-4 animate-in slide-in-from-top-2 border-t pt-4">
+                  <p className="text-sm text-muted-foreground">Configure additional discount constraints and limits</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Start Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">End Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Min Purchase Amount</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full pl-7 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                          placeholder="0.00"
+                          value={formData.minPurchaseAmount}
+                          onChange={(e) => setFormData({ ...formData, minPurchaseAmount: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Max Discount Amount</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full pl-7 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                          placeholder="Unlimited"
+                          value={formData.maxDiscountAmount}
+                          onChange={(e) => setFormData({ ...formData, maxDiscountAmount: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Total Usage Limit</label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        placeholder="Unlimited"
+                        value={formData.usageLimit}
+                        onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Max Uses Per Customer</label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        placeholder="Unlimited"
+                        value={formData.maxUsesPerCustomer}
+                        onChange={(e) => setFormData({ ...formData, maxUsesPerCustomer: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter className="gap-2">

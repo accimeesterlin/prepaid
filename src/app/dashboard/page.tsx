@@ -15,8 +15,9 @@ import {
   Globe,
   Tag,
   Eye,
+  X,
 } from 'lucide-react';
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@pg-prepaid/ui';
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, DialogContent } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 
 interface Metrics {
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [orgSlug, setOrgSlug] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const [showStorefrontModal, setShowStorefrontModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -252,12 +254,12 @@ export default function DashboardPage() {
                 variant="outline"
                 className="w-full justify-start"
                 size="lg"
-                onClick={() => router.push('/dashboard/preview')}
+                onClick={() => setShowStorefrontModal(true)}
               >
                 <Eye className="h-5 w-5 mr-3" />
                 <div className="text-left flex-1">
-                  <div className="font-medium">Test Storefront</div>
-                  <div className="text-xs text-muted-foreground">Preview and test purchases</div>
+                  <div className="font-medium">Preview Storefront</div>
+                  <div className="text-xs text-muted-foreground">Test transactions as a team member</div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 ml-2" />
               </Button>
@@ -394,6 +396,35 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
+
+      {/* Storefront Modal */}
+      <Dialog open={showStorefrontModal} onOpenChange={setShowStorefrontModal}>
+        <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 gap-0">
+          <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+            <div>
+              <h2 className="text-lg font-semibold">Storefront Preview</h2>
+              <p className="text-sm text-muted-foreground">Test transactions as a team member</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowStorefrontModal(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {orgSlug && (
+              <iframe
+                src={`/store/${orgSlug}?teamMember=true`}
+                className="w-full h-full border-0"
+                title="Storefront Preview"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

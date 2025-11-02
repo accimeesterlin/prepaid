@@ -223,11 +223,12 @@ export default function PublicStorefrontPage() {
     };
 
     if (showRecentNumbers) {
-      document.addEventListener('click', handleClickOutside);
+      // Use mousedown instead of click to avoid conflicts with focus event
+      document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showRecentNumbers]);
 
@@ -359,9 +360,12 @@ export default function PublicStorefrontPage() {
       setPaymentMethod(paymentMethods.methods[0].provider as 'stripe' | 'paypal' | 'pgpay');
     }
 
-    // Initialize custom amount for variable-value products
+    // Initialize custom amount for variable-value products and trigger estimate
     if (product.isVariableValue && product.minAmount) {
-      setCustomAmount(product.minAmount.toString());
+      const amount = product.minAmount;
+      setCustomAmount(amount.toString());
+      // Immediately fetch estimate for the initial amount
+      setTimeout(() => fetchEstimate(amount, product.skuCode), 100);
     } else {
       setCustomAmount('');
     }
@@ -385,9 +389,26 @@ export default function PublicStorefrontPage() {
     setDiscountError('');
 
     try {
-      const amount = selectedProduct?.isVariableValue && customAmount
-        ? parseFloat(customAmount)
-        : selectedProduct?.pricing.finalPrice || 0;
+      // Calculate total amount INCLUDING fees (markup) for proper discount calculation
+      let totalAmount = 0;
+
+      if (selectedProduct?.isVariableValue && customAmount) {
+        const amount = parseFloat(customAmount);
+        const markupPercentage = (selectedProduct.pricing.markup / selectedProduct.pricing.costPrice) * 100;
+        const markup = amount * (markupPercentage / 100);
+
+        // Apply product-level discount if any
+        const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
+          ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
+          : 0;
+        const productDiscount = discountPercentage > 0 ? ((amount + markup) * discountPercentage / 100) : 0;
+
+        // Total before discount code = amount + markup - product discount
+        totalAmount = amount + markup - productDiscount;
+      } else {
+        // For fixed-value products, use the final price (which already includes markup and any product discounts)
+        totalAmount = selectedProduct?.pricing.finalPrice || 0;
+      }
 
       const response = await fetch('/api/v1/discounts/validate', {
         method: 'POST',
@@ -395,7 +416,7 @@ export default function PublicStorefrontPage() {
         body: JSON.stringify({
           code: code.trim(),
           orgSlug,
-          amount,
+          amount: totalAmount,  // Use total including fees, not just base price
           countryCode: lookupData?.country?.code,
           productSkuCode: selectedProduct?.skuCode,
         }),
@@ -858,19 +879,6 @@ export default function PublicStorefrontPage() {
 
             {/* Header Section with Country/Operator Info */}
             <div className="text-center space-y-3">
-              {/* Discount Banner */}
-              {lookupData.discount && (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-medium animate-in slide-in-from-top-2">
-                  <Tag className="h-3.5 w-3.5" />
-                  <span>{lookupData.discount.description}</span>
-                  <span className="px-1.5 py-0.5 bg-primary text-primary-foreground rounded text-[10px]">
-                    {lookupData.discount.type === 'percentage'
-                      ? `-${lookupData.discount.value}%`
-                      : `-$${lookupData.discount.value}`}
-                  </span>
-                </div>
-              )}
-
               <h2 className="text-2xl md:text-3xl font-bold">
                 {t('storefront.chooseYourTopup')}
               </h2>

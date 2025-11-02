@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Download, DollarSign, Users, ShoppingCart, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { TrendingUp, TrendingDown, Download, DollarSign, Users, ShoppingCart, CheckCircle, ChevronDown } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 
@@ -29,10 +29,39 @@ export default function AnalyticsPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('30d');
+  const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
+
+  const periodOptions = [
+    { value: 'today', label: 'Today' },
+    { value: '7d', label: 'Last 7 Days' },
+    { value: '30d', label: 'Last 30 Days' },
+    { value: '90d', label: 'Last 90 Days' },
+    { value: '1y', label: 'Last Year' },
+  ];
+
+  const selectedPeriodLabel = periodOptions.find(opt => opt.value === period)?.label || 'Last 30 Days';
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchMetrics();
   }, [period]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowPeriodDropdown(false);
+      }
+    };
+
+    if (showPeriodDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPeriodDropdown]);
 
   const fetchMetrics = async () => {
     try {
@@ -80,24 +109,36 @@ export default function AnalyticsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            {/* Period Selector */}
-            <div className="flex border rounded-lg overflow-hidden">
-              {['7d', '30d', '90d', '1y'].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${
-                    period === p
-                      ? 'bg-primary text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {p === '7d' && 'Last 7 Days'}
-                  {p === '30d' && 'Last 30 Days'}
-                  {p === '90d' && 'Last 90 Days'}
-                  {p === '1y' && 'Last Year'}
-                </button>
-              ))}
+            {/* Period Selector Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <Button
+                variant="outline"
+                onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
+                className="min-w-[160px] justify-between"
+              >
+                {selectedPeriodLabel}
+                <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showPeriodDropdown ? 'rotate-180' : ''}`} />
+              </Button>
+              {showPeriodDropdown && (
+                <div className="absolute top-full mt-1 left-0 w-full bg-white border rounded-lg shadow-lg z-10 overflow-hidden animate-in slide-in-from-top-2">
+                  {periodOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setPeriod(option.value);
+                        setShowPeriodDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm transition-colors ${
+                        period === option.value
+                          ? 'bg-primary text-white font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
@@ -231,12 +272,7 @@ export default function AnalyticsPage() {
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Period</span>
-                    <span className="font-medium">
-                      {period === '7d' && 'Last 7 Days'}
-                      {period === '30d' && 'Last 30 Days'}
-                      {period === '90d' && 'Last 90 Days'}
-                      {period === '1y' && 'Last Year'}
-                    </span>
+                    <span className="font-medium">{selectedPeriodLabel}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Total Customers</span>
