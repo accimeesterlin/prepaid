@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, AlertCircle, Save, TestTube, Link as LinkIcon, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, AlertCircle, Save, TestTube, Link as LinkIcon, Info, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import {
   Button,
   Card,
@@ -24,6 +24,9 @@ interface Integration {
   provider: string;
   status: 'active' | 'inactive' | 'error';
   environment?: string;
+  isPrimaryEmail?: boolean;
+  fromEmail?: string;
+  fromName?: string;
   metadata?: {
     lastTestSuccess?: string;
     lastTestError?: string;
@@ -91,11 +94,11 @@ const integrationConfigs = {
     fields: [
       {
         name: 'apiKey',
-        label: 'API Key',
+        label: 'Send Mail Token',
         type: 'password',
-        placeholder: 'Enter your ZeptoMail API key',
+        placeholder: 'Enter your ZeptoMail Send Mail Token',
         required: true,
-        helpText: 'Found in ZeptoMail Settings → API',
+        helpText: 'Found in Mail Agent → SMTP/API → Send Mail Token (not the general API key)',
       },
       {
         name: 'fromEmail',
@@ -250,6 +253,8 @@ export default function IntegrationsPage() {
   const [saving, setSaving] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [testMessage, setTestMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [settingPrimary, setSettingPrimary] = useState<string | null>(null);
+  const [testEmail, setTestEmail] = useState('');
 
   useEffect(() => {
     fetchIntegrations();
@@ -260,6 +265,7 @@ export default function IntegrationsPage() {
       const response = await fetch('/api/v1/integrations');
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched integrations:', data);
         setIntegrations(data);
       }
     } catch (error) {
@@ -272,6 +278,7 @@ export default function IntegrationsPage() {
   const handleOpenModal = (provider: string) => {
     setSelectedProvider(provider);
     setTestMessage(null);
+    setTestEmail('');
     // Pre-fill form if integration exists
     const existing = integrations.find((i) => i.provider === provider);
     if (existing) {
@@ -300,11 +307,22 @@ export default function IntegrationsPage() {
   const handleTest = async () => {
     if (!selectedProvider) return;
 
+    const config = integrationConfigs[selectedProvider as keyof typeof integrationConfigs];
+    const isEmailProvider = config.category === 'Email Providers';
+
+    // For email providers, require a test email address
+    if (isEmailProvider && !testEmail) {
+      setTestMessage({
+        type: 'error',
+        text: 'Please enter a test email address',
+      });
+      return;
+    }
+
     setTesting(true);
     setTestMessage(null);
 
     try {
-      const config = integrationConfigs[selectedProvider as keyof typeof integrationConfigs];
       const credentials: Record<string, any> = {};
 
       // Collect all credential fields
@@ -324,6 +342,11 @@ export default function IntegrationsPage() {
         payload.environment = formData.environment;
       }
 
+      // Add test email for email providers
+      if (isEmailProvider) {
+        payload.testEmail = testEmail;
+      }
+
       const response = await fetch('/api/v1/integrations/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -331,6 +354,7 @@ export default function IntegrationsPage() {
       });
 
       const result = await response.json();
+      console.log('Test result:', result);
 
       if (response.ok && result.success) {
         // For top-up providers, show balance
@@ -339,17 +363,44 @@ export default function IntegrationsPage() {
             type: 'success',
             text: `Connection successful! Balance: ${result.data.balance} ${result.data.currency}`,
           });
+        } else if (isEmailProvider) {
+          // For email providers, show test email sent message
+          setTestMessage({
+            type: 'success',
+            text: `Test email sent successfully to ${testEmail}! Check your inbox.`,
+          });
         } else {
-          // For email providers and Zapier, just show success
+          // For Zapier and other providers
           setTestMessage({
             type: 'success',
             text: 'Connection successful! Credentials verified.',
           });
         }
       } else {
+        // Better error handling - ensure error is always a string
+        let errorMessage = 'Connection test failed';
+
+        if (result.error) {
+          if (typeof result.error === 'string') {
+            errorMessage = result.error;
+          } else if (result.error.message) {
+            errorMessage = result.error.message;
+          } else if (result.detail) {
+            errorMessage = result.detail;
+          } else {
+            try {
+              errorMessage = JSON.stringify(result.error);
+            } catch {
+              errorMessage = String(result.error);
+            }
+          }
+        }
+
+        console.error('Test failed:', errorMessage);
+
         setTestMessage({
           type: 'error',
-          text: result.error || 'Connection test failed',
+          text: errorMessage,
         });
       }
     } catch (error: any) {
@@ -420,6 +471,37 @@ export default function IntegrationsPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSetPrimary = async (integrationId: string, currentPrimary: boolean) => {
+    console.log('Setting primary:', { integrationId, currentPrimary, newValue: !currentPrimary });
+    setSettingPrimary(integrationId);
+
+    try {
+      const url = `/api/v1/integrations/${integrationId}/primary`;
+      console.log('PATCH request to:', url);
+
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPrimaryEmail: !currentPrimary }),
+      });
+
+      console.log('Response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Success result:', result);
+        await fetchIntegrations();
+      } else {
+        const error = await response.json();
+        console.error('Failed to set primary:', error);
+      }
+    } catch (error) {
+      console.error('Set primary error:', error);
+    } finally {
+      setSettingPrimary(null);
     }
   };
 
@@ -555,6 +637,15 @@ export default function IntegrationsPage() {
                 <div className="space-y-4">
                   {categoryIntegrations.map(([providerId, config]) => {
                     const status = getIntegrationStatus(providerId);
+                    const integration = integrations.find((i) => i.provider === providerId);
+                    const isEmailProvider = config.category === 'Email Providers';
+                    const isConnected = status.status === 'connected';
+                    const isPrimary = integration?.isPrimaryEmail || false;
+
+                    if (isEmailProvider && integration) {
+                      console.log(`[${providerId}] Integration:`, integration, 'isPrimary:', isPrimary);
+                    }
+
                     return (
                       <Card key={providerId}>
                         <CardHeader>
@@ -573,8 +664,19 @@ export default function IntegrationsPage() {
                                     {status.status === 'connected' && <Check className="h-3 w-3" />}
                                     {status.text}
                                   </span>
+                                  {isPrimary && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                      <Star className="h-3 w-3 fill-yellow-600" />
+                                      Primary
+                                    </span>
+                                  )}
                                 </div>
                                 <CardDescription>{config.description}</CardDescription>
+                                {integration?.fromEmail && (
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    From: {integration.fromEmail}
+                                  </p>
+                                )}
                                 <div className="mt-3">
                                   <Button
                                     variant="link"
@@ -587,9 +689,22 @@ export default function IntegrationsPage() {
                                 </div>
                               </div>
                             </div>
-                            <Button onClick={() => handleOpenModal(providerId)}>
-                              {status.status === 'connected' ? 'Reconfigure' : 'Configure'}
-                            </Button>
+                            <div className="flex gap-2">
+                              {isEmailProvider && isConnected && (
+                                <Button
+                                  variant={isPrimary ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => integration && handleSetPrimary(integration.id, isPrimary)}
+                                  disabled={settingPrimary === integration?.id}
+                                >
+                                  <Star className={cn('h-4 w-4 mr-2', isPrimary && 'fill-current')} />
+                                  {settingPrimary === integration?.id ? 'Setting...' : isPrimary ? 'Primary' : 'Set as Primary'}
+                                </Button>
+                              )}
+                              <Button onClick={() => handleOpenModal(providerId)}>
+                                {status.status === 'connected' ? 'Reconfigure' : 'Configure'}
+                              </Button>
+                            </div>
                           </div>
                         </CardHeader>
                       </Card>
@@ -656,6 +771,26 @@ export default function IntegrationsPage() {
                       )}
                     </div>
                   ))}
+
+                  {/* Test Email Input for Email Providers */}
+                  {selectedProvider && integrationConfigs[selectedProvider as keyof typeof integrationConfigs].category === 'Email Providers' && (
+                    <div className="border-t pt-4">
+                      <label className="block text-sm font-medium mb-2">
+                        Test Email Address
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="your-email@example.com"
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        We'll send a test email to this address when you click "Test Connection"
+                      </p>
+                    </div>
+                  )}
 
                   {/* Test Message */}
                   {testMessage && (

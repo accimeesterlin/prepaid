@@ -254,19 +254,6 @@ export default function DashboardPage() {
                 variant="outline"
                 className="w-full justify-start"
                 size="lg"
-                onClick={() => setShowStorefrontModal(true)}
-              >
-                <Eye className="h-5 w-5 mr-3" />
-                <div className="text-left flex-1">
-                  <div className="font-medium">Preview Storefront</div>
-                  <div className="text-xs text-muted-foreground">Test transactions as a team member</div>
-                </div>
-                <ArrowUpRight className="h-4 w-4 ml-2" />
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                size="lg"
                 onClick={() => router.push('/dashboard/storefront')}
               >
                 <Store className="h-5 w-5 mr-3" />
@@ -414,7 +401,7 @@ export default function DashboardPage() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-auto">
             {orgSlug && (
               <iframe
                 src={`/store/${orgSlug}?teamMember=true`}

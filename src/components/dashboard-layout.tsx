@@ -32,19 +32,44 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Storefront', href: '/dashboard/storefront', icon: Store },
-  { name: 'Pricing', href: '/dashboard/pricing', icon: DollarSign },
-  { name: 'Discounts', href: '/dashboard/discounts', icon: Tag },
-  { name: 'Countries', href: '/dashboard/countries', icon: Globe },
-  { name: 'Transactions', href: '/dashboard/transactions', icon: ShoppingCart },
-  { name: 'Customers', href: '/dashboard/customers', icon: Users },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
-  { name: 'Payment Settings', href: '/dashboard/settings/payment', icon: CreditCard },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+// Organized navigation with sections
+const navigationSections = [
+  {
+    title: 'Overview',
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+    ]
+  },
+  {
+    title: 'Storefront',
+    items: [
+      { name: 'Settings', href: '/dashboard/storefront', icon: Store },
+      { name: 'Pricing', href: '/dashboard/pricing', icon: DollarSign },
+      { name: 'Discounts', href: '/dashboard/discounts', icon: Tag },
+      { name: 'Countries', href: '/dashboard/countries', icon: Globe },
+    ]
+  },
+  {
+    title: 'Business',
+    items: [
+      { name: 'Transactions', href: '/dashboard/transactions', icon: ShoppingCart },
+      { name: 'Customers', href: '/dashboard/customers', icon: Users },
+    ]
+  },
+  {
+    title: 'Configuration',
+    items: [
+      { name: 'Team Members', href: '/dashboard/team', icon: Users },
+      { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
+      { name: 'Payment Settings', href: '/dashboard/settings/payment', icon: CreditCard },
+      { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+    ]
+  }
 ];
+
+// Flatten for active item detection
+const navigation = navigationSections.flatMap(section => section.items);
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -131,32 +156,41 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+          <nav className="flex-1 overflow-y-auto px-3 py-4">
             {(() => {
               // Find the best matching navigation item (most specific match)
               const activeItem = navigation.find(nav => pathname === nav.href) ||
                                  navigation.filter(nav => pathname.startsWith(nav.href + '/'))
                                           .sort((a, b) => b.href.length - a.href.length)[0];
 
-              return navigation.map((item) => {
-                const isActive = item.href === activeItem?.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {item.name}
-                  </Link>
-                );
-              });
+              return navigationSections.map((section, sectionIdx) => (
+                <div key={section.title} className={sectionIdx > 0 ? 'mt-6' : ''}>
+                  <h3 className="mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {section.title}
+                  </h3>
+                  <div className="space-y-1">
+                    {section.items.map((item) => {
+                      const isActive = item.href === activeItem?.href;
+                      return (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          className={cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                            isActive
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                          )}
+                          onClick={() => setSidebarOpen(false)}
+                        >
+                          <item.icon className="h-5 w-5" />
+                          {item.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ));
             })()}
           </nav>
         </div>

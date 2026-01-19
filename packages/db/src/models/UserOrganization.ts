@@ -1,10 +1,11 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { UserRole } from '@pg-prepaid/types';
+import { UserRole, Permission } from '@pg-prepaid/types';
 
 export interface IUserOrganization extends Document {
   userId: mongoose.Types.ObjectId;
   orgId: mongoose.Types.ObjectId;
   roles: UserRole[];
+  customPermissions?: Permission[];
   isActive: boolean;
   invitedBy?: mongoose.Types.ObjectId;
   invitedAt?: Date;
@@ -21,6 +22,8 @@ export interface IUserOrganization extends Document {
   hasAvailableBalance(amount: number): boolean;
   useBalance(amount: number, metadata?: { phoneNumber?: string; productName?: string; orderId?: string }): Promise<void>;
   resetBalance(adminId?: mongoose.Types.ObjectId): Promise<void>;
+  hasPermission(permission: Permission): boolean;
+  getEffectivePermissions(): Permission[];
 }
 
 const UserOrganizationSchema = new Schema<IUserOrganization>(
@@ -42,6 +45,11 @@ const UserOrganizationSchema = new Schema<IUserOrganization>(
       enum: Object.values(UserRole),
       default: [UserRole.VIEWER],
       required: true,
+    },
+    customPermissions: {
+      type: [String],
+      enum: Object.values(Permission),
+      default: [],
     },
     isActive: {
       type: Boolean,
@@ -163,6 +171,63 @@ UserOrganizationSchema.methods.resetBalance = async function (adminId?: mongoose
       console.error('Failed to create balance history:', error);
     }
   }
+};
+
+// Role-based default permissions
+const rolePermissions: Record<UserRole, Permission[]> = {
+  [UserRole.ADMIN]: Object.values(Permission), // Admins have all permissions
+  [UserRole.OPERATOR]: [
+    Permission.VIEW_DASHBOARD,
+    Permission.VIEW_ANALYTICS,
+    Permission.VIEW_STOREFRONT_SETTINGS,
+    Permission.VIEW_PRODUCTS,
+    Permission.VIEW_PRICING,
+    Permission.VIEW_DISCOUNTS,
+    Permission.VIEW_COUNTRIES,
+    Permission.VIEW_TRANSACTIONS,
+    Permission.PROCESS_TRANSACTIONS,
+    Permission.VIEW_CUSTOMERS,
+    Permission.VIEW_TEAM,
+    Permission.VIEW_INTEGRATIONS,
+    Permission.VIEW_PAYMENT_SETTINGS,
+    Permission.VIEW_WALLET,
+  ],
+  [UserRole.VIEWER]: [
+    Permission.VIEW_DASHBOARD,
+    Permission.VIEW_ANALYTICS,
+    Permission.VIEW_STOREFRONT_SETTINGS,
+    Permission.VIEW_PRODUCTS,
+    Permission.VIEW_PRICING,
+    Permission.VIEW_DISCOUNTS,
+    Permission.VIEW_COUNTRIES,
+    Permission.VIEW_TRANSACTIONS,
+    Permission.VIEW_CUSTOMERS,
+    Permission.VIEW_TEAM,
+    Permission.VIEW_INTEGRATIONS,
+    Permission.VIEW_PAYMENT_SETTINGS,
+    Permission.VIEW_WALLET,
+  ],
+};
+
+UserOrganizationSchema.methods.getEffectivePermissions = function (): Permission[] {
+  // If custom permissions are set, use them
+  if (this.customPermissions && this.customPermissions.length > 0) {
+    return this.customPermissions;
+  }
+
+  // Otherwise, use role-based permissions (combine all roles)
+  const permissions = new Set<Permission>();
+  for (const role of this.roles) {
+    const rolePerms = rolePermissions[role as UserRole] || [];
+    rolePerms.forEach((perm: Permission) => permissions.add(perm));
+  }
+
+  return Array.from(permissions);
+};
+
+UserOrganizationSchema.methods.hasPermission = function (permission: Permission): boolean {
+  const effectivePermissions = this.getEffectivePermissions();
+  return effectivePermissions.includes(permission);
 };
 
 export const UserOrganization: Model<IUserOrganization> =

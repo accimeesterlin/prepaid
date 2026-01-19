@@ -12,6 +12,7 @@ export interface IIntegration extends Document {
     | 'zapier';
   status: 'active' | 'inactive' | 'error';
   environment?: 'sandbox' | 'production';
+  isPrimaryEmail?: boolean; // Mark this as the primary email provider for transactional emails
   credentials: {
     apiKey?: string;
     apiSecret?: string;
@@ -70,6 +71,10 @@ const IntegrationSchema = new Schema<IIntegration>(
       type: String,
       required: false,
       enum: ['sandbox', 'production'],
+    },
+    isPrimaryEmail: {
+      type: Boolean,
+      default: false,
     },
     credentials: {
       apiKey: {

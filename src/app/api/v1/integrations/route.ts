@@ -15,17 +15,32 @@ export async function GET(_request: NextRequest) {
 
     const integrations = await Integration.find({ orgId: session.orgId });
 
+    console.log('[GET INTEGRATIONS] Found integrations:', integrations.map(i => ({
+      id: i._id,
+      provider: i.provider,
+      isPrimaryEmail: i.isPrimaryEmail,
+    })));
+
     // Don't return credentials for security (but baseUrl is okay as it's not sensitive)
     const safeIntegrations = integrations.map((integration) => ({
       id: integration._id,
       provider: integration.provider,
       status: integration.status,
       environment: integration.environment,
+      isPrimaryEmail: integration.isPrimaryEmail || false,
       baseUrl: integration.credentials?.baseUrl,
+      fromEmail: integration.credentials?.fromEmail,
+      fromName: integration.credentials?.fromName,
       metadata: integration.metadata,
       createdAt: integration.createdAt,
       updatedAt: integration.updatedAt,
     }));
+
+    console.log('[GET INTEGRATIONS] Returning safe integrations:', safeIntegrations.map(i => ({
+      id: i.id,
+      provider: i.provider,
+      isPrimaryEmail: i.isPrimaryEmail,
+    })));
 
     return NextResponse.json(safeIntegrations);
   } catch (error) {
@@ -46,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { provider, environment, credentials } = body;
+    const { provider, environment, credentials, isPrimaryEmail } = body;
 
     // Validate required fields
     if (!provider || !credentials) {
@@ -64,7 +79,70 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate isPrimaryEmail is only for email providers
+    const emailProviders = ['zeptomail', 'mailgun', 'sendgrid', 'mailchimp'];
+    if (isPrimaryEmail && !emailProviders.includes(provider)) {
+      return NextResponse.json(
+        { error: 'Only email providers can be set as primary' },
+        { status: 400 }
+      );
+    }
+
+    // Validate API key doesn't contain invalid characters
+    const apiKey = credentials.apiKey || credentials.apiSecret;
+    if (apiKey) {
+      // Check for non-ASCII characters
+      for (let i = 0; i < apiKey.length; i++) {
+        const code = apiKey.charCodeAt(i);
+        if (code > 127) {
+          return NextResponse.json(
+            {
+              error: 'Invalid API key format',
+              detail: `API key contains invalid character at position ${i}. Please ensure you're copying the actual API key, not console output or formatted text.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Check for suspicious patterns that indicate console output
+      if (apiKey.includes('{') || apiKey.includes('[') || apiKey.includes('page.tsx') || apiKey.includes('console')) {
+        return NextResponse.json(
+          {
+            error: 'Invalid API key format',
+            detail: 'The API key appears to be console output or formatted text. Please copy only the actual API key from your provider dashboard.',
+          },
+          { status: 400 }
+        );
+      }
+
+      // Check minimum length for email providers
+      if (emailProviders.includes(provider) && apiKey.length < 30) {
+        return NextResponse.json(
+          {
+            error: 'Invalid API key format',
+            detail: `API key is too short (${apiKey.length} characters). Email provider API keys are typically longer. Please verify you copied the complete key.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     await dbConnection.connect();
+
+    // If setting as primary email, unset any existing primary email providers
+    if (isPrimaryEmail) {
+      await Integration.updateMany(
+        {
+          orgId: session.orgId,
+          provider: { $in: emailProviders },
+          isPrimaryEmail: true,
+        },
+        {
+          $set: { isPrimaryEmail: false },
+        }
+      );
+    }
 
     // Check if integration already exists
     let integration = await Integration.findOne({
@@ -79,6 +157,9 @@ export async function POST(request: NextRequest) {
       }
       integration.credentials = credentials;
       integration.status = 'active'; // Mark as active when saved
+      if (isPrimaryEmail !== undefined) {
+        integration.isPrimaryEmail = isPrimaryEmail;
+      }
       await integration.save();
     } else {
       // Create new
@@ -93,6 +174,10 @@ export async function POST(request: NextRequest) {
         integrationData.environment = environment;
       }
 
+      if (isPrimaryEmail !== undefined) {
+        integrationData.isPrimaryEmail = isPrimaryEmail;
+      }
+
       integration = await Integration.create(integrationData);
     }
 
@@ -103,6 +188,7 @@ export async function POST(request: NextRequest) {
         provider: integration.provider,
         status: integration.status,
         environment: integration.environment,
+        isPrimaryEmail: integration.isPrimaryEmail || false,
       },
     });
   } catch (error) {

@@ -45,7 +45,9 @@
       "Bash(curl:*)",
       "Bash(awk:*)",
       "Bash(yarn lint:*)",
-      "Bash(yarn eslint:*)"
+      "Bash(yarn eslint:*)",
+      "Bash(ps:*)",
+      "WebFetch(domain:www.zoho.com)"
     ],
     "deny": [],
     "ask": []

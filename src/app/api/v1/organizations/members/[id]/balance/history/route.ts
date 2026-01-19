@@ -7,14 +7,14 @@ import { requireAuth } from '@/lib/auth-middleware';
 import { UserRole } from '@pg-prepaid/types';
 
 /**
- * GET /api/v1/organizations/members/[memberId]/balance/history
+ * GET /api/v1/organizations/members/[id]/balance/history
  * Get balance usage history for a team member (admin only)
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ memberId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { memberId } = await params;
+  const { id: memberId } = await params;
   try {
     const session = await requireAuth(request);
     await dbConnection.connect();

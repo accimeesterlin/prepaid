@@ -7,14 +7,14 @@ import { requireAuth } from '@/lib/auth-middleware';
 import { UserRole } from '@pg-prepaid/types';
 
 /**
- * PATCH /api/v1/organizations/members/[memberId]/balance
+ * PATCH /api/v1/organizations/members/[id]/balance
  * Update team member's balance limit (admin only)
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ memberId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { memberId } = await params;
+  const { id: memberId } = await params;
   try {
     const session = await requireAuth(request);
     await dbConnection.connect();
@@ -69,14 +69,14 @@ export async function PATCH(
 }
 
 /**
- * POST /api/v1/organizations/members/[memberId]/balance/reset
+ * POST /api/v1/organizations/members/[id]/balance/reset
  * Reset team member's used balance to zero (admin only)
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ memberId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { memberId } = await params;
+  const { id: memberId } = await params;
   try {
     const session = await requireAuth(request);
     await dbConnection.connect();

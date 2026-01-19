@@ -1,12 +1,14 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { requireAuth } from '@/lib/auth-middleware';
 import { dbConnection } from '@pg-prepaid/db/connection';
-import { User, UserOrganization } from '@pg-prepaid/db';
+import { User, UserOrganization, Org } from '@pg-prepaid/db';
 import { UserRole } from '@pg-prepaid/types';
 import { ApiErrors, handleApiError } from '@/lib/api-error';
 import { createSuccessResponse } from '@/lib/api-response';
 import { logger } from '@/lib/logger';
+import { EmailService } from '@/lib/services/email.service';
 
 const inviteUserSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -52,10 +54,93 @@ export async function POST(request: NextRequest) {
       throw ApiErrors.Forbidden('Only admins can invite users to the organization');
     }
 
+    // Get organization and inviter information for email
+    logger.info('Looking for organization', { targetOrgId, sessionOrgId: session.orgId });
+    const organization = await Org.findById(targetOrgId);
+    const inviter = await User.findById(session.userId);
+
+    logger.info('Organization lookup result', {
+      found: !!organization,
+      organizationId: organization?._id,
+      organizationName: organization?.name
+    });
+
+    if (!organization) {
+      throw ApiErrors.NotFound('Organization not found');
+    }
+
+    const orgName = organization.name || 'Your Organization';
+    const inviterName = inviter?.email || 'An administrator';
+
     // Find the user to invite
     const userToInvite = await User.findOne({ email: email.toLowerCase() });
+
     if (!userToInvite) {
-      throw ApiErrors.NotFound('User with this email does not exist');
+      // User doesn't exist yet - create a pending invitation
+      // For now, we'll create a placeholder user account that they can claim later
+      // In a production system, you'd typically send an email invitation
+
+      // Generate a temporary password (user will need to reset it)
+      const tempPassword = Math.random().toString(36).slice(-12);
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+      // Create the user account
+      const newUser = await User.create({
+        email: email.toLowerCase(),
+        passwordHash: hashedPassword,
+        orgId: targetOrgId, // Set primary org
+        roles: [UserRole.VIEWER], // Default role
+        isActive: true,
+      });
+
+      // Create the organization membership
+      const userOrg = await UserOrganization.create({
+        userId: newUser._id,
+        orgId: targetOrgId,
+        roles,
+        isActive: true,
+        invitedBy: session.userId,
+        invitedAt: new Date(),
+        joinedAt: new Date(),
+      });
+
+      logger.info('New user created and invited to organization', {
+        userId: newUser._id.toString(),
+        orgId: targetOrgId,
+        roles,
+        invitedBy: session.userId,
+      });
+
+      // Send invitation email with temporary password
+      try {
+        await EmailService.sendTeamInvitationEmail(
+          targetOrgId,
+          newUser.email,
+          inviterName,
+          orgName,
+          tempPassword
+        );
+        logger.info('Invitation email sent', { email: newUser.email });
+      } catch (emailError: any) {
+        logger.error('Failed to send invitation email', {
+          error: emailError.message,
+          email: newUser.email,
+        });
+        // Continue even if email fails - user account is already created
+      }
+
+      return createSuccessResponse(
+        {
+          message: 'Invitation sent successfully. User will receive an email to set up their account.',
+          user: {
+            id: newUser._id.toString(),
+            email: newUser.email,
+            roles: userOrg.roles,
+            isPending: true,
+          },
+        },
+        201
+      );
     }
 
     // Check if user is already in the organization
@@ -110,6 +195,23 @@ export async function POST(request: NextRequest) {
       roles,
       invitedBy: session.userId,
     });
+
+    // Send invitation email to existing user
+    try {
+      await EmailService.sendTeamInvitationEmail(
+        targetOrgId,
+        userToInvite.email,
+        inviterName,
+        orgName
+      );
+      logger.info('Invitation email sent', { email: userToInvite.email });
+    } catch (emailError: any) {
+      logger.error('Failed to send invitation email', {
+        error: emailError.message,
+        email: userToInvite.email,
+      });
+      // Continue even if email fails
+    }
 
     return createSuccessResponse(
       {
