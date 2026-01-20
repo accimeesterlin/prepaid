@@ -18,6 +18,7 @@ export interface EmailOptions {
 export class EmailService {
   /**
    * Get the primary email provider for an organization
+   * Falls back to ZeptoMail using environment variables if no primary provider is configured
    */
   private static async getPrimaryEmailProvider(orgId: string) {
     await dbConnection.connect();
@@ -29,7 +30,28 @@ export class EmailService {
     }).select('+credentials.apiKey +credentials.domain +credentials.fromEmail +credentials.fromName');
 
     if (!primaryProvider) {
-      throw new Error('No primary email provider configured');
+      // Fallback to ZeptoMail using environment variables
+      const zeptoApiKey = process.env.ZEPTOMAIL_API_KEY;
+      const zeptoFromEmail = process.env.ZEPTOMAIL_FROM_EMAIL;
+      const zeptoFromName = process.env.ZEPTOMAIL_FROM_NAME || 'Prepaid Minutes Platform';
+
+      if (!zeptoApiKey || !zeptoFromEmail) {
+        throw new Error(
+          'No primary email provider configured and ZeptoMail environment variables (ZEPTOMAIL_API_KEY, ZEPTOMAIL_FROM_EMAIL) are not set'
+        );
+      }
+
+      logger.info('Using ZeptoMail fallback from environment variables', { orgId });
+
+      // Return a mock integration object for ZeptoMail
+      return {
+        provider: 'zeptomail',
+        credentials: {
+          apiKey: zeptoApiKey,
+          fromEmail: zeptoFromEmail,
+          fromName: zeptoFromName,
+        },
+      } as any;
     }
 
     return primaryProvider;

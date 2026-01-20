@@ -7,6 +7,8 @@ export interface IUser extends Document {
   roles: UserRole[];
   orgId: mongoose.Types.ObjectId;
   isActive: boolean;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +44,14 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: true,
       required: true,
+    },
+    resetPasswordToken: {
+      type: String,
+      select: false, // Don't include by default
+    },
+    resetPasswordExpires: {
+      type: Date,
+      select: false, // Don't include by default
     },
   },
   {
