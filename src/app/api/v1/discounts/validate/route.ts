@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
       amount,
       countryCode,
       productSkuCode,
-      customerEmail,
     } = body;
 
     // Validation

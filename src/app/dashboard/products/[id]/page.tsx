@@ -105,8 +105,8 @@ export default function ProductDetailPage() {
       } else if (response.status === 404) {
         setMessage({ type: 'error', text: 'Product not found' });
       }
-    } catch (error) {
-      console.error('Failed to fetch product:', error);
+    } catch (_error) {
+      console.error('Failed to fetch product:', _error);
       setMessage({ type: 'error', text: 'Failed to load product details' });
     } finally {
       setLoading(false);
@@ -134,7 +134,7 @@ export default function ProductDetailPage() {
         const error = await response.json();
         setMessage({ type: 'error', text: error.error || 'Failed to update product' });
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: 'error', text: 'Failed to update product' });
     } finally {
       setSaving(false);
@@ -156,7 +156,7 @@ export default function ProductDetailPage() {
         setMessage({ type: 'error', text: error.error || 'Failed to delete product' });
         setShowDeleteModal(false);
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: 'error', text: 'Failed to delete product' });
       setShowDeleteModal(false);
     } finally {

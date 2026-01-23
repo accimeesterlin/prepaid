@@ -104,8 +104,8 @@ export default function CountriesPage() {
         const data = await response.json();
         setSettings(data.settings);
       }
-    } catch (error) {
-      console.error('Failed to fetch settings:', error);
+    } catch (_error) {
+      console.error('Failed to fetch settings:', _error);
     } finally {
       setLoading(false);
     }
@@ -151,8 +151,8 @@ export default function CountriesPage() {
 
         setAvailableCountries(fallbackCountries);
       }
-    } catch (error) {
-      console.error('Failed to fetch countries:', error);
+    } catch (_error) {
+      console.error('Failed to fetch countries:', _error);
 
       // Fallback to using all countries from COUNTRY_NAMES
       const fallbackCountries: Country[] = Object.entries(COUNTRY_NAMES)
@@ -191,8 +191,8 @@ export default function CountriesPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to save settings:', error);
+    } catch (_error) {
+      console.error('Failed to save settings:', _error);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred. Please try again.',

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { Search, Phone, DollarSign, Zap, Shield, Filter, Tag, SlidersHorizontal, Globe, CreditCard, CheckCircle, XCircle, Wifi, Banknote, AlertCircle, Beaker } from 'lucide-react';
+import { Search, Phone, DollarSign, Zap, Shield, SlidersHorizontal, CreditCard, CheckCircle, XCircle, Wifi, Banknote, AlertCircle, Beaker } from 'lucide-react';
 import { Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, toast } from '@pg-prepaid/ui';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -31,7 +31,7 @@ export default function PublicStorefrontPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'pgpay'>('stripe');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [customerName, setCustomerName] = useState('');
+  const [_customerName, _setCustomerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [customAmount, setCustomAmount] = useState<string>('');
@@ -41,7 +41,7 @@ export default function PublicStorefrontPage() {
 
   // Payment methods state
   const [paymentMethods, setPaymentMethods] = useState<any>(null);
-  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+  const [_paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
 
   // Discount code state
   const [discountCode, setDiscountCode] = useState<string>('');
@@ -342,7 +342,7 @@ export default function PublicStorefrontPage() {
         // API returns RFC 7807 Problem Details format with "detail" field
         setError(data.detail || data.error || data.message || t('storefront.lookupFailed'));
       }
-    } catch (err: any) {
+    } catch (_err) {
       setError(t('storefront.errorOccurred'));
     } finally {
       setLoading(false);
@@ -436,7 +436,7 @@ export default function PublicStorefrontPage() {
         setDiscountData(null);
         setDiscountError(data.detail || data.error || data.message || t('storefront.invalidDiscountCode'));
       }
-    } catch (error: any) {
+    } catch (_error) {
       setDiscountData(null);
       setDiscountError(t('storefront.errorValidatingDiscount'));
     } finally {
@@ -642,7 +642,7 @@ export default function PublicStorefrontPage() {
   };
 
   // Get unique providers from products
-  const providers = useMemo(() => {
+  const _providers = useMemo(() => {
     if (!lookupData?.products) return [];
     const uniqueProviders = Array.from(
       new Set(lookupData.products.map((p: any) => p.providerName))
@@ -720,7 +720,7 @@ export default function PublicStorefrontPage() {
 
   const totalPages = Math.ceil(filteredAndSortedProducts.length / PRODUCTS_PER_PAGE);
 
-  const primaryColor = lookupData?.branding?.primaryColor || '#3b82f6';
+  const _primaryColor = lookupData?.branding?.primaryColor || '#3b82f6';
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

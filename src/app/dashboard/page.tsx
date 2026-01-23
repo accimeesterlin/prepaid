@@ -14,7 +14,6 @@ import {
   ExternalLink,
   Globe,
   Tag,
-  Eye,
   X,
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, DialogContent } from '@pg-prepaid/ui';

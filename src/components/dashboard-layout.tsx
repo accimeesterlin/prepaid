@@ -22,9 +22,8 @@ import {
   Globe,
   DollarSign,
   User,
-  Eye,
 } from 'lucide-react';
-import { Button, Card } from '@pg-prepaid/ui';
+import { Button } from '@pg-prepaid/ui';
 import { cn } from '@/lib/utils';
 import { OrganizationSwitcher } from './organization-switcher';
 
@@ -73,7 +72,7 @@ const navigation = navigationSections.flatMap(section => section.items);
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [organization, setOrganization] = useState<{ name: string } | null>(null);
+  const [_organization, setOrganization] = useState<{ name: string } | null>(null);
   const [user, setUser] = useState<{ email: string; roles: string[] } | null>(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const pathname = usePathname();

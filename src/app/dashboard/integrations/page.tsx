@@ -268,8 +268,8 @@ export default function IntegrationsPage() {
         console.log('Fetched integrations:', data);
         setIntegrations(data);
       }
-    } catch (error) {
-      console.error('Failed to fetch integrations:', error);
+    } catch (_error) {
+      console.error('Failed to fetch integrations:', _error);
     } finally {
       setLoading(false);
     }
@@ -463,8 +463,8 @@ export default function IntegrationsPage() {
           text: error.error || 'Failed to save integration',
         });
       }
-    } catch (error) {
-      console.error('Save error:', error);
+    } catch (_error) {
+      console.error('Save error:', _error);
       setTestMessage({
         type: 'error',
         text: 'Failed to save integration',
@@ -495,11 +495,11 @@ export default function IntegrationsPage() {
         console.log('Success result:', result);
         await fetchIntegrations();
       } else {
-        const error = await response.json();
-        console.error('Failed to set primary:', error);
+        const errorData = await response.json();
+        console.error('Failed to set primary:', errorData);
       }
-    } catch (error) {
-      console.error('Set primary error:', error);
+    } catch (_error) {
+      console.error('Set primary error:', _error);
     } finally {
       setSettingPrimary(null);
     }

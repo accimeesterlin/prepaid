@@ -68,8 +68,8 @@ export default function ProductsPage() {
         const data = await response.json();
         setProducts(data);
       }
-    } catch (error) {
-      console.error('Failed to fetch products:', error);
+    } catch (_error) {
+      console.error('Failed to fetch products:', _error);
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ export default function ProductsPage() {
         const error = await response.json();
         setMessage({ type: 'error', text: error.error || 'Failed to create product' });
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: 'error', text: 'Failed to create product' });
     } finally {
       setSaving(false);

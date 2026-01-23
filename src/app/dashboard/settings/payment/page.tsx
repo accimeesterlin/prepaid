@@ -138,8 +138,8 @@ export default function PaymentSettingsPage() {
         const data = await response.json();
         setProviders(data.providers || []);
       }
-    } catch (error) {
-      console.error("Failed to fetch providers:", error);
+    } catch (_error) {
+      console.error("Failed to fetch providers:", _error);
       toast({
         title: "Error",
         description: "Failed to load payment providers",
@@ -170,8 +170,8 @@ export default function PaymentSettingsPage() {
             settings: data.provider.settings || {},
           });
         }
-      } catch (error) {
-        console.error("Failed to fetch provider details:", error);
+      } catch (_error) {
+        console.error("Failed to fetch provider details:", _error);
       }
     } else {
       setFormData({
@@ -217,7 +217,7 @@ export default function PaymentSettingsPage() {
           variant: "error",
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to save payment provider",
@@ -254,7 +254,7 @@ export default function PaymentSettingsPage() {
           variant: "error",
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to test payment provider",
@@ -289,7 +289,7 @@ export default function PaymentSettingsPage() {
           variant: "error",
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete payment provider",
@@ -298,7 +298,7 @@ export default function PaymentSettingsPage() {
     }
   };
 
-  const getProviderConfig = (providerId: string) => {
+  const _getProviderConfig = (providerId: string) => {
     return providers.find((p) => p.provider === providerId);
   };
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Beaker, CheckCircle, XCircle, Clock, Phone, Mail, X, Copy, ExternalLink, Calendar, DollarSign, CreditCard, User } from 'lucide-react';
+import { Search, Filter, Download, Beaker, CheckCircle, XCircle, Clock, Phone, Mail, X, Copy, Calendar, DollarSign, User } from 'lucide-react';
 import { Button, Card, CardContent, toast } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { format } from 'date-fns';
@@ -112,8 +112,8 @@ export default function TransactionsPage() {
         setTransactions(data.transactions || []);
         setPagination(data.pagination || { page: 1, limit: 25, total: 0, totalPages: 0 });
       }
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error);
+    } catch (_error) {
+      console.error('Failed to fetch transactions:', _error);
     } finally {
       setLoading(false);
     }

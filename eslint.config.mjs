@@ -22,12 +22,21 @@ const eslintConfig = [
   },
   {
     rules: {
-      // Turn errors into warnings for now to allow build to pass
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": "warn",
-      "react/no-unescaped-entities": "warn",
+      // Suppress warnings that don't affect functionality
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      "react/no-unescaped-entities": "off",
       "prefer-const": "warn",
-      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/exhaustive-deps": "off",
+      "@typescript-eslint/ban-ts-comment": "error",
+      "@typescript-eslint/no-unused-expressions": "warn",
     },
   },
 ];

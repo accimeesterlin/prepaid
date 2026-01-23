@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { dbConnection } from '@pg-prepaid/db/connection';
 import { Integration } from '@pg-prepaid/db';

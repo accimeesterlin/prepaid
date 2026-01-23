@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { UserPlus, Mail, Shield, Eye, Trash2, Edit2, Users as UsersIcon, Crown, AlertCircle, Settings, BarChart3, Store, DollarSign, Tag, Globe, ShoppingCart, CreditCard, Plug, Wallet } from 'lucide-react';
-import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, toast } from '@pg-prepaid/ui';
+import { Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, toast } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 
 // Permission categories with descriptions
@@ -171,8 +171,8 @@ export default function TeamPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to fetch members:', error);
+    } catch (_error) {
+      console.error('Failed to fetch members:', _error);
       toast({
         title: 'Error',
         description: 'Failed to load team members',
@@ -223,8 +223,8 @@ export default function TeamPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to invite member:', error);
+    } catch (_error) {
+      console.error('Failed to invite member:', _error);
       toast({
         title: 'Error',
         description: 'Failed to invite team member',
@@ -281,8 +281,8 @@ export default function TeamPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to update member:', error);
+    } catch (_error) {
+      console.error('Failed to update member:', _error);
       toast({
         title: 'Error',
         description: 'Failed to update team member',
@@ -319,8 +319,8 @@ export default function TeamPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to remove member:', error);
+    } catch (_error) {
+      console.error('Failed to remove member:', _error);
       toast({
         title: 'Error',
         description: 'Failed to remove team member',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Tag, Save, Plus, Edit, Trash2, Search, Filter, Copy, RefreshCw, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
+import { Tag, Save, Plus, Edit, Trash2, Search, Filter, Copy, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, toast, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { cn } from '@/lib/utils';
@@ -84,8 +84,8 @@ export default function DiscountsPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to fetch discounts:', error);
+    } catch (_error) {
+      console.error('Failed to fetch discounts:', _error);
       toast({
         title: 'Error',
         description: 'Failed to load discounts. Please check your connection.',
@@ -216,8 +216,8 @@ export default function DiscountsPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to save discount:', error);
+    } catch (_error) {
+      console.error('Failed to save discount:', _error);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred',
@@ -252,8 +252,8 @@ export default function DiscountsPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to delete discount:', error);
+    } catch (_error) {
+      console.error('Failed to delete discount:', _error);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred',
@@ -284,8 +284,8 @@ export default function DiscountsPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to toggle discount:', error);
+    } catch (_error) {
+      console.error('Failed to toggle discount:', _error);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred',

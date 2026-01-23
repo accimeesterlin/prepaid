@@ -71,8 +71,8 @@ export default function PricingPage() {
         const data = await response.json();
         setPricingRules(data.pricingRules);
       }
-    } catch (error) {
-      console.error('Failed to fetch pricing rules:', error);
+    } catch (_error) {
+      console.error('Failed to fetch pricing rules:', _error);
       toast({
         title: 'Error',
         description: 'Failed to load pricing rules',
@@ -217,8 +217,8 @@ export default function PricingPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to save pricing rule:', error);
+    } catch (_error) {
+      console.error('Failed to save pricing rule:', _error);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred',
@@ -253,8 +253,8 @@ export default function PricingPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to delete pricing rule:', error);
+    } catch (_error) {
+      console.error('Failed to delete pricing rule:', _error);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred',
@@ -285,8 +285,8 @@ export default function PricingPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to toggle pricing rule:', error);
+    } catch (_error) {
+      console.error('Failed to toggle pricing rule:', _error);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred',
@@ -308,8 +308,8 @@ export default function PricingPage() {
       if (response.ok) {
         fetchPricingRules();
       }
-    } catch (error) {
-      console.error('Failed to update priority:', error);
+    } catch (_error) {
+      console.error('Failed to update priority:', _error);
     }
   };
 

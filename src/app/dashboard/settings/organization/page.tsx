@@ -34,7 +34,7 @@ interface Organization {
 
 export default function OrganizationSettingsPage() {
   const router = useRouter();
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [_organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
@@ -76,8 +76,8 @@ export default function OrganizationSettingsPage() {
           timezone: data.settings?.timezone || 'Pacific/Port_Moresby',
         });
       }
-    } catch (error) {
-      console.error('Failed to fetch organization:', error);
+    } catch (_error) {
+      console.error('Failed to fetch organization:', _error);
       setMessage({ type: 'error', text: 'Failed to load organization details' });
     } finally {
       setLoading(false);
@@ -120,7 +120,7 @@ export default function OrganizationSettingsPage() {
         const error = await response.json();
         setMessage({ type: 'error', text: error.error || 'Failed to save organization settings' });
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: 'error', text: 'Failed to save organization settings' });
     } finally {
       setSaving(false);

@@ -84,8 +84,8 @@ export default function CustomerDetailPage() {
       } else if (response.status === 404) {
         setMessage({ type: 'error', text: 'Customer not found' });
       }
-    } catch (error) {
-      console.error('Failed to fetch customer:', error);
+    } catch (_error) {
+      console.error('Failed to fetch customer:', _error);
       setMessage({ type: 'error', text: 'Failed to load customer details' });
     } finally {
       setLoading(false);
@@ -113,7 +113,7 @@ export default function CustomerDetailPage() {
         const error = await response.json();
         setMessage({ type: 'error', text: error.error || 'Failed to update customer' });
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: 'error', text: 'Failed to update customer' });
     } finally {
       setSaving(false);
@@ -135,7 +135,7 @@ export default function CustomerDetailPage() {
         setMessage({ type: 'error', text: error.error || 'Failed to delete customer' });
         setShowDeleteModal(false);
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: 'error', text: 'Failed to delete customer' });
       setShowDeleteModal(false);
     } finally {

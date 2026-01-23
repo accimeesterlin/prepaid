@@ -2,13 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, User, Phone, MapPin, ChevronDown } from 'lucide-react';
+import { Plus, Search, User, Phone, MapPin } from 'lucide-react';
 
-const COUNTRIES = [
-  'Papua New Guinea', 'Australia', 'New Zealand', 'Fiji', 'Solomon Islands',
-  'Vanuatu', 'Samoa', 'Tonga', 'Kiribati', 'Micronesia',
-  'United States', 'United Kingdom', 'Canada', 'Philippines', 'Indonesia',
-].sort();
 import {
   Button,
   Card,
@@ -50,12 +45,6 @@ export default function CustomersPage() {
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [countrySearch, setCountrySearch] = useState('');
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
-
-  const filteredCountries = COUNTRIES.filter(country =>
-    country.toLowerCase().includes(countrySearch.toLowerCase())
-  );
 
   useEffect(() => {
     fetchCustomers();
@@ -71,8 +60,8 @@ export default function CustomersPage() {
         const data = await response.json();
         setCustomers(data);
       }
-    } catch (error) {
-      console.error('Failed to fetch customers:', error);
+    } catch (_error) {
+      console.error('Failed to fetch customers:', _error);
     } finally {
       setLoading(false);
     }
@@ -101,7 +90,7 @@ export default function CustomersPage() {
         const error = await response.json();
         setMessage({ type: 'error', text: error.error || 'Failed to create customer' });
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: 'error', text: 'Failed to create customer' });
     } finally {
       setSaving(false);

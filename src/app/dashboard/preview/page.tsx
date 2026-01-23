@@ -31,8 +31,8 @@ export default function StorefrontPreviewPage() {
           setOrgName(currentOrg.name);
         }
       }
-    } catch (error) {
-      console.error('Failed to fetch org slug:', error);
+    } catch (_error) {
+      console.error('Failed to fetch org slug:', _error);
     }
   };
 
@@ -43,8 +43,8 @@ export default function StorefrontPreviewPage() {
         const data = await response.json();
         setBalanceInfo(data.balanceLimit);
       }
-    } catch (error) {
-      console.error('Failed to fetch balance info:', error);
+    } catch (_error) {
+      console.error('Failed to fetch balance info:', _error);
     }
   };
 
@@ -79,7 +79,7 @@ export default function StorefrontPreviewPage() {
       } else {
         setError(data.detail || data.error || 'Failed to process test purchase');
       }
-    } catch (error) {
+    } catch (_error) {
       setError('An error occurred during test purchase');
     } finally {
       setProcessing(null);
@@ -113,7 +113,7 @@ export default function StorefrontPreviewPage() {
       } else {
         setError(data.detail || data.error || 'Failed to lookup phone number');
       }
-    } catch (error) {
+    } catch (_error) {
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);

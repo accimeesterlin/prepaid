@@ -25,8 +25,8 @@ export default function StorefrontPage() {
         const data = await response.json();
         setOrgSlug(data.slug);
       }
-    } catch (error) {
-      console.error('Failed to fetch organization:', error);
+    } catch (_error) {
+      console.error('Failed to fetch organization:', _error);
     }
   };
 
@@ -37,8 +37,8 @@ export default function StorefrontPage() {
         const data = await response.json();
         setSettings(data.settings);
       }
-    } catch (error) {
-      console.error('Failed to fetch settings:', error);
+    } catch (_error) {
+      console.error('Failed to fetch settings:', _error);
     } finally {
       setLoading(false);
     }
@@ -66,8 +66,8 @@ export default function StorefrontPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Failed to save settings:', error);
+    } catch (_error) {
+      console.error('Failed to save settings:', _error);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred. Please try again.',

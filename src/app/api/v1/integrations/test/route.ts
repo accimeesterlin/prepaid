@@ -313,7 +313,7 @@ async function testMailgun(credentials: any, testEmail?: string) {
     }
 
     // Otherwise just validate the domain
-    const domain = await mg.domains.get(credentials.domain);
+    const _domain = await mg.domains.get(credentials.domain);
 
     return {
       success: true,
@@ -427,7 +427,7 @@ async function testMailchimp(credentials: any, testEmail?: string) {
     }
 
     // Otherwise just ping the API
-    const response = await mailchimpClient.users.ping();
+    const _response = await mailchimpClient.users.ping();
 
     return {
       success: true,

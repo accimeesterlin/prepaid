@@ -152,7 +152,7 @@ export class DingConnectService {
       try {
         responseText = await response.text();
         errorDetails = JSON.parse(responseText);
-      } catch (e) {
+      } catch (_e) {
         errorDetails = { message: responseText || response.statusText };
       }
 

@@ -53,8 +53,8 @@ export default function MembersPage() {
         const data = await response.json();
         setMembers(data.data.members);
       }
-    } catch (error) {
-      console.error('Failed to fetch members:', error);
+    } catch (_error) {
+      console.error('Failed to fetch members:', _error);
     } finally {
       setLoading(false);
     }
@@ -94,8 +94,8 @@ export default function MembersPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Error inviting user:', error);
+    } catch (_error) {
+      console.error('Error inviting user:', _error);
       toast({
         title: 'Error',
         description: 'An error occurred. Please try again.',
@@ -163,8 +163,8 @@ export default function MembersPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Error updating balance limit:', error);
+    } catch (_error) {
+      console.error('Error updating balance limit:', _error);
       toast({
         title: 'Error',
         description: 'An error occurred. Please try again.',
@@ -200,8 +200,8 @@ export default function MembersPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
-      console.error('Error resetting balance:', error);
+    } catch (_error) {
+      console.error('Error resetting balance:', _error);
       toast({
         title: 'Error',
         description: 'An error occurred. Please try again.',

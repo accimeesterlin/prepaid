@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Check, ChevronsUpDown, PlusCircle, Building2, Settings2 } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input, Label, toast } from '@pg-prepaid/ui';
 import { cn } from '@/lib/utils';
@@ -29,7 +28,6 @@ export function OrganizationSwitcher() {
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [editOrgName, setEditOrgName] = useState('');
   const [editOrgSlug, setEditOrgSlug] = useState('');
-  const router = useRouter();
 
   useEffect(() => {
     fetchOrganizations();
@@ -354,8 +352,8 @@ export function OrganizationSwitcher() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     createOrganization();
-                  } else if (e.key === 'Escape') {
-                    !creating && setShowCreateDialog(false);
+                  } else if (e.key === 'Escape' && !creating) {
+                    setShowCreateDialog(false);
                   }
                 }}
                 disabled={creating}

@@ -71,8 +71,8 @@ export default function AnalyticsPage() {
         const data = await response.json();
         setMetrics(data);
       }
-    } catch (error) {
-      console.error('Failed to fetch metrics:', error);
+    } catch (_error) {
+      console.error('Failed to fetch metrics:', _error);
     } finally {
       setLoading(false);
     }

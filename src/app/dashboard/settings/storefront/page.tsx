@@ -42,8 +42,8 @@ export default function StorefrontSettingsPage() {
         const data = await response.json();
         setSettings(data.settings);
       }
-    } catch (error) {
-      console.error('Failed to fetch settings:', error);
+    } catch (_error) {
+      console.error('Failed to fetch settings:', _error);
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ export default function StorefrontSettingsPage() {
         const error = await response.json();
         setMessage({ type: 'error', text: error.error || 'Failed to save settings' });
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: 'error', text: 'Failed to save settings' });
     } finally {
       setSaving(false);

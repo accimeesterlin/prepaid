@@ -2,7 +2,7 @@
 
 import { Building2, CreditCard, Bell, Shield, Plug, Store, Users } from 'lucide-react';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@pg-prepaid/ui';
+import { Card, CardHeader, CardTitle, CardDescription } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { cn } from '@/lib/utils';
 
