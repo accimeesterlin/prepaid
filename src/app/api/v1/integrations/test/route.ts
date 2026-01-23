@@ -6,7 +6,7 @@ import sgMail from '@sendgrid/mail';
 import Mailgun from 'mailgun.js';
 import formData from 'form-data';
 import mailchimp from '@mailchimp/mailchimp_transactional';
-// @ts-ignore - zeptomail package has types but doesn't export them properly
+// @ts-expect-error - zeptomail package has types but doesn't export them properly
 import { SendMailClient } from 'zeptomail';
 
 // POST - Test integration connection
