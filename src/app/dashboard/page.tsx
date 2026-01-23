@@ -40,7 +40,7 @@ interface Metrics {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [metrics] = useState<Metrics>({
+  const [metrics, setMetrics] = useState<Metrics>({
     revenue: { total: 0, trend: 0 },
     transactions: { total: 0, trend: 0 },
     customers: { total: 0, trend: 0 },
@@ -72,11 +72,27 @@ export default function DashboardPage() {
         const orgData = await orgResponse.json();
         setOrgSlug(orgData.slug);
       }
+
+      // Fetch dashboard metrics (all-time data)
+      await fetchMetrics();
     } catch (err) {
       console.error('Auth check error:', err);
       router.push('/login');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMetrics = async () => {
+    try {
+      // Fetch all-time metrics
+      const response = await fetch('/api/v1/dashboard/metrics?period=all');
+      if (response.ok) {
+        const data = await response.json();
+        setMetrics(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error);
     }
   };
 

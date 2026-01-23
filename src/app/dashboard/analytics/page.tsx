@@ -37,6 +37,7 @@ export default function AnalyticsPage() {
     { value: '30d', label: 'Last 30 Days' },
     { value: '90d', label: 'Last 90 Days' },
     { value: '1y', label: 'Last Year' },
+    { value: 'all', label: 'All Time' },
   ];
 
   const selectedPeriodLabel = periodOptions.find(opt => opt.value === period)?.label || 'Last 30 Days';

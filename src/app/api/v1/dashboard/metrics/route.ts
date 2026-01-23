@@ -14,13 +14,16 @@ export async function GET(request: NextRequest) {
     await dbConnection.connect();
 
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get('period') || '30d'; // 7d, 30d, 90d, 1y
+    const period = searchParams.get('period') || '30d'; // today, 7d, 30d, 90d, 1y, all
 
     // Calculate date range
     const now = new Date();
     const startDate = new Date();
 
     switch (period) {
+      case 'today':
+        startDate.setHours(0, 0, 0, 0);
+        break;
       case '7d':
         startDate.setDate(now.getDate() - 7);
         break;
@@ -32,6 +35,10 @@ export async function GET(request: NextRequest) {
         break;
       case '1y':
         startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      case 'all':
+        // Set to very old date for all-time data
+        startDate.setFullYear(2000, 0, 1);
         break;
       default:
         startDate.setDate(now.getDate() - 30);
