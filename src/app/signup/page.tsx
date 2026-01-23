@@ -53,7 +53,15 @@ export default function SignupPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Signup failed');
+        // Handle validation errors with field-specific messages
+        if (data.errors && Array.isArray(data.errors)) {
+          const errorMessages = data.errors
+            .map((err: { field: string; message: string }) => err.message)
+            .join('. ');
+          throw new Error(errorMessages);
+        }
+        // Handle generic error response
+        throw new Error(data.detail || data.message || 'Signup failed. Please try again.');
       }
 
       router.push('/dashboard');

@@ -1,19 +1,19 @@
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import { dbConnection } from '@pg-prepaid/db/connection';
-import { User } from '@pg-prepaid/db/models/user.model';
-import { Org } from '@pg-prepaid/db/models/org.model';
-import { UserOrganization } from '@pg-prepaid/db';
-import { UserRole } from '@pg-prepaid/types';
-import { hashPassword, createToken, createSessionCookie } from '@/lib/auth';
-import { ApiErrors, handleApiError } from '@/lib/api-error';
-import { createSuccessResponse } from '@/lib/api-response';
-import { logger } from '@/lib/logger';
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { dbConnection } from "@pg-prepaid/db/connection";
+import { User } from "@pg-prepaid/db/models/user.model";
+import { Org } from "@pg-prepaid/db/models/org.model";
+import { UserOrganization } from "@pg-prepaid/db";
+import { UserRole } from "@pg-prepaid/types";
+import { hashPassword, createToken, createSessionCookie } from "@/lib/auth";
+import { ApiErrors, handleApiError } from "@/lib/api-error";
+import { createSuccessResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 
 const signupSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  orgName: z.string().min(1, 'Organization name is required'),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  orgName: z.string().min(1, "Organization name is required"),
 });
 
 export async function POST(request: NextRequest) {
@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       const errors = validation.error.errors.map((err) => ({
-        field: err.path.join('.'),
+        field: err.path.join("."),
         message: err.message,
       }));
-      throw ApiErrors.UnprocessableEntity('Validation failed', { errors });
+      throw ApiErrors.UnprocessableEntity("Validation failed", { errors });
     }
 
     const { email, password, orgName } = validation.data;
@@ -38,20 +38,35 @@ export async function POST(request: NextRequest) {
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      throw ApiErrors.Conflict('User with this email already exists');
+      throw ApiErrors.Conflict("User with this email already exists");
     }
 
     // Hash password
     const passwordHash = await hashPassword(password);
 
+    // Generate unique slug from organization name
+    const baseSlug = orgName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-") // Replace non-alphanumeric with hyphens
+      .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+
+    // Ensure slug is unique
+    let slug = baseSlug;
+    let counter = 1;
+    while (await Org.findOne({ slug })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
     // Create organization
     const org = await Org.create({
       name: orgName,
+      slug,
       settings: {},
       paymentProviders: [],
     });
 
-    logger.info('Organization created', { orgId: org._id.toString(), orgName });
+    logger.info("Organization created", { orgId: org._id.toString(), orgName });
 
     // Create user
     const user = await User.create({
@@ -62,7 +77,10 @@ export async function POST(request: NextRequest) {
       isActive: true,
     });
 
-    logger.info('User created', { userId: user._id.toString(), email: user.email });
+    logger.info("User created", {
+      userId: user._id.toString(),
+      email: user.email,
+    });
 
     // Create UserOrganization record
     await UserOrganization.create({
@@ -73,7 +91,7 @@ export async function POST(request: NextRequest) {
       joinedAt: new Date(),
     });
 
-    logger.info('UserOrganization created', {
+    logger.info("UserOrganization created", {
       userId: user._id.toString(),
       orgId: org._id.toString(),
     });
@@ -87,20 +105,23 @@ export async function POST(request: NextRequest) {
     });
 
     // Create response with session cookie
-    const response = createSuccessResponse({
-      user: {
-        id: user._id.toString(),
-        email: user.email,
-        roles: user.roles,
-        orgId: org._id.toString(),
+    const response = createSuccessResponse(
+      {
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          roles: user.roles,
+          orgId: org._id.toString(),
+        },
       },
-    }, 201);
+      201,
+    );
 
-    response.headers.set('Set-Cookie', createSessionCookie(token));
+    response.headers.set("Set-Cookie", createSessionCookie(token));
 
     return response;
   } catch (error) {
-    logger.error('Signup error', { error });
+    logger.error("Signup error", { error });
     return handleApiError(error);
   }
 }
