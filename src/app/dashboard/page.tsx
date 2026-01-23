@@ -15,6 +15,9 @@ import {
   Globe,
   Tag,
   X,
+  Clock,
+  XCircle,
+  ArrowRight,
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, DialogContent } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -26,15 +29,34 @@ interface Metrics {
   };
   transactions: {
     total: number;
+    completed: number;
     trend: number;
   };
   customers: {
     total: number;
+    newCustomers: number;
     trend: number;
   };
   successRate: {
     rate: number;
     trend: number;
+  };
+  averageTransactionValue: number;
+}
+
+interface RecentTransaction {
+  _id: string;
+  orderId: string;
+  status: string;
+  amount: number;
+  currency: string;
+  recipient: {
+    phoneNumber: string;
+    email?: string;
+  };
+  createdAt: string;
+  metadata?: {
+    productName?: string;
   };
 }
 
@@ -42,10 +64,12 @@ export default function DashboardPage() {
   const router = useRouter();
   const [metrics, setMetrics] = useState<Metrics>({
     revenue: { total: 0, trend: 0 },
-    transactions: { total: 0, trend: 0 },
-    customers: { total: 0, trend: 0 },
+    transactions: { total: 0, completed: 0, trend: 0 },
+    customers: { total: 0, newCustomers: 0, trend: 0 },
     successRate: { rate: 0, trend: 0 },
+    averageTransactionValue: 0,
   });
+  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [orgSlug, setOrgSlug] = useState<string>('');
   const [copied, setCopied] = useState(false);
@@ -75,6 +99,7 @@ export default function DashboardPage() {
 
       // Fetch dashboard metrics (all-time data)
       await fetchMetrics();
+      await fetchRecentTransactions();
     } catch (err) {
       console.error('Auth check error:', err);
       router.push('/login');
@@ -93,6 +118,19 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Failed to fetch metrics:', error);
+    }
+  };
+
+  const fetchRecentTransactions = async () => {
+    try {
+      // Fetch latest 5 transactions
+      const response = await fetch('/api/v1/transactions?page=1&limit=5');
+      if (response.ok) {
+        const data = await response.json();
+        setRecentTransactions(data.transactions || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch recent transactions:', error);
     }
   };
 
@@ -327,13 +365,86 @@ export default function DashboardPage() {
               <CardDescription>Your latest transactions and updates</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground font-medium">No activity yet</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Your recent transactions will appear here
-                </p>
-              </div>
+              {recentTransactions.length === 0 ? (
+                <div className="text-center py-12">
+                  <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <p className="text-muted-foreground font-medium">No activity yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Your recent transactions will appear here
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentTransactions.map((transaction) => (
+                    <div
+                      key={transaction._id}
+                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="mt-0.5">
+                          {transaction.status === 'completed' ? (
+                            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            </div>
+                          ) : transaction.status === 'processing' || transaction.status === 'paid' ? (
+                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                              <Clock className="h-4 w-4 text-blue-600" />
+                            </div>
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                              <XCircle className="h-4 w-4 text-red-600" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-sm truncate">
+                              {transaction.metadata?.productName || 'Top-up'}
+                            </p>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                                transaction.status === 'completed'
+                                  ? 'bg-green-100 text-green-700'
+                                  : transaction.status === 'processing' || transaction.status === 'paid'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : transaction.status === 'failed'
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}
+                            >
+                              {transaction.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {transaction.recipient.phoneNumber}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(transaction.createdAt).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="font-semibold text-sm">
+                          {formatCurrency(transaction.amount)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    className="w-full mt-2"
+                    onClick={() => router.push('/dashboard/transactions')}
+                  >
+                    View All Transactions
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

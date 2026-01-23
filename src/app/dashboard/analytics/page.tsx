@@ -12,6 +12,7 @@ interface Metrics {
   };
   transactions: {
     total: number;
+    completed: number;
     trend: number;
   };
   customers: {
@@ -23,6 +24,7 @@ interface Metrics {
     rate: number;
     trend: number;
   };
+  averageTransactionValue: number;
 }
 
 export default function AnalyticsPage() {
@@ -282,15 +284,13 @@ export default function AnalyticsPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Average Transaction Value</span>
                     <span className="font-medium">
-                      ${metrics.transactions.total > 0
-                        ? (metrics.revenue.total / metrics.transactions.total).toFixed(2)
-                        : '0.00'}
+                      ${metrics.averageTransactionValue.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Completed Transactions</span>
                     <span className="font-medium">
-                      {Math.round(metrics.transactions.total * (metrics.successRate.rate / 100))}
+                      {metrics.transactions.completed}
                     </span>
                   </div>
                 </div>

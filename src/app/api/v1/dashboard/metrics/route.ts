@@ -104,6 +104,9 @@ export async function GET(request: NextRequest) {
       ? successRate - prevSuccessRate
       : successRate > 0 ? successRate : 0;
 
+    // Calculate average transaction value (only for completed transactions)
+    const averageTransactionValue = completedCount > 0 ? revenue / completedCount : 0;
+
     const metrics = {
       revenue: {
         total: Math.round(revenue * 100) / 100,
@@ -111,6 +114,7 @@ export async function GET(request: NextRequest) {
       },
       transactions: {
         total: transactionCount,
+        completed: completedCount,
         trend: Math.round(transactionTrend * 10) / 10,
       },
       customers: {
@@ -122,6 +126,7 @@ export async function GET(request: NextRequest) {
         rate: Math.round(successRate * 10) / 10,
         trend: Math.round(successRateTrend * 10) / 10,
       },
+      averageTransactionValue: Math.round(averageTransactionValue * 100) / 100,
     };
 
     return NextResponse.json(metrics);

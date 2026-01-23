@@ -572,20 +572,41 @@ export async function POST(request: NextRequest) {
             });
           }
         } else if (transferResult.Status === "Failed") {
-        transaction.status = "failed";
-        transaction.timeline.failedAt = new Date();
-        transaction.metadata.failureReason =
-          transferResult.ErrorMessage || "Unknown error";
+          transaction.status = "failed";
+          transaction.timeline.failedAt = new Date();
+          transaction.metadata.failureReason =
+            transferResult.ErrorMessage || "Unknown error";
+          (transaction.metadata as Record<string, unknown>).dingconnectErrorCode = transferResult.ErrorCode;
 
-        logger.error("Transaction failed at DingConnect", {
-          orderId: transaction.orderId,
-          errorMessage: transferResult.ErrorMessage,
-        });
-        } else {
-          // Processing status remains
-          logger.info("Transaction still processing", {
+          logger.error("Transaction failed at DingConnect", {
             orderId: transaction.orderId,
+            errorMessage: transferResult.ErrorMessage,
+            errorCode: transferResult.ErrorCode,
+          });
+        } else if (transferResult.Status === "Processing") {
+          // DingConnect is still processing - keep status as processing
+          // Transaction will remain in processing state and can be checked later
+          transaction.status = "processing";
+          (transaction.metadata as Record<string, unknown>).dingconnectStatus = transferResult.Status;
+          (transaction.metadata as Record<string, unknown>).lastDingConnectCheck = new Date();
+
+          logger.info("Transaction still processing at DingConnect", {
+            orderId: transaction.orderId,
+            transferId: transferResult.TransferId,
             status: transferResult.Status,
+            message: "Transaction will remain in processing state - admin can manually check status later",
+          });
+        } else {
+          // Unknown status - log warning and keep as processing
+          transaction.status = "processing";
+          (transaction.metadata as Record<string, unknown>).dingconnectStatus = transferResult.Status;
+          (transaction.metadata as Record<string, unknown>).lastDingConnectCheck = new Date();
+
+          logger.warn("Unknown DingConnect status - keeping as processing", {
+            orderId: transaction.orderId,
+            transferId: transferResult.TransferId,
+            status: transferResult.Status,
+            message: "Unexpected status from DingConnect API",
           });
         }
       }

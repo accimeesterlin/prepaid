@@ -282,6 +282,14 @@ export class DingConnectService {
   }
 
   /**
+   * Get transfer status
+   * GET /api/V1/GetTransferStatus
+   */
+  async getTransferStatus(transferId: number): Promise<SendTransferResponse> {
+    return this.request<SendTransferResponse>(`/api/V1/GetTransferStatus?TransferId=${transferId}`);
+  }
+
+  /**
    * Validate a transfer without actually sending it
    */
   async validateTransfer(params: Omit<SendTransferRequest, 'ValidateOnly'>): Promise<{
