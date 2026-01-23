@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "../lib/utils";
 
+// Symbol to identify DialogTrigger components reliably
+const DIALOG_TRIGGER_SYMBOL = Symbol('DialogTrigger');
+
 interface DialogContextValue {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -33,7 +36,7 @@ export function Dialog({ open: controlledOpen, onOpenChange, children }: DialogP
     <DialogContext.Provider value={{ open, onOpenChange: handleOpenChange }}>
       {/* Render triggers outside of portal */}
       {React.Children.toArray(children).map((child, index) => {
-        if (React.isValidElement(child) && (child as any).type?.name === 'DialogTrigger') {
+        if (React.isValidElement(child) && (child as any).type?.[DIALOG_TRIGGER_SYMBOL]) {
           return <React.Fragment key={index}>{child}</React.Fragment>;
         }
         return null;
@@ -87,6 +90,9 @@ export function DialogTrigger({ children, asChild }: DialogTriggerProps) {
     </button>
   );
 }
+
+// Mark the component with our symbol so Dialog can find it reliably
+(DialogTrigger as any)[DIALOG_TRIGGER_SYMBOL] = true;
 
 interface DialogContentProps {
   children: React.ReactNode;
