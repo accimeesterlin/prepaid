@@ -29,10 +29,6 @@ export function Dialog({ open: controlledOpen, onOpenChange, children }: DialogP
   const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
   const handleOpenChange = onOpenChange || setUncontrolledOpen;
 
-  if (!mounted) {
-    return null;
-  }
-
   return (
     <DialogContext.Provider value={{ open, onOpenChange: handleOpenChange }}>
       {/* Render triggers outside of portal */}
@@ -43,8 +39,8 @@ export function Dialog({ open: controlledOpen, onOpenChange, children }: DialogP
         return null;
       })}
 
-      {/* Only render dialog content in portal when open */}
-      {open && mounted && createPortal(
+      {/* Only render dialog content in portal when open and mounted */}
+      {open && mounted && typeof window !== 'undefined' && createPortal(
         <>
           {/* Backdrop */}
           <div
