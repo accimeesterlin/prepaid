@@ -127,7 +127,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Storefront URL Card */}
-        <Card className="border-primary/50 shadow-md">
+        <Card className="border-border shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Store className="h-5 w-5" />

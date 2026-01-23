@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserPlus, Mail, Shield, Eye, Trash2, Edit2, Users as UsersIcon, Crown, AlertCircle, Settings, BarChart3, Store, DollarSign, Tag, Globe, ShoppingCart, CreditCard, Plug, Wallet } from 'lucide-react';
+import { UserPlus, Mail, Shield, Eye, Trash2, Edit2, Users as UsersIcon, Crown, AlertCircle, Settings, BarChart3, Store, DollarSign, Tag, Globe, ShoppingCart, CreditCard, Plug, Wallet, Copy, Search } from 'lucide-react';
 import { Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, toast } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 
@@ -151,6 +151,7 @@ export default function TeamPage() {
   const [editBalanceLimitEnabled, setEditBalanceLimitEnabled] = useState(false);
   const [editBalanceLimitMax, setEditBalanceLimitMax] = useState('0');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchMembers();
@@ -374,6 +375,30 @@ export default function TeamPage() {
     }
   };
 
+  const copyInviteLink = async (email: string) => {
+    const baseUrl = window.location.origin;
+    const inviteLink = `${baseUrl}/signup?email=${encodeURIComponent(email)}`;
+    
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast({
+        title: 'Success',
+        description: 'Invite link copied to clipboard',
+        variant: 'success',
+      });
+    } catch (_error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to copy invite link',
+        variant: 'error',
+      });
+    }
+  };
+
+  const filteredMembers = members.filter((member) =>
+    member.user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -404,26 +429,46 @@ export default function TeamPage() {
           </Button>
         </div>
 
+        {/* Search Bar */}
+        {members.length > 0 && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        )}
+
         {/* Team Members List */}
-        {members.length === 0 ? (
+        {filteredMembers.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
                 <UsersIcon className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No team members yet</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {members.length === 0 ? 'No team members yet' : 'No team members found'}
+              </h3>
               <p className="text-muted-foreground text-center max-w-md mb-4">
-                Invite team members to help you manage your storefront and transactions.
+                {members.length === 0
+                  ? 'Invite team members to help you manage your storefront and transactions.'
+                  : 'Try adjusting your search query.'}
               </p>
-              <Button onClick={() => setShowInviteModal(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invite Your First Member
-              </Button>
+              {members.length === 0 && (
+                <Button onClick={() => setShowInviteModal(true)}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Invite Your First Member
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4">
-            {members.map((member) => (
+            {filteredMembers.map((member) => (
               <Card key={member.id}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
@@ -462,6 +507,14 @@ export default function TeamPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyInviteLink(member.user.email)}
+                        title="Copy invite link"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
