@@ -48,7 +48,8 @@
       "Bash(yarn eslint:*)",
       "Bash(ps:*)",
       "WebFetch(domain:www.zoho.com)",
-      "Bash(nslookup:*)"
+      "Bash(nslookup:*)",
+      "Bash(yarn tsc:*)"
     ],
     "deny": [],
     "ask": []

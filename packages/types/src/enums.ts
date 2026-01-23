@@ -33,6 +33,7 @@ export enum Permission {
   // Transactions
   VIEW_TRANSACTIONS = 'view_transactions',
   PROCESS_TRANSACTIONS = 'process_transactions',
+  UPDATE_TRANSACTION_STATUS = 'update_transaction_status',
   REFUND_TRANSACTIONS = 'refund_transactions',
 
   // Customers
@@ -64,12 +65,10 @@ export enum Permission {
 }
 
 export enum TransactionStatus {
-  CREATED = 'created',
-  PAYMENT_PENDING = 'payment_pending',
-  PAYMENT_AUTHORIZED = 'payment_authorized',
-  PAYMENT_FAILED = 'payment_failed',
-  SENT = 'sent',
-  CONFIRMED = 'confirmed',
+  PENDING = 'pending',
+  PAID = 'paid',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
   FAILED = 'failed',
   REFUNDED = 'refunded',
 }

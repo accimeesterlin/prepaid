@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Beaker, CheckCircle, XCircle, Clock, Phone, Mail, X, Copy, Calendar, DollarSign, User } from 'lucide-react';
-import { Button, Card, CardContent, toast } from '@pg-prepaid/ui';
+import { Search, Filter, Download, Beaker, CheckCircle, XCircle, Clock, Phone, Mail, X, Copy, Calendar, DollarSign, User, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Button, Card, CardContent, toast, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { format } from 'date-fns';
+import { TransactionStatus } from '@pg-prepaid/types';
 
 interface Transaction {
   _id: string;
@@ -56,6 +57,10 @@ export default function TransactionsPage() {
   });
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+  const [statusReason, setStatusReason] = useState('');
 
   // Load filters from localStorage on mount
   useEffect(() => {
@@ -162,6 +167,63 @@ export default function TransactionsPage() {
   const handleTransactionClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setShowDetails(true);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!selectedTransaction || !newStatus) return;
+
+    setUpdatingStatus(true);
+    try {
+      const response = await fetch(`/api/v1/transactions/${selectedTransaction._id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: newStatus,
+          reason: statusReason || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Transaction status updated successfully',
+          variant: 'success',
+        });
+        setShowStatusDialog(false);
+        setNewStatus('');
+        setStatusReason('');
+        fetchTransactions();
+        // Update selected transaction if details panel is open
+        if (showDetails && selectedTransaction) {
+          const updatedTx = transactions.find(t => t._id === selectedTransaction._id);
+          if (updatedTx) {
+            setSelectedTransaction({ ...updatedTx, status: newStatus });
+          }
+        }
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.detail || 'Failed to update transaction status',
+          variant: 'error',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update transaction status',
+        variant: 'error',
+      });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const openStatusDialog = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setNewStatus(transaction.status);
+    setStatusReason('');
+    setShowStatusDialog(true);
   };
 
   if (loading) {
@@ -336,11 +398,23 @@ export default function TransactionsPage() {
                       </div>
                     </div>
 
-                    {/* Right: Amount */}
+                    {/* Right: Amount and Actions */}
                     <div className="flex items-center justify-between md:justify-end md:flex-col md:items-end gap-2">
                       <span className="text-lg font-bold">
                         {formatCurrency(transaction.amount, transaction.currency)}
                       </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openStatusDialog(transaction);
+                        }}
+                        className="shrink-0"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                        Update Status
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -376,81 +450,78 @@ export default function TransactionsPage() {
           </Card>
         )}
 
-        {/* Pagination Controls */}
+        {/* Pagination Controls - Shadcn Style */}
         {!loading && pagination.totalPages > 1 && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-sm text-muted-foreground">
-                  Page {pagination.page} of {pagination.totalPages}
-                </div>
+          <div className="flex items-center justify-between border-t pt-4">
+            <div className="text-sm text-muted-foreground">
+              Page <span className="font-medium">{pagination.page}</span> of{' '}
+              <span className="font-medium">{pagination.totalPages}</span>
+            </div>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                  >
-                    First
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                First
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
 
-                  {/* Page Numbers */}
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (pagination.totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= pagination.totalPages - 2) {
-                        pageNum = pagination.totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
+              {/* Page Numbers */}
+              <div className="hidden sm:flex items-center gap-1">
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (pagination.totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= pagination.totalPages - 2) {
+                    pageNum = pagination.totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
 
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setCurrentPage(pageNum)}
-                          className="min-w-[2.5rem]"
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
-                    disabled={currentPage === pagination.totalPages}
-                  >
-                    Next
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(pagination.totalPages)}
-                    disabled={currentPage === pagination.totalPages}
-                  >
-                    Last
-                  </Button>
-                </div>
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className="min-w-[2.5rem]"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
               </div>
-            </CardContent>
-          </Card>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+                disabled={currentPage === pagination.totalPages}
+              >
+                Next
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(pagination.totalPages)}
+                disabled={currentPage === pagination.totalPages}
+              >
+                Last
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Transaction Details Sidebar */}
@@ -476,15 +547,28 @@ export default function TransactionsPage() {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Status Badge */}
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(selectedTransaction.status)}
-                  {selectedTransaction.metadata?.testMode && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 border border-amber-200 rounded-full text-xs font-medium">
-                      <Beaker className="h-3 w-3" />
-                      Test Mode
-                    </span>
-                  )}
+                {/* Status Badge and Update Button */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(selectedTransaction.status)}
+                    {selectedTransaction.metadata?.testMode && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 border border-amber-200 rounded-full text-xs font-medium">
+                        <Beaker className="h-3 w-3" />
+                        Test Mode
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowDetails(false);
+                      openStatusDialog(selectedTransaction);
+                    }}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Update
+                  </Button>
                 </div>
 
                 {/* Order ID */}
@@ -693,6 +777,108 @@ export default function TransactionsPage() {
             </div>
           </>
         )}
+
+        {/* Status Update Dialog */}
+        <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Update Transaction Status</DialogTitle>
+              <DialogDescription>
+                Change the status of transaction {selectedTransaction?.orderId}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Current Status */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Current Status</label>
+                <div className="flex items-center gap-2">
+                  {selectedTransaction && getStatusBadge(selectedTransaction.status)}
+                </div>
+              </div>
+
+              {/* New Status */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  New Status <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                >
+                  <option value={TransactionStatus.PENDING}>Pending</option>
+                  <option value={TransactionStatus.PAID}>Paid</option>
+                  <option value={TransactionStatus.PROCESSING}>Processing</option>
+                  <option value={TransactionStatus.COMPLETED}>Completed</option>
+                  <option value={TransactionStatus.FAILED}>Failed</option>
+                  <option value={TransactionStatus.REFUNDED}>Refunded</option>
+                </select>
+              </div>
+
+              {/* Reason (required for failed/refunded status) */}
+              {(newStatus === TransactionStatus.FAILED || newStatus === TransactionStatus.REFUNDED) && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Reason <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
+                    placeholder={`Explain why this transaction ${newStatus === TransactionStatus.FAILED ? 'failed' : 'was refunded'}...`}
+                    value={statusReason}
+                    onChange={(e) => setStatusReason(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A reason is required when marking a transaction as {newStatus}
+                  </p>
+                </div>
+              )}
+
+              {/* Warning for certain status changes */}
+              {selectedTransaction && newStatus !== selectedTransaction.status && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="text-sm text-amber-800">
+                    <p className="font-medium">Confirm Status Change</p>
+                    <p className="text-xs mt-1">
+                      You are changing the status from <strong>{selectedTransaction.status}</strong> to <strong>{newStatus}</strong>.
+                      This action will update the transaction timeline.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowStatusDialog(false)}
+                disabled={updatingStatus}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateStatus}
+                disabled={
+                  updatingStatus ||
+                  !newStatus ||
+                  newStatus === selectedTransaction?.status ||
+                  ((newStatus === TransactionStatus.FAILED || newStatus === TransactionStatus.REFUNDED) && !statusReason?.trim())
+                }
+              >
+                {updatingStatus ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Status'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
