@@ -1,18 +1,18 @@
-import { NextRequest } from 'next/server';
-import { requireAuth } from '@/lib/auth-middleware';
-import { dbConnection } from '@pg-prepaid/db/connection';
-import { Transaction, Customer } from '@pg-prepaid/db';
-import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
-import { handleApiError } from '@/lib/api-error';
-import { logger } from '@/lib/logger';
-import { TransactionStatus, Permission } from '@pg-prepaid/types';
-import { hasPermission } from '@/lib/permissions';
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/auth-middleware";
+import { dbConnection } from "@pg-prepaid/db/connection";
+import { Transaction, Customer } from "@pg-prepaid/db";
+import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
+import { handleApiError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
+import { TransactionStatus, Permission } from "@pg-prepaid/types";
+import { hasPermission } from "@/lib/permissions";
 import {
   updateTransactionStatusSchema,
   validateStatusUpdate,
   isReasonRequired,
-} from '@/lib/validations/transaction';
-import { ZodError } from 'zod';
+} from "@/lib/validations/transaction";
+import { ZodError } from "zod";
 
 /**
  * PATCH /api/v1/transactions/[id]/status
@@ -22,7 +22,7 @@ import { ZodError } from 'zod';
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -30,14 +30,14 @@ export async function PATCH(
 
     // Check permissions
     if (!hasPermission(session.roles, Permission.UPDATE_TRANSACTION_STATUS)) {
-      logger.warn('Permission denied for transaction status update', {
+      logger.warn("Permission denied for transaction status update", {
         userId: session.userId,
         roles: session.roles,
         transactionId: id,
       });
       return createErrorResponse(
-        'You do not have permission to update transaction status. Only Admin and Operator roles can perform this action.',
-        403
+        "You do not have permission to update transaction status. Only Admin and Operator roles can perform this action.",
+        403,
       );
     }
 
@@ -51,8 +51,13 @@ export async function PATCH(
       validatedData = updateTransactionStatusSchema.parse(body);
     } catch (error) {
       if (error instanceof ZodError) {
-        const errors = error.errors.map(err => `${err.path.join('.')}: ${err.message}`);
-        return createErrorResponse(`Validation failed: ${errors.join(', ')}`, 400);
+        const errors = error.errors.map(
+          (err) => `${err.path.join(".")}: ${err.message}`,
+        );
+        return createErrorResponse(
+          `Validation failed: ${errors.join(", ")}`,
+          400,
+        );
       }
       throw error;
     }
@@ -63,11 +68,11 @@ export async function PATCH(
     if (isReasonRequired(status) && !reason) {
       return createErrorResponse(
         `A reason is required when setting status to ${status}`,
-        400
+        400,
       );
     }
 
-    logger.info('Updating transaction status', {
+    logger.info("Updating transaction status", {
       orgId: session.orgId,
       userId: session.userId,
       transactionId: id,
@@ -82,7 +87,7 @@ export async function PATCH(
     });
 
     if (!transaction) {
-      return createErrorResponse('Transaction not found', 404);
+      return createErrorResponse("Transaction not found", 404);
     }
 
     const oldStatus = transaction.status as TransactionStatus;
@@ -136,7 +141,10 @@ export async function PATCH(
     await transaction.save();
 
     // Create or update customer if transaction is completed
-    if (status === TransactionStatus.COMPLETED && transaction.recipient?.phoneNumber) {
+    if (
+      status === TransactionStatus.COMPLETED &&
+      transaction.recipient?.phoneNumber
+    ) {
       try {
         const existingCustomer = await Customer.findOne({
           orgId: session.orgId,
@@ -156,21 +164,23 @@ export async function PATCH(
               totalSpent: transaction.amount,
               currency: transaction.currency,
               lastPurchaseAt: now,
-              acquisitionSource: 'transaction',
+              acquisitionSource: "transaction",
             },
           });
 
-          logger.info('Customer created from transaction', {
+          logger.info("Customer created from transaction", {
             orgId: session.orgId,
             phoneNumber: transaction.recipient.phoneNumber,
             transactionId: id,
           });
         } else {
           // Update existing customer metrics
-          existingCustomer.metadata.totalPurchases = (existingCustomer.metadata.totalPurchases || 0) + 1;
-          existingCustomer.metadata.totalSpent = (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
+          existingCustomer.metadata.totalPurchases =
+            (existingCustomer.metadata.totalPurchases || 0) + 1;
+          existingCustomer.metadata.totalSpent =
+            (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
           existingCustomer.metadata.lastPurchaseAt = now;
-          
+
           // Update name and email if not set
           if (!existingCustomer.name && transaction.recipient.name) {
             existingCustomer.name = transaction.recipient.name;
@@ -181,10 +191,10 @@ export async function PATCH(
           if (!existingCustomer.country && transaction.operator?.country) {
             existingCustomer.country = transaction.operator.country;
           }
-          
+
           await existingCustomer.save();
 
-          logger.info('Customer updated from transaction', {
+          logger.info("Customer updated from transaction", {
             orgId: session.orgId,
             phoneNumber: transaction.recipient.phoneNumber,
             transactionId: id,
@@ -192,7 +202,7 @@ export async function PATCH(
         }
       } catch (customerError) {
         // Log the error but don't fail the transaction status update
-        logger.error('Error creating/updating customer from transaction', {
+        logger.error("Error creating/updating customer from transaction", {
           error: customerError,
           transactionId: id,
           phoneNumber: transaction.recipient.phoneNumber,
@@ -200,7 +210,7 @@ export async function PATCH(
       }
     }
 
-    logger.info('Transaction status updated successfully', {
+    logger.info("Transaction status updated successfully", {
       orgId: session.orgId,
       userId: session.userId,
       transactionId: id,
@@ -211,7 +221,7 @@ export async function PATCH(
 
     return createSuccessResponse({
       success: true,
-      message: 'Transaction status updated successfully',
+      message: "Transaction status updated successfully",
       transaction: {
         _id: transaction._id,
         orderId: transaction.orderId,
@@ -221,7 +231,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    logger.error('Error updating transaction status', { error });
+    logger.error("Error updating transaction status", { error });
     return handleApiError(error);
   }
 }
