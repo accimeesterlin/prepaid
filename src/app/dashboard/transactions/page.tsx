@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Beaker, CheckCircle, XCircle, Clock, Phone, Mail, X, Copy, Calendar, DollarSign, User, RefreshCw, AlertTriangle } from 'lucide-react';
-import { Button, Card, CardContent, toast, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@pg-prepaid/ui';
+import { Search, Filter, Download, Beaker, CheckCircle, XCircle, Clock, Phone, Mail, X, Copy, Calendar, DollarSign, User, RefreshCw, AlertTriangle, MoreVertical } from 'lucide-react';
+import { Button, Card, CardContent, toast, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { format } from 'date-fns';
 import { TransactionStatus } from '@pg-prepaid/types';
@@ -403,18 +403,49 @@ export default function TransactionsPage() {
                       <span className="text-lg font-bold">
                         {formatCurrency(transaction.amount, transaction.currency)}
                       </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openStatusDialog(transaction);
-                        }}
-                        className="shrink-0"
-                      >
-                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Update Status
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="sr-only">Open menu</span>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTransactionClick(transaction);
+                            }}
+                          >
+                            <User className="h-3.5 w-3.5 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openStatusDialog(transaction);
+                            }}
+                          >
+                            <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                            Update Status
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(transaction.orderId, 'Order ID');
+                            }}
+                          >
+                            <Copy className="h-3.5 w-3.5 mr-2" />
+                            Copy Order ID
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardContent>
@@ -537,38 +568,60 @@ export default function TransactionsPage() {
             <div className="fixed inset-y-0 right-0 w-full sm:w-[500px] bg-background shadow-xl z-50 overflow-y-auto animate-in slide-in-from-right duration-300">
               <div className="sticky top-0 bg-background border-b px-6 py-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Transaction Details</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDetails(false)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setShowDetails(false);
+                          openStatusDialog(selectedTransaction);
+                        }}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                        Update Status
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => copyToClipboard(selectedTransaction.orderId, 'Order ID')}
+                      >
+                        <Copy className="h-3.5 w-3.5 mr-2" />
+                        Copy Order ID
+                      </DropdownMenuItem>
+                      {selectedTransaction.providerTransactionId && (
+                        <DropdownMenuItem
+                          onClick={() => copyToClipboard(selectedTransaction.providerTransactionId!, 'Provider Transaction ID')}
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-2" />
+                          Copy Provider ID
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDetails(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Status Badge and Update Button */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(selectedTransaction.status)}
-                    {selectedTransaction.metadata?.testMode && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 border border-amber-200 rounded-full text-xs font-medium">
-                        <Beaker className="h-3 w-3" />
-                        Test Mode
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowDetails(false);
-                      openStatusDialog(selectedTransaction);
-                    }}
-                  >
-                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                    Update
-                  </Button>
+                {/* Status Badge */}
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(selectedTransaction.status)}
+                  {selectedTransaction.metadata?.testMode && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 border border-amber-200 rounded-full text-xs font-medium">
+                      <Beaker className="h-3 w-3" />
+                      Test Mode
+                    </span>
+                  )}
                 </div>
 
                 {/* Order ID */}

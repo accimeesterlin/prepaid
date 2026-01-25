@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@mailchimp/mailchimp_transactional": "^1.0.59",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-slot": "^1.0.2",
     "@sendgrid/mail": "^8.1.6",
     "awesome-phonenumber": "^7.5.0",

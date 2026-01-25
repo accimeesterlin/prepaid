@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
 import { dbConnection } from '@pg-prepaid/db/connection';
-import { Transaction } from '@pg-prepaid/db';
+import { Transaction, Customer } from '@pg-prepaid/db';
 import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
@@ -134,6 +134,71 @@ export async function PATCH(
     }
 
     await transaction.save();
+
+    // Create or update customer if transaction is completed
+    if (status === TransactionStatus.COMPLETED && transaction.recipient?.phoneNumber) {
+      try {
+        const existingCustomer = await Customer.findOne({
+          orgId: session.orgId,
+          phoneNumber: transaction.recipient.phoneNumber,
+        });
+
+        if (!existingCustomer) {
+          // Create new customer
+          await Customer.create({
+            orgId: session.orgId,
+            phoneNumber: transaction.recipient.phoneNumber,
+            email: transaction.recipient.email,
+            name: transaction.recipient.name,
+            country: transaction.operator?.country,
+            metadata: {
+              totalPurchases: 1,
+              totalSpent: transaction.amount,
+              currency: transaction.currency,
+              lastPurchaseAt: now,
+              acquisitionSource: 'transaction',
+            },
+          });
+
+          logger.info('Customer created from transaction', {
+            orgId: session.orgId,
+            phoneNumber: transaction.recipient.phoneNumber,
+            transactionId: id,
+          });
+        } else {
+          // Update existing customer metrics
+          existingCustomer.metadata.totalPurchases = (existingCustomer.metadata.totalPurchases || 0) + 1;
+          existingCustomer.metadata.totalSpent = (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
+          existingCustomer.metadata.lastPurchaseAt = now;
+          
+          // Update name and email if not set
+          if (!existingCustomer.name && transaction.recipient.name) {
+            existingCustomer.name = transaction.recipient.name;
+          }
+          if (!existingCustomer.email && transaction.recipient.email) {
+            existingCustomer.email = transaction.recipient.email;
+          }
+          if (!existingCustomer.country && transaction.operator?.country) {
+            existingCustomer.country = transaction.operator.country;
+          }
+          
+          await existingCustomer.save();
+
+          logger.info('Customer updated from transaction', {
+            orgId: session.orgId,
+            phoneNumber: transaction.recipient.phoneNumber,
+            transactionId: id,
+          });
+        }
+      } catch (customerError) {
+        // Log the error but don't fail the transaction status update
+        logger.error('Error creating/updating customer from transaction', {
+          error: customerError,
+          transactionId: id,
+          phoneNumber: transaction.recipient.phoneNumber,
+        });
+      }
+    }
 
     logger.info('Transaction status updated successfully', {
       orgId: session.orgId,
