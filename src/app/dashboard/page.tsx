@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DollarSign,
   ShoppingCart,
@@ -18,9 +18,20 @@ import {
   Clock,
   XCircle,
   ArrowRight,
-} from 'lucide-react';
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, DialogContent } from '@pg-prepaid/ui';
-import { DashboardLayout } from '@/components/dashboard-layout';
+  Wallet,
+  RefreshCw,
+} from "lucide-react";
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Dialog,
+  DialogContent,
+} from "@pg-prepaid/ui";
+import { DashboardLayout } from "@/components/dashboard-layout";
 
 interface Metrics {
   revenue: {
@@ -60,6 +71,15 @@ interface RecentTransaction {
   };
 }
 
+interface ProviderBalance {
+  provider: string | null;
+  balance: number | null;
+  currency: string | null;
+  environment?: string;
+  lastSync?: string;
+  error?: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [metrics, setMetrics] = useState<Metrics>({
@@ -69,11 +89,16 @@ export default function DashboardPage() {
     successRate: { rate: 0, trend: 0 },
     averageTransactionValue: 0,
   });
-  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<
+    RecentTransaction[]
+  >([]);
   const [loading, setLoading] = useState(true);
-  const [orgSlug, setOrgSlug] = useState<string>('');
+  const [orgSlug, setOrgSlug] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [showStorefrontModal, setShowStorefrontModal] = useState(false);
+  const [providerBalance, setProviderBalance] =
+    useState<ProviderBalance | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -81,17 +106,17 @@ export default function DashboardPage() {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('/api/v1/auth/me');
+      const response = await fetch("/api/v1/auth/me");
 
       if (!response.ok) {
         if (response.status === 401) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
       }
 
       // Fetch organization slug
-      const orgResponse = await fetch('/api/v1/organization');
+      const orgResponse = await fetch("/api/v1/organization");
       if (orgResponse.ok) {
         const orgData = await orgResponse.json();
         setOrgSlug(orgData.slug);
@@ -100,9 +125,10 @@ export default function DashboardPage() {
       // Fetch dashboard metrics (all-time data)
       await fetchMetrics();
       await fetchRecentTransactions();
+      await fetchBalance();
     } catch (err) {
-      console.error('Auth check error:', err);
-      router.push('/login');
+      console.error("Auth check error:", err);
+      router.push("/login");
     } finally {
       setLoading(false);
     }
@@ -111,32 +137,48 @@ export default function DashboardPage() {
   const fetchMetrics = async () => {
     try {
       // Fetch all-time metrics
-      const response = await fetch('/api/v1/dashboard/metrics?period=all');
+      const response = await fetch("/api/v1/dashboard/metrics?period=all");
       if (response.ok) {
         const data = await response.json();
         setMetrics(data);
       }
     } catch (error) {
-      console.error('Failed to fetch metrics:', error);
+      console.error("Failed to fetch metrics:", error);
     }
   };
 
   const fetchRecentTransactions = async () => {
     try {
       // Fetch latest 5 transactions
-      const response = await fetch('/api/v1/transactions?page=1&limit=5');
+      const response = await fetch("/api/v1/transactions?page=1&limit=5");
       if (response.ok) {
         const data = await response.json();
         setRecentTransactions(data.transactions || []);
       }
     } catch (error) {
-      console.error('Failed to fetch recent transactions:', error);
+      console.error("Failed to fetch recent transactions:", error);
     }
   };
 
-  const storefrontUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/store/${orgSlug}`
-    : '';
+  const fetchBalance = async () => {
+    setLoadingBalance(true);
+    try {
+      const response = await fetch("/api/v1/dashboard/balance");
+      if (response.ok) {
+        const data = await response.json();
+        setProviderBalance(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch provider balance:", error);
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
+
+  const storefrontUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/store/${orgSlug}`
+      : "";
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(storefrontUrl);
@@ -158,7 +200,10 @@ export default function DashboardPage() {
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
   };
 
   return (
@@ -173,7 +218,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => router.push('/dashboard/storefront')}>
+            <Button onClick={() => router.push("/dashboard/storefront")}>
               <Store className="h-4 w-4 mr-2" />
               Storefront Settings
             </Button>
@@ -194,7 +239,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm break-all">
-                {storefrontUrl || 'Loading...'}
+                {storefrontUrl || "Loading..."}
               </div>
               <Button
                 variant="outline"
@@ -217,7 +262,7 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(storefrontUrl, '_blank')}
+                onClick={() => window.open(storefrontUrl, "_blank")}
                 disabled={!storefrontUrl}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
@@ -238,8 +283,12 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground font-medium">Total Revenue</p>
-                <p className="text-3xl font-bold">{formatCurrency(metrics.revenue.total)}</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Total Revenue
+                </p>
+                <p className="text-3xl font-bold">
+                  {formatCurrency(metrics.revenue.total)}
+                </p>
                 <p className="text-xs text-muted-foreground">All time</p>
               </div>
             </CardContent>
@@ -254,8 +303,12 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground font-medium">Transactions</p>
-                <p className="text-3xl font-bold">{metrics.transactions.total}</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Transactions
+                </p>
+                <p className="text-3xl font-bold">
+                  {metrics.transactions.total}
+                </p>
                 <p className="text-xs text-muted-foreground">All time</p>
               </div>
             </CardContent>
@@ -270,9 +323,13 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground font-medium">Customers</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Customers
+                </p>
                 <p className="text-3xl font-bold">{metrics.customers.total}</p>
-                <p className="text-xs text-muted-foreground">Total registered</p>
+                <p className="text-xs text-muted-foreground">
+                  Total registered
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -286,13 +343,95 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground font-medium">Success Rate</p>
-                <p className="text-3xl font-bold">{metrics.successRate.rate}%</p>
-                <p className="text-xs text-muted-foreground">Transaction success</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Success Rate
+                </p>
+                <p className="text-3xl font-bold">
+                  {metrics.successRate.rate}%
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Transaction success
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Provider Balance Card */}
+        {providerBalance && providerBalance.provider && (
+          <Card className="border-border shadow-md">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  <CardTitle>Provider Balance</CardTitle>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={fetchBalance}
+                  disabled={loadingBalance}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${loadingBalance ? "animate-spin" : ""}`}
+                  />
+                </Button>
+              </div>
+              <CardDescription>
+                {providerBalance.provider === "dingconnect"
+                  ? "DingConnect"
+                  : "Reloadly"}{" "}
+                account balance
+                {providerBalance.environment &&
+                  ` (${providerBalance.environment})`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {providerBalance.balance !== null ? (
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-4xl font-bold">
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: providerBalance.currency || "USD",
+                      }).format(providerBalance.balance)}
+                    </p>
+                    <span className="text-sm text-muted-foreground">
+                      {providerBalance.currency || "USD"}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <XCircle className="h-4 w-4" />
+                    <p className="text-sm">Balance unavailable</p>
+                  </div>
+                )}
+
+                {providerBalance.lastSync && (
+                  <p className="text-xs text-muted-foreground">
+                    Last updated:{" "}
+                    {new Date(providerBalance.lastSync).toLocaleString()}
+                  </p>
+                )}
+
+                {providerBalance.error && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <XCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="text-sm text-amber-800">
+                      <p className="font-medium">
+                        Failed to fetch live balance
+                      </p>
+                      <p className="text-xs mt-1">
+                        Showing last cached value. Error:{" "}
+                        {providerBalance.error}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Getting Started Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -300,19 +439,23 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Get started with your storefront</CardDescription>
+              <CardDescription>
+                Get started with your storefront
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button
                 variant="outline"
                 className="w-full justify-start"
                 size="lg"
-                onClick={() => router.push('/dashboard/storefront')}
+                onClick={() => router.push("/dashboard/storefront")}
               >
                 <Store className="h-5 w-5 mr-3" />
                 <div className="text-left flex-1">
                   <div className="font-medium">Configure Storefront</div>
-                  <div className="text-xs text-muted-foreground">Set up branding and pricing</div>
+                  <div className="text-xs text-muted-foreground">
+                    Set up branding and pricing
+                  </div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 ml-2" />
               </Button>
@@ -320,12 +463,14 @@ export default function DashboardPage() {
                 variant="outline"
                 className="w-full justify-start"
                 size="lg"
-                onClick={() => router.push('/dashboard/countries')}
+                onClick={() => router.push("/dashboard/countries")}
               >
                 <Globe className="h-5 w-5 mr-3" />
                 <div className="text-left flex-1">
                   <div className="font-medium">Select Countries</div>
-                  <div className="text-xs text-muted-foreground">Choose countries to serve</div>
+                  <div className="text-xs text-muted-foreground">
+                    Choose countries to serve
+                  </div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 ml-2" />
               </Button>
@@ -333,12 +478,14 @@ export default function DashboardPage() {
                 variant="outline"
                 className="w-full justify-start"
                 size="lg"
-                onClick={() => router.push('/dashboard/discounts')}
+                onClick={() => router.push("/dashboard/discounts")}
               >
                 <Tag className="h-5 w-5 mr-3" />
                 <div className="text-left flex-1">
                   <div className="font-medium">Create Discounts</div>
-                  <div className="text-xs text-muted-foreground">Set up promotional offers</div>
+                  <div className="text-xs text-muted-foreground">
+                    Set up promotional offers
+                  </div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 ml-2" />
               </Button>
@@ -346,12 +493,14 @@ export default function DashboardPage() {
                 variant="outline"
                 className="w-full justify-start"
                 size="lg"
-                onClick={() => router.push('/dashboard/integrations')}
+                onClick={() => router.push("/dashboard/integrations")}
               >
                 <TrendingUp className="h-5 w-5 mr-3" />
                 <div className="text-left flex-1">
                   <div className="font-medium">Connect DingConnect</div>
-                  <div className="text-xs text-muted-foreground">Integrate with telecom API</div>
+                  <div className="text-xs text-muted-foreground">
+                    Integrate with telecom API
+                  </div>
                 </div>
                 <ArrowUpRight className="h-4 w-4 ml-2" />
               </Button>
@@ -362,13 +511,17 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Your latest transactions and updates</CardDescription>
+              <CardDescription>
+                Your latest transactions and updates
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {recentTransactions.length === 0 ? (
                 <div className="text-center py-12">
                   <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground font-medium">No activity yet</p>
+                  <p className="text-muted-foreground font-medium">
+                    No activity yet
+                  </p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Your recent transactions will appear here
                   </p>
@@ -382,11 +535,12 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-start gap-3 flex-1">
                         <div className="mt-0.5">
-                          {transaction.status === 'completed' ? (
+                          {transaction.status === "completed" ? (
                             <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
                               <CheckCircle className="h-4 w-4 text-green-600" />
                             </div>
-                          ) : transaction.status === 'processing' || transaction.status === 'paid' ? (
+                          ) : transaction.status === "processing" ||
+                            transaction.status === "paid" ? (
                             <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
                               <Clock className="h-4 w-4 text-blue-600" />
                             </div>
@@ -399,17 +553,18 @@ export default function DashboardPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-medium text-sm truncate">
-                              {transaction.metadata?.productName || 'Top-up'}
+                              {transaction.metadata?.productName || "Top-up"}
                             </p>
                             <span
                               className={`text-xs px-2 py-0.5 rounded-full capitalize ${
-                                transaction.status === 'completed'
-                                  ? 'bg-green-100 text-green-700'
-                                  : transaction.status === 'processing' || transaction.status === 'paid'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : transaction.status === 'failed'
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-gray-100 text-gray-700'
+                                transaction.status === "completed"
+                                  ? "bg-green-100 text-green-700"
+                                  : transaction.status === "processing" ||
+                                      transaction.status === "paid"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : transaction.status === "failed"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-gray-100 text-gray-700"
                               }`}
                             >
                               {transaction.status}
@@ -419,12 +574,15 @@ export default function DashboardPage() {
                             {transaction.recipient.phoneNumber}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(transaction.createdAt).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}
+                            {new Date(transaction.createdAt).toLocaleString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              },
+                            )}
                           </p>
                         </div>
                       </div>
@@ -438,7 +596,7 @@ export default function DashboardPage() {
                   <Button
                     variant="outline"
                     className="w-full mt-2"
-                    onClick={() => router.push('/dashboard/transactions')}
+                    onClick={() => router.push("/dashboard/transactions")}
                   >
                     View All Transactions
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -463,7 +621,7 @@ export default function DashboardPage() {
               <Button
                 variant="link"
                 className="p-0"
-                onClick={() => router.push('/dashboard/storefront')}
+                onClick={() => router.push("/dashboard/storefront")}
               >
                 Manage Storefront <ArrowUpRight className="h-4 w-4 ml-1" />
               </Button>
@@ -482,7 +640,7 @@ export default function DashboardPage() {
               <Button
                 variant="link"
                 className="p-0"
-                onClick={() => router.push('/dashboard/customers')}
+                onClick={() => router.push("/dashboard/customers")}
               >
                 View Customers <ArrowUpRight className="h-4 w-4 ml-1" />
               </Button>
@@ -501,7 +659,7 @@ export default function DashboardPage() {
               <Button
                 variant="link"
                 className="p-0"
-                onClick={() => router.push('/dashboard/analytics')}
+                onClick={() => router.push("/dashboard/analytics")}
               >
                 View Analytics <ArrowUpRight className="h-4 w-4 ml-1" />
               </Button>
@@ -516,7 +674,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between p-4 border-b bg-muted/30">
             <div>
               <h2 className="text-lg font-semibold">Storefront Preview</h2>
-              <p className="text-sm text-muted-foreground">Test transactions as a team member</p>
+              <p className="text-sm text-muted-foreground">
+                Test transactions as a team member
+              </p>
             </div>
             <Button
               variant="ghost"
