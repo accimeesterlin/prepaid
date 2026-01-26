@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface ITransaction extends Document {
   orderId: string;
@@ -7,11 +7,20 @@ export interface ITransaction extends Document {
   productId: string;
   amount: number;
   currency: string;
-  status: 'pending' | 'paid' | 'processing' | 'completed' | 'failed' | 'refunded';
-  paymentGateway?: 'stripe' | 'paypal' | 'pgpay';
+  status:
+    | "pending"
+    | "paid"
+    | "processing"
+    | "completed"
+    | "failed"
+    | "refunded";
+  paymentGateway?: "stripe" | "paypal" | "pgpay" | "balance";
   paymentId?: string;
-  provider: 'dingconnect' | 'reloadly';
+  paymentType: "gateway" | "balance" | "admin_assigned";
+  provider: "dingconnect" | "reloadly";
   providerTransactionId?: string;
+  createdBy?: string; // User ID who created this transaction (staff or customer)
+  processedBy?: string; // User ID who processed/completed this transaction
   recipient: {
     phoneNumber: string;
     email?: string;
@@ -69,29 +78,51 @@ const TransactionSchema = new Schema<ITransaction>(
     currency: {
       type: String,
       required: true,
-      default: 'USD',
+      default: "USD",
     },
     status: {
       type: String,
       required: true,
-      enum: ['pending', 'paid', 'processing', 'completed', 'failed', 'refunded'],
-      default: 'pending',
+      enum: [
+        "pending",
+        "paid",
+        "processing",
+        "completed",
+        "failed",
+        "refunded",
+      ],
+      default: "pending",
       index: true,
     },
     paymentGateway: {
       type: String,
-      enum: ['stripe', 'paypal', 'pgpay'],
+      enum: ["stripe", "paypal", "pgpay", "balance"],
     },
     paymentId: {
       type: String,
       index: true,
     },
+    paymentType: {
+      type: String,
+      required: true,
+      enum: ["gateway", "balance", "admin_assigned"],
+      default: "gateway",
+      index: true,
+    },
     provider: {
       type: String,
       required: true,
-      enum: ['dingconnect', 'reloadly'],
+      enum: ["dingconnect", "reloadly"],
     },
     providerTransactionId: {
+      type: String,
+      index: true,
+    },
+    createdBy: {
+      type: String,
+      index: true,
+    },
+    processedBy: {
       type: String,
       index: true,
     },
@@ -141,17 +172,20 @@ const TransactionSchema = new Schema<ITransaction>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Indexes for common queries
 TransactionSchema.index({ orgId: 1, status: 1, createdAt: -1 });
-TransactionSchema.index({ 'recipient.phoneNumber': 1 });
+TransactionSchema.index({ "recipient.phoneNumber": 1 });
 TransactionSchema.index({ createdAt: -1 });
 TransactionSchema.index({ paymentGateway: 1, paymentId: 1 });
+TransactionSchema.index({ createdBy: 1, createdAt: -1 });
+TransactionSchema.index({ orgId: 1, createdBy: 1, status: 1 });
+TransactionSchema.index({ orgId: 1, paymentType: 1 });
 
 // Generate orderId before save
-TransactionSchema.pre('save', function (next) {
+TransactionSchema.pre("save", function (next) {
   if (!this.orderId) {
     this.orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
   }
@@ -159,4 +193,5 @@ TransactionSchema.pre('save', function (next) {
 });
 
 export const Transaction: Model<ITransaction> =
-  mongoose.models.Transaction || mongoose.model<ITransaction>('Transaction', TransactionSchema);
+  mongoose.models.Transaction ||
+  mongoose.model<ITransaction>("Transaction", TransactionSchema);

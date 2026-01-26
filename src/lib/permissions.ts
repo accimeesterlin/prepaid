@@ -1,4 +1,4 @@
-import { UserRole, Permission } from '@pg-prepaid/types';
+import { UserRole, Permission } from "@pg-prepaid/types";
 
 /**
  * Role-based permission mapping
@@ -35,6 +35,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Customers
     Permission.VIEW_CUSTOMERS,
     Permission.EDIT_CUSTOMERS,
+    Permission.VIEW_CUSTOMER_BALANCE,
 
     // Integrations
     Permission.VIEW_INTEGRATIONS,
@@ -44,6 +45,11 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
     // Wallet
     Permission.VIEW_WALLET,
+
+    // Staff Self-Service
+    Permission.VIEW_OWN_TRANSACTIONS,
+    Permission.VIEW_OWN_BALANCE,
+    Permission.MANAGE_OWN_API_KEYS,
   ],
   [UserRole.VIEWER]: [
     // Dashboard & Analytics
@@ -77,14 +83,26 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
     // Wallet
     Permission.VIEW_WALLET,
+
+    // Staff Self-Service
+    Permission.VIEW_OWN_TRANSACTIONS,
+    Permission.VIEW_OWN_BALANCE,
+    Permission.MANAGE_OWN_API_KEYS,
+  ],
+  [UserRole.CUSTOMER]: [
+    // Customers have limited permissions
+    // They mostly interact through customer portal, not admin dashboard
   ],
 };
 
 /**
  * Check if a user has a specific permission based on their roles
  */
-export function hasPermission(userRoles: UserRole[], permission: Permission): boolean {
-  return userRoles.some(role => {
+export function hasPermission(
+  userRoles: UserRole[],
+  permission: Permission,
+): boolean {
+  return userRoles.some((role) => {
     const rolePermissions = ROLE_PERMISSIONS[role];
     return rolePermissions.includes(permission);
   });
@@ -93,15 +111,23 @@ export function hasPermission(userRoles: UserRole[], permission: Permission): bo
 /**
  * Check if a user has any of the specified permissions
  */
-export function hasAnyPermission(userRoles: UserRole[], permissions: Permission[]): boolean {
-  return permissions.some(permission => hasPermission(userRoles, permission));
+export function hasAnyPermission(
+  userRoles: UserRole[],
+  permissions: Permission[],
+): boolean {
+  return permissions.some((permission) => hasPermission(userRoles, permission));
 }
 
 /**
  * Check if a user has all of the specified permissions
  */
-export function hasAllPermissions(userRoles: UserRole[], permissions: Permission[]): boolean {
-  return permissions.every(permission => hasPermission(userRoles, permission));
+export function hasAllPermissions(
+  userRoles: UserRole[],
+  permissions: Permission[],
+): boolean {
+  return permissions.every((permission) =>
+    hasPermission(userRoles, permission),
+  );
 }
 
 /**
@@ -110,9 +136,9 @@ export function hasAllPermissions(userRoles: UserRole[], permissions: Permission
 export function getUserPermissions(userRoles: UserRole[]): Permission[] {
   const allPermissions = new Set<Permission>();
 
-  userRoles.forEach(role => {
+  userRoles.forEach((role) => {
     const rolePermissions = ROLE_PERMISSIONS[role];
-    rolePermissions.forEach(permission => allPermissions.add(permission));
+    rolePermissions.forEach((permission) => allPermissions.add(permission));
   });
 
   return Array.from(allPermissions);
@@ -129,5 +155,7 @@ export function isAdmin(userRoles: UserRole[]): boolean {
  * Check if user is operator or above
  */
 export function isOperatorOrAbove(userRoles: UserRole[]): boolean {
-  return userRoles.includes(UserRole.ADMIN) || userRoles.includes(UserRole.OPERATOR);
+  return (
+    userRoles.includes(UserRole.ADMIN) || userRoles.includes(UserRole.OPERATOR)
+  );
 }
