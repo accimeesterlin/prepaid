@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslation } from '@/lib/i18n/LanguageContext';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
 
 interface UserData {
   _id: string;
@@ -18,7 +18,7 @@ interface UserData {
 export default function MyAccountPage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -28,15 +28,15 @@ export default function MyAccountPage() {
 
   const loadUserData = async () => {
     try {
-      const res = await fetch('/api/auth/session');
+      const res = await fetch("/api/auth/session");
       if (!res.ok) {
-        router.push('/login');
+        router.push("/login");
         return;
       }
       const data = await res.json();
       setUser(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load user data');
+      setError(err.message || "Failed to load user data");
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,7 @@ export default function MyAccountPage() {
   if (error || !user) {
     return (
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-        {error || 'Failed to load user data'}
+        {error || "Failed to load user data"}
       </div>
     );
   }
@@ -66,24 +66,34 @@ export default function MyAccountPage() {
 
       {/* Profile Information */}
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Profile Information</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Profile Information
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Name
+            </label>
             <p className="text-lg text-gray-900">{user.name}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Email
+            </label>
             <p className="text-lg text-gray-900">{user.email}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Role</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Role
+            </label>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
               {user.role}
             </span>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">User ID</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              User ID
+            </label>
             <p className="text-sm text-gray-500 font-mono">{user._id}</p>
           </div>
         </div>
@@ -92,19 +102,27 @@ export default function MyAccountPage() {
       {/* Balance Information (if applicable) */}
       {hasBalance && (
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Balance Information</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Balance Information
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-4 text-white">
               <p className="text-sm text-blue-100">Current Balance</p>
-              <p className="text-2xl font-bold">${user.currentBalance?.toFixed(2) || '0.00'}</p>
+              <p className="text-2xl font-bold">
+                ${user.currentBalance?.toFixed(2) || "0.00"}
+              </p>
             </div>
             <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-4 text-white">
               <p className="text-sm text-green-100">Total Assigned</p>
-              <p className="text-2xl font-bold">${user.totalAssigned?.toFixed(2) || '0.00'}</p>
+              <p className="text-2xl font-bold">
+                ${user.totalAssigned?.toFixed(2) || "0.00"}
+              </p>
             </div>
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-4 text-white">
               <p className="text-sm text-purple-100">Total Used</p>
-              <p className="text-2xl font-bold">${user.totalUsed?.toFixed(2) || '0.00'}</p>
+              <p className="text-2xl font-bold">
+                ${user.totalUsed?.toFixed(2) || "0.00"}
+              </p>
             </div>
           </div>
         </div>

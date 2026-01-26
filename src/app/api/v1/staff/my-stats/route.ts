@@ -1,8 +1,8 @@
-import { NextRequest } from 'next/server';
-import { requireAuth } from '@/lib/auth-middleware';
-import { Transaction } from '@/packages/db';
-import { ApiResponse } from '@/lib/api-response';
-import { ApiError } from '@/lib/api-error';
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/auth-middleware";
+import { Transaction } from "@/packages/db";
+import { ApiResponse } from "@/lib/api-response";
+import { ApiError } from "@/lib/api-error";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,10 +23,16 @@ export async function GET(request: NextRequest) {
       Transaction.countDocuments({ createdBy: session.userId }),
       Transaction.aggregate([
         { $match: { createdBy: session.userId } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
       ]).then((res) => res[0]?.total || 0),
-      Transaction.countDocuments({ createdBy: session.userId, status: 'completed' }),
-      Transaction.countDocuments({ createdBy: session.userId, status: 'pending' }),
+      Transaction.countDocuments({
+        createdBy: session.userId,
+        status: "completed",
+      }),
+      Transaction.countDocuments({
+        createdBy: session.userId,
+        status: "pending",
+      }),
       Transaction.aggregate([
         {
           $match: {
@@ -38,7 +44,7 @@ export async function GET(request: NextRequest) {
           $group: {
             _id: null,
             count: { $sum: 1 },
-            amount: { $sum: '$amount' },
+            amount: { $sum: "$amount" },
           },
         },
       ]).then((res) => res[0] || { count: 0, amount: 0 }),

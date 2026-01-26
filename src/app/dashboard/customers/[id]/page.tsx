@@ -1,13 +1,38 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Phone, Mail, MapPin, User, Edit, Trash2, Save, X, Receipt, Calendar, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import {
+  ArrowLeft,
+  Phone,
+  Mail,
+  MapPin,
+  User,
+  Edit,
+  Trash2,
+  Save,
+  X,
+  Receipt,
+  Calendar,
+  ChevronDown,
+} from "lucide-react";
 
 const COUNTRIES = [
-  'Papua New Guinea', 'Australia', 'New Zealand', 'Fiji', 'Solomon Islands',
-  'Vanuatu', 'Samoa', 'Tonga', 'Kiribati', 'Micronesia',
-  'United States', 'United Kingdom', 'Canada', 'Philippines', 'Indonesia',
+  "Papua New Guinea",
+  "Australia",
+  "New Zealand",
+  "Fiji",
+  "Solomon Islands",
+  "Vanuatu",
+  "Samoa",
+  "Tonga",
+  "Kiribati",
+  "Micronesia",
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Philippines",
+  "Indonesia",
 ].sort();
 import {
   Button,
@@ -22,8 +47,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@pg-prepaid/ui';
-import { DashboardLayout } from '@/components/dashboard-layout';
+} from "@pg-prepaid/ui";
+import { DashboardLayout } from "@/components/dashboard-layout";
 
 interface Customer {
   _id: string;
@@ -67,25 +92,30 @@ export default function CustomerDetailPage() {
   const [editing, setEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
-  const [balanceAction, setBalanceAction] = useState<'assign' | 'adjust' | 'reset'>('assign');
-  const [balanceAmount, setBalanceAmount] = useState('');
-  const [balanceDescription, setBalanceDescription] = useState('');
+  const [balanceAction, setBalanceAction] = useState<
+    "assign" | "adjust" | "reset"
+  >("assign");
+  const [balanceAmount, setBalanceAmount] = useState("");
+  const [balanceDescription, setBalanceDescription] = useState("");
   const [balanceHistory, setBalanceHistory] = useState<BalanceHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [formData, setFormData] = useState({
-    phoneNumber: '',
-    email: '',
-    name: '',
-    country: '',
+    phoneNumber: "",
+    email: "",
+    name: "",
+    country: "",
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [countrySearch, setCountrySearch] = useState('');
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [countrySearch, setCountrySearch] = useState("");
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
-  const filteredCountries = COUNTRIES.filter(country =>
-    country.toLowerCase().includes(countrySearch.toLowerCase())
+  const filteredCountries = COUNTRIES.filter((country) =>
+    country.toLowerCase().includes(countrySearch.toLowerCase()),
   );
 
   useEffect(() => {
@@ -101,16 +131,16 @@ export default function CustomerDetailPage() {
         setCustomer(data);
         setFormData({
           phoneNumber: data.phoneNumber,
-          email: data.email || '',
-          name: data.name || '',
-          country: data.country || '',
+          email: data.email || "",
+          name: data.name || "",
+          country: data.country || "",
         });
       } else if (response.status === 404) {
-        setMessage({ type: 'error', text: 'Customer not found' });
+        setMessage({ type: "error", text: "Customer not found" });
       }
     } catch (_error) {
-      console.error('Failed to fetch customer:', _error);
-      setMessage({ type: 'error', text: 'Failed to load customer details' });
+      console.error("Failed to fetch customer:", _error);
+      setMessage({ type: "error", text: "Failed to load customer details" });
     } finally {
       setLoading(false);
     }
@@ -122,8 +152,8 @@ export default function CustomerDetailPage() {
 
     try {
       const response = await fetch(`/api/v1/customers/${customerId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
@@ -131,14 +161,17 @@ export default function CustomerDetailPage() {
         const updatedCustomer = await response.json();
         setCustomer(updatedCustomer);
         setEditing(false);
-        setMessage({ type: 'success', text: 'Customer updated successfully!' });
+        setMessage({ type: "success", text: "Customer updated successfully!" });
         setTimeout(() => setMessage(null), 3000);
       } else {
         const error = await response.json();
-        setMessage({ type: 'error', text: error.error || 'Failed to update customer' });
+        setMessage({
+          type: "error",
+          text: error.error || "Failed to update customer",
+        });
       }
     } catch (_error) {
-      setMessage({ type: 'error', text: 'Failed to update customer' });
+      setMessage({ type: "error", text: "Failed to update customer" });
     } finally {
       setSaving(false);
     }
@@ -149,18 +182,21 @@ export default function CustomerDetailPage() {
 
     try {
       const response = await fetch(`/api/v1/customers/${customerId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok) {
-        router.push('/dashboard/customers');
+        router.push("/dashboard/customers");
       } else {
         const error = await response.json();
-        setMessage({ type: 'error', text: error.error || 'Failed to delete customer' });
+        setMessage({
+          type: "error",
+          text: error.error || "Failed to delete customer",
+        });
         setShowDeleteModal(false);
       }
     } catch (_error) {
-      setMessage({ type: 'error', text: 'Failed to delete customer' });
+      setMessage({ type: "error", text: "Failed to delete customer" });
       setShowDeleteModal(false);
     } finally {
       setDeleting(false);
@@ -171,9 +207,9 @@ export default function CustomerDetailPage() {
     if (customer) {
       setFormData({
         phoneNumber: customer.phoneNumber,
-        email: customer.email || '',
-        name: customer.name || '',
-        country: customer.country || '',
+        email: customer.email || "",
+        name: customer.name || "",
+        country: customer.country || "",
       });
     }
     setEditing(false);
@@ -181,27 +217,32 @@ export default function CustomerDetailPage() {
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   const fetchBalanceHistory = async () => {
     setLoadingHistory(true);
     try {
-      const response = await fetch(`/api/v1/customers/${customerId}/balance/history`);
+      const response = await fetch(
+        `/api/v1/customers/${customerId}/balance/history`,
+      );
       if (response.ok) {
         const data = await response.json();
         setBalanceHistory(data.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch balance history:', error);
+      console.error("Failed to fetch balance history:", error);
     } finally {
       setLoadingHistory(false);
     }
@@ -209,7 +250,7 @@ export default function CustomerDetailPage() {
 
   const handleBalanceAction = async () => {
     if (!balanceAmount || parseFloat(balanceAmount) <= 0) {
-      setMessage({ type: 'error', text: 'Please enter a valid amount' });
+      setMessage({ type: "error", text: "Please enter a valid amount" });
       return;
     }
 
@@ -217,55 +258,62 @@ export default function CustomerDetailPage() {
     setMessage(null);
 
     try {
-      const endpoint = balanceAction === 'assign' 
-        ? `/api/v1/customers/${customerId}/balance`
-        : `/api/v1/customers/${customerId}/balance`;
-      
-      const method = balanceAction === 'assign' ? 'POST' : 'PUT';
-      
+      const endpoint =
+        balanceAction === "assign"
+          ? `/api/v1/customers/${customerId}/balance`
+          : `/api/v1/customers/${customerId}/balance`;
+
+      const method = balanceAction === "assign" ? "POST" : "PUT";
+
       const body: any = {
         description: balanceDescription || `Balance ${balanceAction}`,
       };
 
-      if (balanceAction === 'assign') {
+      if (balanceAction === "assign") {
         body.amount = parseFloat(balanceAmount);
-      } else if (balanceAction === 'adjust') {
-        body.type = 'adjustment';
+      } else if (balanceAction === "adjust") {
+        body.type = "adjustment";
         body.amount = parseFloat(balanceAmount);
-      } else if (balanceAction === 'reset') {
-        body.type = 'reset';
+      } else if (balanceAction === "reset") {
+        body.type = "reset";
         body.newBalance = parseFloat(balanceAmount);
       }
 
       const response = await fetch(endpoint, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
       if (response.ok) {
-        setMessage({ type: 'success', text: `Balance ${balanceAction}ed successfully!` });
+        setMessage({
+          type: "success",
+          text: `Balance ${balanceAction}ed successfully!`,
+        });
         setShowBalanceModal(false);
-        setBalanceAmount('');
-        setBalanceDescription('');
+        setBalanceAmount("");
+        setBalanceDescription("");
         await fetchCustomer();
         await fetchBalanceHistory();
         setTimeout(() => setMessage(null), 3000);
       } else {
         const error = await response.json();
-        setMessage({ type: 'error', text: error.error?.message || `Failed to ${balanceAction} balance` });
+        setMessage({
+          type: "error",
+          text: error.error?.message || `Failed to ${balanceAction} balance`,
+        });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: `Failed to ${balanceAction} balance` });
+      setMessage({ type: "error", text: `Failed to ${balanceAction} balance` });
     } finally {
       setSaving(false);
     }
   };
 
-  const openBalanceModal = (action: 'assign' | 'adjust' | 'reset') => {
+  const openBalanceModal = (action: "assign" | "adjust" | "reset") => {
     setBalanceAction(action);
-    setBalanceAmount('');
-    setBalanceDescription('');
+    setBalanceAmount("");
+    setBalanceDescription("");
     setShowBalanceModal(true);
   };
 
@@ -288,8 +336,10 @@ export default function CustomerDetailPage() {
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-2">Customer Not Found</h2>
-            <p className="text-muted-foreground mb-6">The customer you're looking for doesn't exist.</p>
-            <Button onClick={() => router.push('/dashboard/customers')}>
+            <p className="text-muted-foreground mb-6">
+              The customer you're looking for doesn't exist.
+            </p>
+            <Button onClick={() => router.push("/dashboard/customers")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Customers
             </Button>
@@ -304,11 +354,17 @@ export default function CustomerDetailPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/customers')}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/dashboard/customers")}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold tracking-tight">Customer Details</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Customer Details
+            </h1>
             <p className="text-muted-foreground mt-1">
               View and manage customer information
             </p>
@@ -319,7 +375,10 @@ export default function CustomerDetailPage() {
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
-              <Button variant="destructive" onClick={() => setShowDeleteModal(true)}>
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteModal(true)}
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </Button>
@@ -331,9 +390,9 @@ export default function CustomerDetailPage() {
         {message && (
           <div
             className={`p-4 rounded-lg text-sm ${
-              message.type === 'success'
-                ? 'bg-green-50 text-green-800 border border-green-200'
-                : 'bg-red-50 text-red-800 border border-red-200'
+              message.type === "success"
+                ? "bg-green-50 text-green-800 border border-green-200"
+                : "bg-red-50 text-red-800 border border-red-200"
             }`}
           >
             {message.text}
@@ -348,8 +407,12 @@ export default function CustomerDetailPage() {
                 <User className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-2xl">{customer.name || 'Unnamed Customer'}</CardTitle>
-                <CardDescription>Customer since {formatDate(customer.createdAt)}</CardDescription>
+                <CardTitle className="text-2xl">
+                  {customer.name || "Unnamed Customer"}
+                </CardTitle>
+                <CardDescription>
+                  Customer since {formatDate(customer.createdAt)}
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -365,7 +428,12 @@ export default function CustomerDetailPage() {
                       type="tel"
                       className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       value={formData.phoneNumber}
-                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          phoneNumber: e.target.value,
+                        })
+                      }
                     />
                   ) : (
                     <span>{customer.phoneNumber}</span>
@@ -379,10 +447,12 @@ export default function CustomerDetailPage() {
                       placeholder="Email address"
                       className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
                     />
                   ) : (
-                    <span>{customer.email || 'Not provided'}</span>
+                    <span>{customer.email || "Not provided"}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
@@ -393,10 +463,12 @@ export default function CustomerDetailPage() {
                       placeholder="Full name"
                       className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
                     />
                   ) : (
-                    <span>{customer.name || 'Not provided'}</span>
+                    <span>{customer.name || "Not provided"}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
@@ -425,7 +497,7 @@ export default function CustomerDetailPage() {
                               onClick={() => {
                                 setFormData({ ...formData, country });
                                 setShowCountryDropdown(false);
-                                setCountrySearch('');
+                                setCountrySearch("");
                               }}
                             >
                               {country}
@@ -435,18 +507,25 @@ export default function CustomerDetailPage() {
                       )}
                     </div>
                   ) : (
-                    <span>{customer.country || 'Not provided'}</span>
+                    <span>{customer.country || "Not provided"}</span>
                   )}
                 </div>
               </div>
 
               {editing && (
                 <div className="flex gap-3 mt-4">
-                  <Button onClick={handleUpdate} disabled={saving || !formData.phoneNumber}>
+                  <Button
+                    onClick={handleUpdate}
+                    disabled={saving || !formData.phoneNumber}
+                  >
                     <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? "Saving..." : "Save Changes"}
                   </Button>
-                  <Button variant="outline" onClick={handleCancelEdit} disabled={saving}>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                  >
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
@@ -463,7 +542,9 @@ export default function CustomerDetailPage() {
                     <Receipt className="h-4 w-4" />
                     <span>Total Purchases</span>
                   </div>
-                  <p className="text-2xl font-bold">{customer.metadata.totalPurchases}</p>
+                  <p className="text-2xl font-bold">
+                    {customer.metadata.totalPurchases}
+                  </p>
                 </div>
                 <div className="p-4 bg-muted rounded-lg">
                   <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
@@ -471,7 +552,10 @@ export default function CustomerDetailPage() {
                     <span>Total Spent</span>
                   </div>
                   <p className="text-2xl font-bold">
-                    {formatCurrency(customer.metadata.totalSpent, customer.metadata.currency)}
+                    {formatCurrency(
+                      customer.metadata.totalSpent,
+                      customer.metadata.currency,
+                    )}
                   </p>
                 </div>
               </div>
@@ -492,32 +576,46 @@ export default function CustomerDetailPage() {
                 <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white">
                   <p className="text-sm opacity-90">Current Balance</p>
                   <p className="text-2xl font-bold">
-                    {customer.balanceCurrency} {customer.currentBalance?.toFixed(2)}
+                    {customer.balanceCurrency}{" "}
+                    {customer.currentBalance?.toFixed(2)}
                   </p>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-green-500 to-green-600 rounded-lg text-white">
                   <p className="text-sm opacity-90">Total Assigned</p>
                   <p className="text-2xl font-bold">
-                    {customer.balanceCurrency} {customer.totalAssigned?.toFixed(2) || '0.00'}
+                    {customer.balanceCurrency}{" "}
+                    {customer.totalAssigned?.toFixed(2) || "0.00"}
                   </p>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg text-white">
                   <p className="text-sm opacity-90">Total Used</p>
                   <p className="text-2xl font-bold">
-                    {customer.balanceCurrency} {customer.totalUsed?.toFixed(2) || '0.00'}
+                    {customer.balanceCurrency}{" "}
+                    {customer.totalUsed?.toFixed(2) || "0.00"}
                   </p>
                 </div>
               </div>
 
               {/* Balance Actions */}
               <div className="flex gap-3 mb-6">
-                <Button onClick={() => openBalanceModal('assign')} className="flex-1">
+                <Button
+                  onClick={() => openBalanceModal("assign")}
+                  className="flex-1"
+                >
                   Assign Balance
                 </Button>
-                <Button onClick={() => openBalanceModal('adjust')} variant="outline" className="flex-1">
+                <Button
+                  onClick={() => openBalanceModal("adjust")}
+                  variant="outline"
+                  className="flex-1"
+                >
                   Adjust Balance
                 </Button>
-                <Button onClick={() => openBalanceModal('reset')} variant="outline" className="flex-1">
+                <Button
+                  onClick={() => openBalanceModal("reset")}
+                  variant="outline"
+                  className="flex-1"
+                >
                   Reset Balance
                 </Button>
               </div>
@@ -530,25 +628,41 @@ export default function CustomerDetailPage() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   </div>
                 ) : balanceHistory.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No balance history</p>
+                  <p className="text-muted-foreground text-center py-4">
+                    No balance history
+                  </p>
                 ) : (
                   <div className="space-y-3">
                     {balanceHistory.slice(0, 10).map((entry) => (
-                      <div key={entry._id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div
+                        key={entry._id}
+                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                      >
                         <div className="flex-1">
-                          <p className="font-medium capitalize">{entry.type.replace('_', ' ')}</p>
-                          <p className="text-sm text-muted-foreground">{entry.description}</p>
+                          <p className="font-medium capitalize">
+                            {entry.type.replace("_", " ")}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {entry.description}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {formatDate(entry.createdAt)}
                             {entry.adminId && ` by ${entry.adminId.name}`}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className={`font-bold ${entry.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {entry.amount >= 0 ? '+' : ''}{customer.balanceCurrency} {Math.abs(entry.amount).toFixed(2)}
+                          <p
+                            className={`font-bold ${entry.amount >= 0 ? "text-green-600" : "text-red-600"}`}
+                          >
+                            {entry.amount >= 0 ? "+" : ""}
+                            {customer.balanceCurrency}{" "}
+                            {Math.abs(entry.amount).toFixed(2)}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {customer.balanceCurrency} {entry.previousBalance.toFixed(2)} → {customer.balanceCurrency} {entry.newBalance.toFixed(2)}
+                            {customer.balanceCurrency}{" "}
+                            {entry.previousBalance.toFixed(2)} →{" "}
+                            {customer.balanceCurrency}{" "}
+                            {entry.newBalance.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -565,20 +679,23 @@ export default function CustomerDetailPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {balanceAction === 'assign' && 'Assign Balance'}
-                {balanceAction === 'adjust' && 'Adjust Balance'}
-                {balanceAction === 'reset' && 'Reset Balance'}
+                {balanceAction === "assign" && "Assign Balance"}
+                {balanceAction === "adjust" && "Adjust Balance"}
+                {balanceAction === "reset" && "Reset Balance"}
               </DialogTitle>
               <DialogDescription>
-                {balanceAction === 'assign' && 'Add balance to this customer\'s account'}
-                {balanceAction === 'adjust' && 'Adjust the customer\'s balance by a specific amount (positive or negative)'}
-                {balanceAction === 'reset' && 'Set the customer\'s balance to a specific value'}
+                {balanceAction === "assign" &&
+                  "Add balance to this customer's account"}
+                {balanceAction === "adjust" &&
+                  "Adjust the customer's balance by a specific amount (positive or negative)"}
+                {balanceAction === "reset" &&
+                  "Set the customer's balance to a specific value"}
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  {balanceAction === 'reset' ? 'New Balance' : 'Amount'}
+                  {balanceAction === "reset" ? "New Balance" : "Amount"}
                 </label>
                 <input
                   type="number"
@@ -591,7 +708,9 @@ export default function CustomerDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Description</label>
+                <label className="block text-sm font-medium mb-2">
+                  Description
+                </label>
                 <textarea
                   placeholder="Optional note about this balance change"
                   value={balanceDescription}
@@ -602,11 +721,20 @@ export default function CustomerDetailPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowBalanceModal(false)} disabled={saving}>
+              <Button
+                variant="outline"
+                onClick={() => setShowBalanceModal(false)}
+                disabled={saving}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleBalanceAction} disabled={saving || !balanceAmount}>
-                {saving ? 'Processing...' : `${balanceAction === 'assign' ? 'Assign' : balanceAction === 'adjust' ? 'Adjust' : 'Reset'} Balance`}
+              <Button
+                onClick={handleBalanceAction}
+                disabled={saving || !balanceAmount}
+              >
+                {saving
+                  ? "Processing..."
+                  : `${balanceAction === "assign" ? "Assign" : balanceAction === "adjust" ? "Adjust" : "Reset"} Balance`}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -618,20 +746,32 @@ export default function CustomerDetailPage() {
             <DialogHeader>
               <DialogTitle>Delete Customer</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete this customer? This action cannot be undone.
+                Are you sure you want to delete this customer? This action
+                cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <p className="text-sm text-muted-foreground">
-                Customer: <span className="font-semibold">{customer.name || customer.phoneNumber}</span>
+                Customer:{" "}
+                <span className="font-semibold">
+                  {customer.name || customer.phoneNumber}
+                </span>
               </p>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)} disabled={deleting}>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+              >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Deleting...' : 'Delete Customer'}
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete Customer"}
               </Button>
             </DialogFooter>
           </DialogContent>

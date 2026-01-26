@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslation } from '@/lib/i18n/LanguageContext';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
 
 interface ApiKey {
   _id: string;
@@ -17,10 +17,10 @@ interface ApiKey {
 export default function MyApiKeysPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newKeyData, setNewKeyData] = useState({
-    name: '',
+    name: "",
     scopes: [] as string[],
   });
   const [createdKey, setCreatedKey] = useState<string | null>(null);
@@ -28,12 +28,12 @@ export default function MyApiKeysPage() {
   const { t } = useTranslation();
 
   const staffScopes = [
-    { value: 'balance:read', label: 'Read Balance' },
-    { value: 'transactions:read', label: 'Read Transactions' },
-    { value: 'transactions:create', label: 'Create Transactions' },
-    { value: 'topup:send', label: 'Send Top-ups' },
-    { value: 'customer:read', label: 'Read Customers' },
-    { value: 'customer:update', label: 'Update Customers' },
+    { value: "balance:read", label: "Read Balance" },
+    { value: "transactions:read", label: "Read Transactions" },
+    { value: "transactions:create", label: "Create Transactions" },
+    { value: "topup:send", label: "Send Top-ups" },
+    { value: "customer:read", label: "Read Customers" },
+    { value: "customer:update", label: "Update Customers" },
   ];
 
   useEffect(() => {
@@ -43,20 +43,20 @@ export default function MyApiKeysPage() {
   const loadApiKeys = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/api-keys?userOnly=true');
-      
+      const res = await fetch("/api/v1/api-keys?userOnly=true");
+
       if (!res.ok) {
         if (res.status === 401) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
-        throw new Error('Failed to load API keys');
+        throw new Error("Failed to load API keys");
       }
 
       const data = await res.json();
       setApiKeys(data.data || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load API keys');
+      setError(err.message || "Failed to load API keys");
     } finally {
       setLoading(false);
     }
@@ -64,44 +64,44 @@ export default function MyApiKeysPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     try {
-      const res = await fetch('/api/v1/api-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/v1/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newKeyData),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error?.message || 'Failed to create API key');
+        throw new Error(data.error?.message || "Failed to create API key");
       }
 
       setCreatedKey(data.data.fullKey);
-      setNewKeyData({ name: '', scopes: [] });
+      setNewKeyData({ name: "", scopes: [] });
       await loadApiKeys();
     } catch (err: any) {
-      setError(err.message || 'Failed to create API key');
+      setError(err.message || "Failed to create API key");
     }
   };
 
   const handleRevoke = async (keyId: string) => {
-    if (!confirm('Are you sure you want to revoke this API key?')) return;
+    if (!confirm("Are you sure you want to revoke this API key?")) return;
 
     try {
       const res = await fetch(`/api/v1/api-keys/${keyId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!res.ok) {
-        throw new Error('Failed to revoke API key');
+        throw new Error("Failed to revoke API key");
       }
 
       await loadApiKeys();
     } catch (err: any) {
-      setError(err.message || 'Failed to revoke API key');
+      setError(err.message || "Failed to revoke API key");
     }
   };
 
@@ -147,7 +147,9 @@ export default function MyApiKeysPage() {
         {apiKeys.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">No API keys found</p>
-            <p className="text-gray-400 text-sm mt-2">Create your first API key to get started</p>
+            <p className="text-gray-400 text-sm mt-2">
+              Create your first API key to get started
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -198,17 +200,17 @@ export default function MyApiKeysPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {key.lastUsedAt
                         ? new Date(key.lastUsedAt).toLocaleDateString()
-                        : 'Never used'}
+                        : "Never used"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           key.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {key.isActive ? 'Active' : 'Revoked'}
+                        {key.isActive ? "Active" : "Revoked"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -235,7 +237,9 @@ export default function MyApiKeysPage() {
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             {createdKey ? (
               <>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">API Key Created!</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  API Key Created!
+                </h2>
                 <div className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-4">
                   <p className="text-sm text-yellow-800 mb-2">
                     ⚠️ Copy this key now. You won't be able to see it again!
@@ -247,7 +251,7 @@ export default function MyApiKeysPage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(createdKey);
-                    alert('API key copied to clipboard!');
+                    alert("API key copied to clipboard!");
                   }}
                   className="w-full mb-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
@@ -265,7 +269,9 @@ export default function MyApiKeysPage() {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Create API Key</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  Create API Key
+                </h2>
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -275,7 +281,9 @@ export default function MyApiKeysPage() {
                       type="text"
                       required
                       value={newKeyData.name}
-                      onChange={(e) => setNewKeyData({ ...newKeyData, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewKeyData({ ...newKeyData, name: e.target.value })
+                      }
                       placeholder="My API Key"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     />
@@ -294,7 +302,9 @@ export default function MyApiKeysPage() {
                             onChange={() => toggleScope(scope.value)}
                             className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           />
-                          <span className="text-sm text-gray-700">{scope.label}</span>
+                          <span className="text-sm text-gray-700">
+                            {scope.label}
+                          </span>
                         </label>
                       ))}
                     </div>

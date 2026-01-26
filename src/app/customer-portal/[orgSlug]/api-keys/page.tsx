@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslation } from '@/lib/i18n/LanguageContext';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
 
 interface ApiKey {
   _id: string;
@@ -20,13 +20,13 @@ export default function ApiKeysPage({
 }: {
   params: Promise<{ orgSlug: string }>;
 }) {
-  const [orgSlug, setOrgSlug] = useState<string>('');
+  const [orgSlug, setOrgSlug] = useState<string>("");
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newKeyData, setNewKeyData] = useState({
-    name: '',
+    name: "",
     scopes: [] as string[],
   });
   const [createdKey, setCreatedKey] = useState<string | null>(null);
@@ -34,12 +34,12 @@ export default function ApiKeysPage({
   const { t } = useTranslation();
 
   const availableScopes = [
-    { value: 'balance:read', label: 'Read Balance' },
-    { value: 'transactions:read', label: 'Read Transactions' },
-    { value: 'transactions:create', label: 'Create Transactions' },
-    { value: 'topup:send', label: 'Send Top-ups' },
-    { value: 'customer:read', label: 'Read Profile' },
-    { value: 'customer:update', label: 'Update Profile' },
+    { value: "balance:read", label: "Read Balance" },
+    { value: "transactions:read", label: "Read Transactions" },
+    { value: "transactions:create", label: "Create Transactions" },
+    { value: "topup:send", label: "Send Top-ups" },
+    { value: "customer:read", label: "Read Profile" },
+    { value: "customer:update", label: "Update Profile" },
   ];
 
   useEffect(() => {
@@ -55,8 +55,8 @@ export default function ApiKeysPage({
   const loadApiKeys = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/api-keys', {
-        credentials: 'include',
+      const res = await fetch("/api/v1/api-keys", {
+        credentials: "include",
       });
 
       if (!res.ok) {
@@ -64,13 +64,13 @@ export default function ApiKeysPage({
           router.push(`/customer-portal/${orgSlug}/login`);
           return;
         }
-        throw new Error('Failed to load API keys');
+        throw new Error("Failed to load API keys");
       }
 
       const data = await res.json();
       setApiKeys(data.data || []);
     } catch (err: any) {
-      setError(err.message || t('api.keys.loadError'));
+      setError(err.message || t("api.keys.loadError"));
     } finally {
       setLoading(false);
     }
@@ -78,46 +78,46 @@ export default function ApiKeysPage({
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     try {
-      const res = await fetch('/api/v1/api-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      const res = await fetch("/api/v1/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(newKeyData),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error?.message || 'Failed to create API key');
+        throw new Error(data.error?.message || "Failed to create API key");
       }
 
       setCreatedKey(data.data.fullKey);
-      setNewKeyData({ name: '', scopes: [] });
+      setNewKeyData({ name: "", scopes: [] });
       await loadApiKeys();
     } catch (err: any) {
-      setError(err.message || t('api.keys.createError'));
+      setError(err.message || t("api.keys.createError"));
     }
   };
 
   const handleRevoke = async (keyId: string) => {
-    if (!confirm(t('api.keys.revokeConfirm'))) return;
+    if (!confirm(t("api.keys.revokeConfirm"))) return;
 
     try {
       const res = await fetch(`/api/v1/api-keys/${keyId}`, {
-        method: 'DELETE',
-        credentials: 'include',
+        method: "DELETE",
+        credentials: "include",
       });
 
       if (!res.ok) {
-        throw new Error('Failed to revoke API key');
+        throw new Error("Failed to revoke API key");
       }
 
       await loadApiKeys();
     } catch (err: any) {
-      setError(err.message || t('api.keys.revokeError'));
+      setError(err.message || t("api.keys.revokeError"));
     }
   };
 
@@ -142,7 +142,9 @@ export default function ApiKeysPage({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white rounded-lg shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">{t('api.keys.title')}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {t("api.keys.title")}
+          </h1>
           <button
             onClick={() => {
               setShowCreateModal(true);
@@ -150,7 +152,7 @@ export default function ApiKeysPage({
             }}
             className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
           >
-            {t('api.keys.createNew')}
+            {t("api.keys.createNew")}
           </button>
         </div>
 
@@ -162,7 +164,7 @@ export default function ApiKeysPage({
 
         {apiKeys.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">{t('api.keys.noKeys')}</p>
+            <p className="text-gray-500 text-lg">{t("api.keys.noKeys")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -170,22 +172,22 @@ export default function ApiKeysPage({
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('api.keys.table.name')}
+                    {t("api.keys.table.name")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('api.keys.table.key')}
+                    {t("api.keys.table.key")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('api.keys.table.scopes')}
+                    {t("api.keys.table.scopes")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('api.keys.table.lastUsed')}
+                    {t("api.keys.table.lastUsed")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('api.keys.table.status')}
+                    {t("api.keys.table.status")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('api.keys.table.actions')}
+                    {t("api.keys.table.actions")}
                   </th>
                 </tr>
               </thead>
@@ -213,17 +215,19 @@ export default function ApiKeysPage({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {key.lastUsedAt
                         ? new Date(key.lastUsedAt).toLocaleDateString()
-                        : t('api.keys.table.neverUsed')}
+                        : t("api.keys.table.neverUsed")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           key.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {key.isActive ? t('api.keys.table.active') : t('api.keys.table.revoked')}
+                        {key.isActive
+                          ? t("api.keys.table.active")
+                          : t("api.keys.table.revoked")}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -232,7 +236,7 @@ export default function ApiKeysPage({
                           onClick={() => handleRevoke(key._id)}
                           className="text-red-600 hover:text-red-900"
                         >
-                          {t('api.keys.table.revoke')}
+                          {t("api.keys.table.revoke")}
                         </button>
                       )}
                     </td>
@@ -250,9 +254,13 @@ export default function ApiKeysPage({
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             {createdKey ? (
               <>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">{t('api.keys.modal.keyCreated')}</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  {t("api.keys.modal.keyCreated")}
+                </h2>
                 <div className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-4">
-                  <p className="text-sm text-yellow-800 mb-2">{t('api.keys.modal.copyWarning')}</p>
+                  <p className="text-sm text-yellow-800 mb-2">
+                    {t("api.keys.modal.copyWarning")}
+                  </p>
                   <div className="bg-white p-3 rounded border border-yellow-300 font-mono text-sm break-all">
                     {createdKey}
                   </div>
@@ -260,11 +268,11 @@ export default function ApiKeysPage({
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(createdKey);
-                    alert(t('api.keys.modal.copied'));
+                    alert(t("api.keys.modal.copied"));
                   }}
                   className="w-full mb-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
                 >
-                  {t('api.keys.modal.copyKey')}
+                  {t("api.keys.modal.copyKey")}
                 </button>
                 <button
                   onClick={() => {
@@ -273,30 +281,34 @@ export default function ApiKeysPage({
                   }}
                   className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
                 >
-                  {t('api.keys.modal.close')}
+                  {t("api.keys.modal.close")}
                 </button>
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">{t('api.keys.modal.createTitle')}</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  {t("api.keys.modal.createTitle")}
+                </h2>
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t('api.keys.modal.keyName')}
+                      {t("api.keys.modal.keyName")}
                     </label>
                     <input
                       type="text"
                       required
                       value={newKeyData.name}
-                      onChange={(e) => setNewKeyData({ ...newKeyData, name: e.target.value })}
-                      placeholder={t('api.keys.modal.keyNamePlaceholder')}
+                      onChange={(e) =>
+                        setNewKeyData({ ...newKeyData, name: e.target.value })
+                      }
+                      placeholder={t("api.keys.modal.keyNamePlaceholder")}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('api.keys.modal.selectScopes')}
+                      {t("api.keys.modal.selectScopes")}
                     </label>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {availableScopes.map((scope) => (
@@ -307,7 +319,9 @@ export default function ApiKeysPage({
                             onChange={() => toggleScope(scope.value)}
                             className="mr-2 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                           />
-                          <span className="text-sm text-gray-700">{scope.label}</span>
+                          <span className="text-sm text-gray-700">
+                            {scope.label}
+                          </span>
                         </label>
                       ))}
                     </div>
@@ -319,14 +333,14 @@ export default function ApiKeysPage({
                       disabled={newKeyData.scopes.length === 0}
                       className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {t('api.keys.modal.create')}
+                      {t("api.keys.modal.create")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowCreateModal(false)}
                       className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
                     >
-                      {t('api.keys.modal.cancel')}
+                      {t("api.keys.modal.cancel")}
                     </button>
                   </div>
                 </form>

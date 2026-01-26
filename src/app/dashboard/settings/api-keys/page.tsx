@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/components/dashboard-layout';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { DashboardLayout } from "@/components/dashboard-layout";
 import {
   Card,
   CardContent,
@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@pg-prepaid/ui';
+} from "@pg-prepaid/ui";
 
 interface ApiKey {
   _id: string;
@@ -47,7 +47,7 @@ interface ApiKey {
 export default function AdminApiKeysPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [selectedKey, setSelectedKey] = useState<ApiKey | null>(null);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [newRateLimits, setNewRateLimits] = useState({
@@ -64,41 +64,46 @@ export default function AdminApiKeysPage() {
   const loadApiKeys = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/api-keys?includeAll=true');
-      
+      const res = await fetch("/api/v1/api-keys?includeAll=true");
+
       if (!res.ok) {
         if (res.status === 401) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
-        throw new Error('Failed to load API keys');
+        throw new Error("Failed to load API keys");
       }
 
       const data = await res.json();
       setApiKeys(data.data || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load API keys');
+      setError(err.message || "Failed to load API keys");
     } finally {
       setLoading(false);
     }
   };
 
   const handleRevoke = async (keyId: string) => {
-    if (!confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) return;
+    if (
+      !confirm(
+        "Are you sure you want to revoke this API key? This action cannot be undone.",
+      )
+    )
+      return;
 
     try {
       const res = await fetch(`/api/v1/api-keys/${keyId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!res.ok) {
-        throw new Error('Failed to revoke API key');
+        throw new Error("Failed to revoke API key");
       }
 
       await loadApiKeys();
     } catch (err: any) {
-      setError(err.message || 'Failed to revoke API key');
-      setTimeout(() => setError(''), 5000);
+      setError(err.message || "Failed to revoke API key");
+      setTimeout(() => setError(""), 5000);
     }
   };
 
@@ -117,22 +122,22 @@ export default function AdminApiKeysPage() {
     setSaving(true);
     try {
       const res = await fetch(`/api/v1/api-keys/${selectedKey._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rateLimit: newRateLimits,
         }),
       });
 
       if (!res.ok) {
-        throw new Error('Failed to update rate limit');
+        throw new Error("Failed to update rate limit");
       }
 
       setShowRateLimitModal(false);
       await loadApiKeys();
     } catch (err: any) {
-      setError(err.message || 'Failed to update rate limit');
-      setTimeout(() => setError(''), 5000);
+      setError(err.message || "Failed to update rate limit");
+      setTimeout(() => setError(""), 5000);
     } finally {
       setSaving(false);
     }
@@ -177,34 +182,56 @@ export default function AdminApiKeysPage() {
           <CardContent>
             {apiKeys.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground text-lg">No API keys found</p>
+                <p className="text-muted-foreground text-lg">
+                  No API keys found
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-semibold">Name</th>
+                      <th className="text-left py-3 px-4 font-semibold">
+                        Name
+                      </th>
                       <th className="text-left py-3 px-4 font-semibold">Key</th>
-                      <th className="text-left py-3 px-4 font-semibold">Owner</th>
-                      <th className="text-left py-3 px-4 font-semibold">Type</th>
-                      <th className="text-left py-3 px-4 font-semibold">Scopes</th>
-                      <th className="text-left py-3 px-4 font-semibold">Rate Limits</th>
-                      <th className="text-left py-3 px-4 font-semibold">Last Used</th>
-                      <th className="text-left py-3 px-4 font-semibold">Status</th>
-                      <th className="text-left py-3 px-4 font-semibold">Actions</th>
+                      <th className="text-left py-3 px-4 font-semibold">
+                        Owner
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold">
+                        Type
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold">
+                        Scopes
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold">
+                        Rate Limits
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold">
+                        Last Used
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {apiKeys.map((key) => (
                       <tr key={key._id} className="border-b hover:bg-muted/50">
                         <td className="py-3 px-4 font-medium">{key.name}</td>
-                        <td className="py-3 px-4 font-mono text-sm">{key.keyPrefix}...</td>
+                        <td className="py-3 px-4 font-mono text-sm">
+                          {key.keyPrefix}...
+                        </td>
                         <td className="py-3 px-4">
                           {key.userId ? (
                             <div>
                               <p className="font-medium">{key.userId.name}</p>
-                              <p className="text-xs text-muted-foreground">{key.userId.email}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {key.userId.email}
+                              </p>
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
                                 {key.userId.role}
                               </span>
@@ -212,15 +239,18 @@ export default function AdminApiKeysPage() {
                           ) : key.customerId ? (
                             <div>
                               <p className="font-medium">
-                                {key.customerId.firstName} {key.customerId.lastName}
+                                {key.customerId.firstName}{" "}
+                                {key.customerId.lastName}
                               </p>
-                              <p className="text-xs text-muted-foreground">{key.customerId.email}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {key.customerId.email}
+                              </p>
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
                                 Customer
                               </span>
                             </div>
                           ) : (
-                            '-'
+                            "-"
                           )}
                         </td>
                         <td className="py-3 px-4">
@@ -263,17 +293,17 @@ export default function AdminApiKeysPage() {
                         <td className="py-3 px-4 text-sm text-muted-foreground">
                           {key.lastUsedAt
                             ? new Date(key.lastUsedAt).toLocaleDateString()
-                            : 'Never'}
+                            : "Never"}
                         </td>
                         <td className="py-3 px-4">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
                               key.isActive
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {key.isActive ? 'Active' : 'Revoked'}
+                            {key.isActive ? "Active" : "Revoked"}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -371,7 +401,7 @@ export default function AdminApiKeysPage() {
                 Cancel
               </Button>
               <Button onClick={handleUpdateRateLimit} disabled={saving}>
-                {saving ? 'Updating...' : 'Update Rate Limits'}
+                {saving ? "Updating..." : "Update Rate Limits"}
               </Button>
             </DialogFooter>
           </DialogContent>

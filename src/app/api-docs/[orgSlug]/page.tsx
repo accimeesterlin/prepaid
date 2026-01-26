@@ -1,14 +1,23 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Code, Shield, Zap, Book, Key, Activity, Copy, Check } from 'lucide-react';
+import { useState, useEffect } from "react";
+import {
+  Code,
+  Shield,
+  Zap,
+  Book,
+  Key,
+  Activity,
+  Copy,
+  Check,
+} from "lucide-react";
 
 export default function ApiDocsPage({
   params,
 }: {
   params: Promise<{ orgSlug: string }>;
 }) {
-  const [orgSlug, setOrgSlug] = useState<string>('');
+  const [orgSlug, setOrgSlug] = useState<string>("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -21,7 +30,15 @@ export default function ApiDocsPage({
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const CodeBlock = ({ code, language, id }: { code: string; language: string; id: string }) => (
+  const CodeBlock = ({
+    code,
+    language,
+    id,
+  }: {
+    code: string;
+    language: string;
+    id: string;
+  }) => (
     <div className="relative">
       <div className="absolute top-2 right-2 flex items-center gap-2">
         <span className="text-xs text-gray-400 uppercase">{language}</span>
@@ -50,8 +67,8 @@ export default function ApiDocsPage({
           Prepaid Minutes API Documentation
         </h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Build powerful integrations with our RESTful API. Send prepaid mobile top-ups
-          programmatically to customers worldwide.
+          Build powerful integrations with our RESTful API. Send prepaid mobile
+          top-ups programmatically to customers worldwide.
         </p>
       </div>
 
@@ -68,7 +85,8 @@ export default function ApiDocsPage({
           <Shield className="h-8 w-8 text-indigo-600 mb-4" />
           <h3 className="font-semibold text-lg mb-2">Secure</h3>
           <p className="text-gray-600 text-sm">
-            API key authentication with rate limiting and scope-based permissions
+            API key authentication with rate limiting and scope-based
+            permissions
           </p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -82,25 +100,32 @@ export default function ApiDocsPage({
 
       {/* Getting Started */}
       <section id="getting-started" className="mb-16 scroll-mt-20">
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">Getting Started</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-6">
+          Getting Started
+        </h2>
         <div className="bg-white rounded-lg shadow-sm border p-8 space-y-6">
           <div>
             <h3 className="text-xl font-semibold mb-3">1. Get Your API Key</h3>
             <p className="text-gray-600 mb-4">
-              Navigate to your dashboard and create a new API key with the required scopes.
-              Each API key has specific permissions (scopes) that determine what actions it can perform.
+              Navigate to your dashboard and create a new API key with the
+              required scopes. Each API key has specific permissions (scopes)
+              that determine what actions it can perform.
             </p>
             <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
               <p className="text-sm text-blue-900">
-                <strong>Note:</strong> Keep your API key secret! Never share it publicly or commit it to version control.
+                <strong>Note:</strong> Keep your API key secret! Never share it
+                publicly or commit it to version control.
               </p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-xl font-semibold mb-3">2. Make Your First Request</h3>
+            <h3 className="text-xl font-semibold mb-3">
+              2. Make Your First Request
+            </h3>
             <p className="text-gray-600 mb-4">
-              All API requests should include your API key in the Authorization header:
+              All API requests should include your API key in the Authorization
+              header:
             </p>
             <CodeBlock
               id="first-request"
@@ -134,12 +159,17 @@ export default function ApiDocsPage({
 
       {/* Authentication */}
       <section id="authentication" className="mb-16 scroll-mt-20">
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">Authentication</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-6">
+          Authentication
+        </h2>
         <div className="bg-white rounded-lg shadow-sm border p-8 space-y-6">
           <div>
-            <h3 className="text-xl font-semibold mb-3">API Key Authentication</h3>
+            <h3 className="text-xl font-semibold mb-3">
+              API Key Authentication
+            </h3>
             <p className="text-gray-600 mb-4">
-              Include your API key in every request using the Authorization header with Bearer token:
+              Include your API key in every request using the Authorization
+              header with Bearer token:
             </p>
             <CodeBlock
               id="auth-header"
@@ -150,12 +180,16 @@ export default function ApiDocsPage({
 
           <div>
             <h3 className="text-xl font-semibold mb-3">Rate Limiting</h3>
-            <p className="text-gray-600 mb-4">
-              API keys have two rate limits:
-            </p>
+            <p className="text-gray-600 mb-4">API keys have two rate limits:</p>
             <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">
-              <li><strong>Per-Key Limit:</strong> Default 1,000 requests per hour per API key</li>
-              <li><strong>Organization Limit:</strong> Default 10,000 requests per hour across all keys</li>
+              <li>
+                <strong>Per-Key Limit:</strong> Default 1,000 requests per hour
+                per API key
+              </li>
+              <li>
+                <strong>Organization Limit:</strong> Default 10,000 requests per
+                hour across all keys
+              </li>
             </ul>
             <p className="text-gray-600 mb-4">
               Rate limit information is included in response headers:
@@ -172,52 +206,89 @@ X-RateLimit-Reset: 1640995200`}
           <div>
             <h3 className="text-xl font-semibold mb-3">Scopes</h3>
             <p className="text-gray-600 mb-4">
-              Each API key has specific scopes that determine what operations it can perform:
+              Each API key has specific scopes that determine what operations it
+              can perform:
             </p>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scope</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Scope
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Description
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">balance:read</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">View account balance</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      balance:read
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      View account balance
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">balance:write</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Modify account balance (admin only)</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      balance:write
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Modify account balance (admin only)
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">transactions:read</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">View transaction history</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      transactions:read
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      View transaction history
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">transactions:create</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Create new transactions</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      transactions:create
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Create new transactions
+                    </td>
                   </tr>
                   <tr>
                     <td className="px-6 py-4 font-mono text-sm">topup:send</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Send mobile top-ups</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Send mobile top-ups
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">customer:read</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Read customer information</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      customer:read
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Read customer information
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">customer:update</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Update customer information</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      customer:update
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Update customer information
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">webhooks:read</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">View webhook logs</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      webhooks:read
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      View webhook logs
+                    </td>
                   </tr>
                   <tr>
                     <td className="px-6 py-4 font-mono text-sm">admin:*</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Full administrative access</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Full administrative access
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -229,11 +300,11 @@ X-RateLimit-Reset: 1640995200`}
       {/* Endpoints */}
       <section id="endpoints" className="mb-16 scroll-mt-20">
         <h2 className="text-3xl font-bold text-gray-900 mb-6">API Endpoints</h2>
-        
+
         {/* Balance Endpoints */}
         <div className="bg-white rounded-lg shadow-sm border p-8 mb-6">
           <h3 className="text-2xl font-semibold mb-4">Balance</h3>
-          
+
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-3 mb-2">
@@ -242,9 +313,13 @@ X-RateLimit-Reset: 1640995200`}
                 </span>
                 <code className="text-lg">/api/v1/customers/:id/balance</code>
               </div>
-              <p className="text-gray-600 mb-3">Get customer balance information</p>
-              <p className="text-sm text-gray-500 mb-3"><strong>Required scope:</strong> balance:read</p>
-              
+              <p className="text-gray-600 mb-3">
+                Get customer balance information
+              </p>
+              <p className="text-sm text-gray-500 mb-3">
+                <strong>Required scope:</strong> balance:read
+              </p>
+
               <h4 className="font-semibold mb-2">Example Request (cURL)</h4>
               <CodeBlock
                 id="balance-get-curl"
@@ -253,7 +328,9 @@ X-RateLimit-Reset: 1640995200`}
   -H "Authorization: Bearer sk_live_your_api_key_here"`}
               />
 
-              <h4 className="font-semibold mt-4 mb-2">Example Request (JavaScript)</h4>
+              <h4 className="font-semibold mt-4 mb-2">
+                Example Request (JavaScript)
+              </h4>
               <CodeBlock
                 id="balance-get-js"
                 language="javascript"
@@ -266,7 +343,9 @@ const data = await response.json();
 console.log(data);`}
               />
 
-              <h4 className="font-semibold mt-4 mb-2">Example Request (Python)</h4>
+              <h4 className="font-semibold mt-4 mb-2">
+                Example Request (Python)
+              </h4>
               <CodeBlock
                 id="balance-get-python"
                 language="python"
@@ -306,7 +385,7 @@ print(data)`}
         {/* Transaction Endpoints */}
         <div className="bg-white rounded-lg shadow-sm border p-8 mb-6">
           <h3 className="text-2xl font-semibold mb-4">Transactions</h3>
-          
+
           <div className="space-y-8">
             <div>
               <div className="flex items-center gap-3 mb-2">
@@ -315,9 +394,13 @@ print(data)`}
                 </span>
                 <code className="text-lg">/api/v1/transactions</code>
               </div>
-              <p className="text-gray-600 mb-3">Create a new transaction (send top-up)</p>
-              <p className="text-sm text-gray-500 mb-3"><strong>Required scope:</strong> transactions:create, topup:send</p>
-              
+              <p className="text-gray-600 mb-3">
+                Create a new transaction (send top-up)
+              </p>
+              <p className="text-sm text-gray-500 mb-3">
+                <strong>Required scope:</strong> transactions:create, topup:send
+              </p>
+
               <h4 className="font-semibold mb-2">Request Body</h4>
               <CodeBlock
                 id="transaction-create-body"
@@ -329,7 +412,9 @@ print(data)`}
 }`}
               />
 
-              <h4 className="font-semibold mt-4 mb-2">Example Request (cURL)</h4>
+              <h4 className="font-semibold mt-4 mb-2">
+                Example Request (cURL)
+              </h4>
               <CodeBlock
                 id="transaction-create-curl"
                 language="bash"
@@ -343,7 +428,9 @@ print(data)`}
   }'`}
               />
 
-              <h4 className="font-semibold mt-4 mb-2">Example Request (JavaScript)</h4>
+              <h4 className="font-semibold mt-4 mb-2">
+                Example Request (JavaScript)
+              </h4>
               <CodeBlock
                 id="transaction-create-js"
                 language="javascript"
@@ -362,7 +449,9 @@ print(data)`}
 const data = await response.json();`}
               />
 
-              <h4 className="font-semibold mt-4 mb-2">Example Request (Python)</h4>
+              <h4 className="font-semibold mt-4 mb-2">
+                Example Request (Python)
+              </h4>
               <CodeBlock
                 id="transaction-create-python"
                 language="python"
@@ -411,15 +500,25 @@ print(data)`}
                 <span className="px-3 py-1 bg-green-100 text-green-800 rounded font-mono text-sm font-semibold">
                   GET
                 </span>
-                <code className="text-lg">/api/v1/customers/:id/transactions</code>
+                <code className="text-lg">
+                  /api/v1/customers/:id/transactions
+                </code>
               </div>
-              <p className="text-gray-600 mb-3">Get transaction history for a customer</p>
-              <p className="text-sm text-gray-500 mb-3"><strong>Required scope:</strong> transactions:read</p>
-              
+              <p className="text-gray-600 mb-3">
+                Get transaction history for a customer
+              </p>
+              <p className="text-sm text-gray-500 mb-3">
+                <strong>Required scope:</strong> transactions:read
+              </p>
+
               <h4 className="font-semibold mb-2">Query Parameters</h4>
               <ul className="list-disc list-inside space-y-1 text-gray-600 mb-3">
-                <li><code>page</code> - Page number (default: 1)</li>
-                <li><code>limit</code> - Results per page (default: 20, max: 100)</li>
+                <li>
+                  <code>page</code> - Page number (default: 1)
+                </li>
+                <li>
+                  <code>limit</code> - Results per page (default: 20, max: 100)
+                </li>
               </ul>
 
               <CodeBlock
@@ -440,22 +539,32 @@ print(data)`}
           <div>
             <h3 className="text-xl font-semibold mb-3">Overview</h3>
             <p className="text-gray-600 mb-4">
-              Webhooks allow you to receive real-time notifications when events occur in your account.
-              Configure webhook URLs in your dashboard to receive POST requests for transaction updates.
+              Webhooks allow you to receive real-time notifications when events
+              occur in your account. Configure webhook URLs in your dashboard to
+              receive POST requests for transaction updates.
             </p>
           </div>
 
           <div>
             <h3 className="text-xl font-semibold mb-3">Webhook Events</h3>
             <ul className="list-disc list-inside space-y-2 text-gray-600">
-              <li><code>transaction.completed</code> - Transaction successfully completed</li>
-              <li><code>transaction.failed</code> - Transaction failed</li>
-              <li><code>balance.updated</code> - Customer balance changed</li>
+              <li>
+                <code>transaction.completed</code> - Transaction successfully
+                completed
+              </li>
+              <li>
+                <code>transaction.failed</code> - Transaction failed
+              </li>
+              <li>
+                <code>balance.updated</code> - Customer balance changed
+              </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-xl font-semibold mb-3">Webhook Payload Example</h3>
+            <h3 className="text-xl font-semibold mb-3">
+              Webhook Payload Example
+            </h3>
             <CodeBlock
               id="webhook-payload"
               language="json"
@@ -489,7 +598,9 @@ print(data)`}
           </div>
 
           <div>
-            <h3 className="text-xl font-semibold mb-3">Signature Verification (Coming Soon)</h3>
+            <h3 className="text-xl font-semibold mb-3">
+              Signature Verification (Coming Soon)
+            </h3>
             <p className="text-gray-600 mb-4">
               Verify webhook authenticity by checking the signature header:
             </p>
@@ -513,10 +624,14 @@ function verifyWebhook(payload, signature, secret) {
 
       {/* Error Codes */}
       <section id="errors" className="mb-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">Error Handling</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-6">
+          Error Handling
+        </h2>
         <div className="bg-white rounded-lg shadow-sm border p-8 space-y-6">
           <div>
-            <h3 className="text-xl font-semibold mb-3">Error Response Format</h3>
+            <h3 className="text-xl font-semibold mb-3">
+              Error Response Format
+            </h3>
             <CodeBlock
               id="error-format"
               language="json"
@@ -540,41 +655,67 @@ function verifyWebhook(payload, signature, secret) {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">HTTP Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      HTTP Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Description
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">UNAUTHORIZED</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      UNAUTHORIZED
+                    </td>
                     <td className="px-6 py-4 text-sm">401</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Invalid or missing API key</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Invalid or missing API key
+                    </td>
                   </tr>
                   <tr>
                     <td className="px-6 py-4 font-mono text-sm">FORBIDDEN</td>
                     <td className="px-6 py-4 text-sm">403</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Insufficient permissions</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Insufficient permissions
+                    </td>
                   </tr>
                   <tr>
                     <td className="px-6 py-4 font-mono text-sm">NOT_FOUND</td>
                     <td className="px-6 py-4 text-sm">404</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Resource not found</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Resource not found
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">RATE_LIMIT_EXCEEDED</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      RATE_LIMIT_EXCEEDED
+                    </td>
                     <td className="px-6 py-4 text-sm">429</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Rate limit exceeded</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Rate limit exceeded
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">INSUFFICIENT_BALANCE</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      INSUFFICIENT_BALANCE
+                    </td>
                     <td className="px-6 py-4 text-sm">400</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Insufficient balance</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Insufficient balance
+                    </td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 font-mono text-sm">VALIDATION_ERROR</td>
+                    <td className="px-6 py-4 font-mono text-sm">
+                      VALIDATION_ERROR
+                    </td>
                     <td className="px-6 py-4 text-sm">400</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">Invalid request data</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Invalid request data
+                    </td>
                   </tr>
                 </tbody>
               </table>

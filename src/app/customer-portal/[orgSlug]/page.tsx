@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function CustomerPortalIndex({
   params,
@@ -13,7 +13,7 @@ export default function CustomerPortalIndex({
   useEffect(() => {
     params.then((p) => {
       // Check if user is authenticated, redirect to dashboard or login
-      fetch('/api/v1/customer-auth/me', { credentials: 'include' })
+      fetch("/api/v1/customer-auth/me", { credentials: "include" })
         .then((res) => {
           if (res.ok) {
             router.push(`/customer-portal/${p.orgSlug}/dashboard`);

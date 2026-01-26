@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/components/dashboard-layout';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { DashboardLayout } from "@/components/dashboard-layout";
 import {
   Card,
   CardContent,
@@ -15,8 +15,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@pg-prepaid/ui';
-import { RefreshCw, Filter, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
+} from "@pg-prepaid/ui";
+import {
+  RefreshCw,
+  Filter,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  XCircle,
+} from "lucide-react";
 
 interface WebhookLog {
   _id: string;
@@ -29,7 +36,7 @@ interface WebhookLog {
   responseStatus?: number;
   responseBody?: any;
   error?: string;
-  status: 'pending' | 'success' | 'failed';
+  status: "pending" | "success" | "failed";
   attempts: number;
   maxAttempts: number;
   nextRetryAt?: string;
@@ -40,11 +47,11 @@ interface WebhookLog {
 export default function WebhookLogsPage() {
   const [logs, setLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [selectedLog, setSelectedLog] = useState<WebhookLog | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterSource, setFilterSource] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,31 +71,31 @@ export default function WebhookLogsPage() {
   const loadLogs = async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
-    
+
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '20',
+        limit: "20",
       });
 
-      if (filterStatus !== 'all') params.append('status', filterStatus);
-      if (filterSource !== 'all') params.append('source', filterSource);
+      if (filterStatus !== "all") params.append("status", filterStatus);
+      if (filterSource !== "all") params.append("source", filterSource);
 
       const res = await fetch(`/api/v1/webhooks/logs?${params.toString()}`);
-      
+
       if (!res.ok) {
         if (res.status === 401) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
-        throw new Error('Failed to load webhook logs');
+        throw new Error("Failed to load webhook logs");
       }
 
       const data = await res.json();
       setLogs(data.data || []);
       setHasMore(data.pagination?.hasNextPage || false);
     } catch (err: any) {
-      setError(err.message || 'Failed to load webhook logs');
+      setError(err.message || "Failed to load webhook logs");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -96,22 +103,22 @@ export default function WebhookLogsPage() {
   };
 
   const handleReplay = async (logId: string) => {
-    if (!confirm('Are you sure you want to replay this webhook?')) return;
+    if (!confirm("Are you sure you want to replay this webhook?")) return;
 
     try {
       const res = await fetch(`/api/v1/webhooks/logs/${logId}/replay`, {
-        method: 'POST',
+        method: "POST",
       });
 
       if (!res.ok) {
-        throw new Error('Failed to replay webhook');
+        throw new Error("Failed to replay webhook");
       }
 
       await loadLogs();
-      alert('Webhook replayed successfully');
+      alert("Webhook replayed successfully");
     } catch (err: any) {
-      setError(err.message || 'Failed to replay webhook');
-      setTimeout(() => setError(''), 5000);
+      setError(err.message || "Failed to replay webhook");
+      setTimeout(() => setError(""), 5000);
     }
   };
 
@@ -122,11 +129,11 @@ export default function WebhookLogsPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'success':
+      case "success":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'failed':
+      case "failed":
         return <XCircle className="h-5 w-5 text-red-500" />;
-      case 'pending':
+      case "pending":
         return <Clock className="h-5 w-5 text-yellow-500" />;
       default:
         return <AlertCircle className="h-5 w-5 text-gray-500" />;
@@ -159,7 +166,9 @@ export default function WebhookLogsPage() {
             </p>
           </div>
           <Button onClick={() => loadLogs(true)} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -177,7 +186,9 @@ export default function WebhookLogsPage() {
               <Filter className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Status</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Status
+                  </label>
                   <select
                     value={filterStatus}
                     onChange={(e) => {
@@ -193,7 +204,9 @@ export default function WebhookLogsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Source</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Source
+                  </label>
                   <select
                     value={filterSource}
                     onChange={(e) => {
@@ -220,13 +233,15 @@ export default function WebhookLogsPage() {
           <CardHeader>
             <CardTitle>Webhook Events</CardTitle>
             <CardDescription>
-              {logs.length} event{logs.length !== 1 ? 's' : ''} found
+              {logs.length} event{logs.length !== 1 ? "s" : ""} found
             </CardDescription>
           </CardHeader>
           <CardContent>
             {logs.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground text-lg">No webhook logs found</p>
+                <p className="text-muted-foreground text-lg">
+                  No webhook logs found
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -258,9 +273,10 @@ export default function WebhookLogsPage() {
                             {log.responseStatus && (
                               <span
                                 className={`font-semibold ${
-                                  log.responseStatus >= 200 && log.responseStatus < 300
-                                    ? 'text-green-600'
-                                    : 'text-red-600'
+                                  log.responseStatus >= 200 &&
+                                  log.responseStatus < 300
+                                    ? "text-green-600"
+                                    : "text-red-600"
                                 }`}
                               >
                                 HTTP {log.responseStatus}
@@ -268,20 +284,27 @@ export default function WebhookLogsPage() {
                             )}
                           </div>
                           {log.error && (
-                            <p className="text-sm text-red-600 mt-2">{log.error}</p>
+                            <p className="text-sm text-red-600 mt-2">
+                              {log.error}
+                            </p>
                           )}
-                          {log.status === 'pending' && log.nextRetryAt && (
+                          {log.status === "pending" && log.nextRetryAt && (
                             <p className="text-sm text-yellow-600 mt-2">
-                              Next retry: {new Date(log.nextRetryAt).toLocaleString()}
+                              Next retry:{" "}
+                              {new Date(log.nextRetryAt).toLocaleString()}
                             </p>
                           )}
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => viewDetails(log)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => viewDetails(log)}
+                        >
                           Details
                         </Button>
-                        {log.status === 'failed' && (
+                        {log.status === "failed" && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -307,7 +330,9 @@ export default function WebhookLogsPage() {
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-muted-foreground">Page {page}</span>
+                <span className="text-sm text-muted-foreground">
+                  Page {page}
+                </span>
                 <Button
                   variant="outline"
                   onClick={() => setPage((p) => p + 1)}
@@ -347,7 +372,9 @@ export default function WebhookLogsPage() {
                       <p className="text-sm text-muted-foreground">Status</p>
                       <div className="flex items-center gap-2">
                         {getStatusIcon(selectedLog.status)}
-                        <span className="font-medium capitalize">{selectedLog.status}</span>
+                        <span className="font-medium capitalize">
+                          {selectedLog.status}
+                        </span>
                       </div>
                     </div>
                     <div>
@@ -370,7 +397,9 @@ export default function WebhookLogsPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Headers</p>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Headers
+                      </p>
                       <pre className="font-mono text-xs bg-background p-3 rounded border overflow-x-auto">
                         {JSON.stringify(selectedLog.requestHeaders, null, 2)}
                       </pre>
@@ -390,13 +419,15 @@ export default function WebhookLogsPage() {
                     <h3 className="font-semibold mb-2">Response</h3>
                     <div className="p-4 bg-muted rounded-lg space-y-3">
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">Status Code</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Status Code
+                        </p>
                         <p
                           className={`font-semibold ${
                             selectedLog.responseStatus >= 200 &&
                             selectedLog.responseStatus < 300
-                              ? 'text-green-600'
-                              : 'text-red-600'
+                              ? "text-green-600"
+                              : "text-red-600"
                           }`}
                         >
                           {selectedLog.responseStatus}
@@ -404,7 +435,9 @@ export default function WebhookLogsPage() {
                       </div>
                       {selectedLog.responseBody && (
                         <div>
-                          <p className="text-sm text-muted-foreground mb-1">Body</p>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Body
+                          </p>
                           <pre className="font-mono text-xs bg-background p-3 rounded border overflow-x-auto">
                             {JSON.stringify(selectedLog.responseBody, null, 2)}
                           </pre>
@@ -412,8 +445,12 @@ export default function WebhookLogsPage() {
                       )}
                       {selectedLog.error && (
                         <div>
-                          <p className="text-sm text-muted-foreground mb-1">Error</p>
-                          <p className="text-sm text-red-600">{selectedLog.error}</p>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Error
+                          </p>
+                          <p className="text-sm text-red-600">
+                            {selectedLog.error}
+                          </p>
                         </div>
                       )}
                     </div>

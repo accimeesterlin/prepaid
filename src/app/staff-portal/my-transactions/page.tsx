@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslation } from '@/lib/i18n/LanguageContext';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
 
 interface Transaction {
   _id: string;
@@ -20,7 +20,7 @@ interface Transaction {
 export default function MyTransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const router = useRouter();
@@ -33,21 +33,23 @@ export default function MyTransactionsPage() {
   const loadTransactions = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/staff/my-transactions?page=${page}&limit=20`);
-      
+      const res = await fetch(
+        `/api/v1/staff/my-transactions?page=${page}&limit=20`,
+      );
+
       if (!res.ok) {
         if (res.status === 401) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
-        throw new Error('Failed to load transactions');
+        throw new Error("Failed to load transactions");
       }
 
       const data = await res.json();
       setTransactions(data.data || []);
       setHasMore(data.pagination?.hasNextPage || false);
     } catch (err: any) {
-      setError(err.message || 'Failed to load transactions');
+      setError(err.message || "Failed to load transactions");
     } finally {
       setLoading(false);
     }
@@ -109,7 +111,7 @@ export default function MyTransactionsPage() {
                   {transactions.map((tx) => (
                     <tr key={tx._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(tx.createdAt).toLocaleDateString()}{' '}
+                        {new Date(tx.createdAt).toLocaleDateString()}{" "}
                         <span className="text-gray-500">
                           {new Date(tx.createdAt).toLocaleTimeString()}
                         </span>
@@ -121,21 +123,23 @@ export default function MyTransactionsPage() {
                         {tx.product ? (
                           <>
                             <div>{tx.product.name}</div>
-                            <div className="text-xs text-gray-400">{tx.product.country}</div>
+                            <div className="text-xs text-gray-400">
+                              {tx.product.country}
+                            </div>
                           </>
                         ) : (
-                          '-'
+                          "-"
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                         ${tx.amount.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {tx.paymentType === 'balance' ? (
+                        {tx.paymentType === "balance" ? (
                           <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
                             Balance
                           </span>
-                        ) : tx.paymentType === 'admin_assigned' ? (
+                        ) : tx.paymentType === "admin_assigned" ? (
                           <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                             Admin
                           </span>
@@ -148,11 +152,11 @@ export default function MyTransactionsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            tx.status === 'completed'
-                              ? 'bg-green-100 text-green-800'
-                              : tx.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
+                            tx.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : tx.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
                           }`}
                         >
                           {tx.status}

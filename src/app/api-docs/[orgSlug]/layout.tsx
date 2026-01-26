@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { LanguageProvider } from '@/lib/i18n/LanguageContext';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { Code, Shield, Zap, Book, Key, Activity } from 'lucide-react';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { Code, Shield, Zap, Book, Key, Activity } from "lucide-react";
 
 export default function ApiDocsLayout({
   children,
@@ -13,7 +13,7 @@ export default function ApiDocsLayout({
   children: React.ReactNode;
   params: Promise<{ orgSlug: string }>;
 }) {
-  const [orgSlug, setOrgSlug] = useState<string>('');
+  const [orgSlug, setOrgSlug] = useState<string>("");
 
   useEffect(() => {
     params.then((p) => setOrgSlug(p.orgSlug));
@@ -27,7 +27,10 @@ export default function ApiDocsLayout({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-8">
-                <Link href={`/api-docs/${orgSlug}`} className="text-2xl font-bold text-indigo-600">
+                <Link
+                  href={`/api-docs/${orgSlug}`}
+                  className="text-2xl font-bold text-indigo-600"
+                >
                   API Documentation
                 </Link>
                 <nav className="hidden md:flex space-x-4">
@@ -71,7 +74,8 @@ export default function ApiDocsLayout({
         <footer className="bg-white border-t mt-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <p className="text-center text-gray-500 text-sm">
-              © {new Date().getFullYear()} Prepaid Minutes API. All rights reserved.
+              © {new Date().getFullYear()} Prepaid Minutes API. All rights
+              reserved.
             </p>
           </div>
         </footer>
