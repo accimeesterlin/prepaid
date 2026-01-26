@@ -3,18 +3,18 @@
  * POST /api/v1/customer-auth/verify-email
  */
 
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import { Org } from '@pg-prepaid/db';
-import { ApiErrors } from '@/lib/api-error';
-import { createSuccessResponse } from '@/lib/api-response';
-import { emailVerificationService } from '@/lib/services/email-verification.service';
-import { createCustomerSession } from '@/lib/customer-auth';
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { Org } from "@pg-prepaid/db";
+import { ApiErrors } from "@/lib/api-error";
+import { createSuccessResponse } from "@/lib/api-response";
+import { emailVerificationService } from "@/lib/services/email-verification.service";
+import { createCustomerSession } from "@/lib/customer-auth";
 
 const verifyEmailSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  token: z.string().min(1, 'Verification token is required'),
-  orgSlug: z.string().min(1, 'Organization slug is required'),
+  email: z.string().email("Invalid email address"),
+  token: z.string().min(1, "Verification token is required"),
+  orgSlug: z.string().min(1, "Organization slug is required"),
 });
 
 export async function POST(request: NextRequest) {
@@ -26,18 +26,18 @@ export async function POST(request: NextRequest) {
     const org = await Org.findOne({ slug: data.orgSlug.toLowerCase() });
 
     if (!org) {
-      throw ApiErrors.NotFound('Organization not found');
+      throw ApiErrors.NotFound("Organization not found");
     }
 
     // Verify email
     const result = await emailVerificationService.verifyEmail(
       data.email,
       data.token,
-      org._id.toString()
+      org._id.toString(),
     );
 
     if (!result.success) {
-      throw ApiErrors.BadRequest(result.error || 'Verification failed');
+      throw ApiErrors.BadRequest(result.error || "Verification failed");
     }
 
     // Update session with verified status
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     return createSuccessResponse({
-      message: 'Email verified successfully',
+      message: "Email verified successfully",
       customer: {
         id: result.customer?._id.toString(),
         email: result.customer?.email,

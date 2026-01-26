@@ -3,11 +3,11 @@
  * GET /api/v1/customer-auth/me
  */
 
-import { NextRequest } from 'next/server';
-import { Customer } from '@pg-prepaid/db';
-import { ApiErrors } from '@/lib/api-error';
-import { createSuccessResponse } from '@/lib/api-response';
-import { requireCustomerAuth } from '@/lib/auth-middleware';
+import { NextRequest } from "next/server";
+import { Customer } from "@pg-prepaid/db";
+import { ApiErrors } from "@/lib/api-error";
+import { createSuccessResponse } from "@/lib/api-response";
+import { requireCustomerAuth } from "@/lib/auth-middleware";
 
 export async function GET(request: NextRequest) {
   const session = await requireCustomerAuth(request);
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const customer = await Customer.findById(session.customerId);
 
   if (!customer) {
-    throw ApiErrors.NotFound('Customer not found');
+    throw ApiErrors.NotFound("Customer not found");
   }
 
   return createSuccessResponse({

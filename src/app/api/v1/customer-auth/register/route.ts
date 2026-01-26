@@ -3,21 +3,24 @@
  * POST /api/v1/customer-auth/register
  */
 
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import { Customer } from '@pg-prepaid/db';
-import { Org } from '@pg-prepaid/db';
-import { ApiErrors } from '@/lib/api-error';
-import { createSuccessResponse, createCreatedResponse } from '@/lib/api-response';
-import { createCustomerSession } from '@/lib/customer-auth';
-import { emailVerificationService } from '@/lib/services/email-verification.service';
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { Customer } from "@pg-prepaid/db";
+import { Org } from "@pg-prepaid/db";
+import { ApiErrors } from "@/lib/api-error";
+import {
+  createSuccessResponse,
+  createCreatedResponse,
+} from "@/lib/api-response";
+import { createCustomerSession } from "@/lib/customer-auth";
+import { emailVerificationService } from "@/lib/services/email-verification.service";
 
 const registerSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  name: z.string().min(1, 'Name is required').optional(),
-  phoneNumber: z.string().min(10, 'Phone number is required'),
-  orgSlug: z.string().min(1, 'Organization slug is required'),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1, "Name is required").optional(),
+  phoneNumber: z.string().min(10, "Phone number is required"),
+  orgSlug: z.string().min(1, "Organization slug is required"),
 });
 
 export async function POST(request: NextRequest) {
@@ -29,7 +32,7 @@ export async function POST(request: NextRequest) {
     const org = await Org.findOne({ slug: data.orgSlug.toLowerCase() });
 
     if (!org) {
-      throw ApiErrors.NotFound('Organization not found');
+      throw ApiErrors.NotFound("Organization not found");
     }
 
     // Check if customer already exists with this email in this org
@@ -39,7 +42,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingCustomer) {
-      throw ApiErrors.BadRequest('An account with this email already exists');
+      throw ApiErrors.BadRequest("An account with this email already exists");
     }
 
     // Create customer
@@ -53,20 +56,22 @@ export async function POST(request: NextRequest) {
       currentBalance: 0,
       totalAssigned: 0,
       totalUsed: 0,
-      balanceCurrency: org.settings?.currency || 'USD',
+      balanceCurrency: org.settings?.currency || "USD",
       metadata: {
         totalPurchases: 0,
         totalSpent: 0,
-        currency: org.settings?.currency || 'USD',
+        currency: org.settings?.currency || "USD",
       },
     });
 
     // Send verification email
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `${request.nextUrl.protocol}//${request.nextUrl.host}`;
     await emailVerificationService.sendVerificationEmail(
       customer,
       data.orgSlug,
-      baseUrl
+      baseUrl,
     );
 
     // Create session (but user needs to verify email before using balance)
@@ -79,7 +84,8 @@ export async function POST(request: NextRequest) {
     });
 
     return createCreatedResponse({
-      message: 'Account created successfully. Please check your email to verify your account.',
+      message:
+        "Account created successfully. Please check your email to verify your account.",
       customer: {
         id: customer._id.toString(),
         email: customer.email,

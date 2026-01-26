@@ -33,30 +33,60 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 // PUT - Update customer
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Try customer auth first
+    let isCustomer = false;
+    let customerId = null;
+    
+    try {
+      const customerAuth = await import('@/lib/auth-middleware').then(m => m.requireCustomerAuth);
+      const { customer } = await customerAuth(request);
+      isCustomer = true;
+      customerId = customer._id;
+    } catch (e) {
+      // Not a customer, try staff auth
     }
 
     const { id } = await params;
+
+    // If customer, ensure they can only update themselves
+    if (isCustomer && customerId?.toString() !== id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // If not customer, require staff session
+    if (!isCustomer) {
+      const session = await getSession();
+      if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
     const body = await request.json();
-    const { phoneNumber, email, name, country } = body;
+    const { phoneNumber, email, name, country, firstName, lastName, phone } = body;
 
     await dbConnection.connect();
 
-    const customer = await Customer.findOne({
-      _id: id,
-      orgId: session.orgId,
-    });
+    const customer = await Customer.findById(id);
 
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    if (phoneNumber) customer.phoneNumber = phoneNumber;
-    if (email !== undefined) customer.email = email;
-    if (name !== undefined) customer.name = name;
-    if (country !== undefined) customer.country = country;
+    // Allow customer to update limited fields
+    if (isCustomer) {
+      if (firstName !== undefined) customer.firstName = firstName;
+      if (lastName !== undefined) customer.lastName = lastName;
+      if (phone !== undefined) customer.phone = phone;
+    } else {
+      // Staff can update all fields
+      if (phoneNumber) customer.phoneNumber = phoneNumber;
+      if (email !== undefined) customer.email = email;
+      if (name !== undefined) customer.name = name;
+      if (country !== undefined) customer.country = country;
+      if (firstName !== undefined) customer.firstName = firstName;
+      if (lastName !== undefined) customer.lastName = lastName;
+      if (phone !== undefined) customer.phone = phone;
+    }
 
     await customer.save();
 

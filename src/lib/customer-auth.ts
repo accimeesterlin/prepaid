@@ -3,10 +3,12 @@
  * Handles JWT tokens for customer authentication (separate from staff auth)
  */
 
-import { SignJWT, jwtVerify } from 'jose';
-import { cookies } from 'next/headers';
+import { SignJWT, jwtVerify } from "jose";
+import { cookies } from "next/headers";
 
-const secret = new TextEncoder().encode(process.env.CUSTOMER_JWT_SECRET || 'customer-secret-key-change-in-production');
+const secret = new TextEncoder().encode(
+  process.env.CUSTOMER_JWT_SECRET || "customer-secret-key-change-in-production",
+);
 
 export interface CustomerSessionPayload {
   customerId: string;
@@ -19,20 +21,22 @@ export interface CustomerSessionPayload {
 /**
  * Create a customer session (JWT token)
  */
-export async function createCustomerSession(payload: CustomerSessionPayload): Promise<string> {
+export async function createCustomerSession(
+  payload: CustomerSessionPayload,
+): Promise<string> {
   const token = await new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
+    .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime('7d') // 7 days expiry
+    .setExpirationTime("7d") // 7 days expiry
     .sign(secret);
 
   // Set cookie
-  (await cookies()).set('customer-session', token, {
+  (await cookies()).set("customer-session", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60, // 7 days
-    path: '/',
+    path: "/",
   });
 
   return token;
@@ -42,7 +46,7 @@ export async function createCustomerSession(payload: CustomerSessionPayload): Pr
  * Get current customer session
  */
 export async function getCustomerSession(): Promise<CustomerSessionPayload | null> {
-  const token = (await cookies()).get('customer-session')?.value;
+  const token = (await cookies()).get("customer-session")?.value;
 
   if (!token) {
     return null;
@@ -60,13 +64,15 @@ export async function getCustomerSession(): Promise<CustomerSessionPayload | nul
  * Delete customer session
  */
 export async function deleteCustomerSession(): Promise<void> {
-  (await cookies()).delete('customer-session');
+  (await cookies()).delete("customer-session");
 }
 
 /**
  * Verify customer JWT token (without setting cookie)
  */
-export async function verifyCustomerToken(token: string): Promise<CustomerSessionPayload | null> {
+export async function verifyCustomerToken(
+  token: string,
+): Promise<CustomerSessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secret);
     return payload as CustomerSessionPayload;

@@ -3,18 +3,18 @@
  * POST /api/v1/customer-auth/login
  */
 
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import { Customer } from '@pg-prepaid/db';
-import { Org } from '@pg-prepaid/db';
-import { ApiErrors } from '@/lib/api-error';
-import { createSuccessResponse } from '@/lib/api-response';
-import { createCustomerSession } from '@/lib/customer-auth';
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { Customer } from "@pg-prepaid/db";
+import { Org } from "@pg-prepaid/db";
+import { ApiErrors } from "@/lib/api-error";
+import { createSuccessResponse } from "@/lib/api-response";
+import { createCustomerSession } from "@/lib/customer-auth";
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
-  orgSlug: z.string().min(1, 'Organization slug is required'),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+  orgSlug: z.string().min(1, "Organization slug is required"),
 });
 
 export async function POST(request: NextRequest) {
@@ -26,24 +26,24 @@ export async function POST(request: NextRequest) {
     const org = await Org.findOne({ slug: data.orgSlug.toLowerCase() });
 
     if (!org) {
-      throw ApiErrors.Unauthorized('Invalid credentials');
+      throw ApiErrors.Unauthorized("Invalid credentials");
     }
 
     // Find customer with password hash
     const customer = await Customer.findOne({
       email: data.email.toLowerCase(),
       orgId: org._id.toString(),
-    }).select('+passwordHash');
+    }).select("+passwordHash");
 
     if (!customer || !customer.passwordHash) {
-      throw ApiErrors.Unauthorized('Invalid credentials');
+      throw ApiErrors.Unauthorized("Invalid credentials");
     }
 
     // Verify password
     const isValid = await customer.comparePassword(data.password);
 
     if (!isValid) {
-      throw ApiErrors.Unauthorized('Invalid credentials');
+      throw ApiErrors.Unauthorized("Invalid credentials");
     }
 
     // Create session
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     });
 
     return createSuccessResponse({
-      message: 'Login successful',
+      message: "Login successful",
       customer: {
         id: customer._id.toString(),
         email: customer.email,

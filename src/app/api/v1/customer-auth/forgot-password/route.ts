@@ -3,18 +3,18 @@
  * POST /api/v1/customer-auth/forgot-password
  */
 
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import crypto from 'crypto';
-import { Customer } from '@pg-prepaid/db';
-import { Org } from '@pg-prepaid/db';
-import { ApiErrors } from '@/lib/api-error';
-import { createSuccessResponse } from '@/lib/api-response';
-import { sendEmail } from '@/lib/services/email.service';
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import crypto from "crypto";
+import { Customer } from "@pg-prepaid/db";
+import { Org } from "@pg-prepaid/db";
+import { ApiErrors } from "@/lib/api-error";
+import { createSuccessResponse } from "@/lib/api-response";
+import { sendEmail } from "@/lib/services/email.service";
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  orgSlug: z.string().min(1, 'Organization slug is required'),
+  email: z.string().email("Invalid email address"),
+  orgSlug: z.string().min(1, "Organization slug is required"),
 });
 
 export async function POST(request: NextRequest) {
@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
     if (!org) {
       // Don't reveal if org exists
       return createSuccessResponse({
-        message: 'If an account exists with this email, a password reset link has been sent.',
+        message:
+          "If an account exists with this email, a password reset link has been sent.",
       });
     }
 
@@ -36,17 +37,18 @@ export async function POST(request: NextRequest) {
     const customer = await Customer.findOne({
       email: data.email.toLowerCase(),
       orgId: org._id.toString(),
-    }).select('+resetPasswordToken +resetPasswordTokenExpiry');
+    }).select("+resetPasswordToken +resetPasswordTokenExpiry");
 
     if (!customer) {
       // Don't reveal if customer exists
       return createSuccessResponse({
-        message: 'If an account exists with this email, a password reset link has been sent.',
+        message:
+          "If an account exists with this email, a password reset link has been sent.",
       });
     }
 
     // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString("hex");
     const resetExpiry = new Date();
     resetExpiry.setHours(resetExpiry.getHours() + 1); // 1 hour expiry
 
@@ -55,19 +57,22 @@ export async function POST(request: NextRequest) {
     await customer.save();
 
     // Build reset URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `${request.nextUrl.protocol}//${request.nextUrl.host}`;
     const resetUrl = `${baseUrl}/customer-portal/${data.orgSlug}/reset-password?token=${resetToken}&email=${encodeURIComponent(customer.email!)}`;
 
     // Send email
     await sendEmail({
       to: customer.email!,
-      subject: 'Reset Your Password',
-      html: buildResetEmailHtml(customer.name || 'Customer', resetUrl),
-      text: buildResetEmailText(customer.name || 'Customer', resetUrl),
+      subject: "Reset Your Password",
+      html: buildResetEmailHtml(customer.name || "Customer", resetUrl),
+      text: buildResetEmailText(customer.name || "Customer", resetUrl),
     });
 
     return createSuccessResponse({
-      message: 'If an account exists with this email, a password reset link has been sent.',
+      message:
+        "If an account exists with this email, a password reset link has been sent.",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

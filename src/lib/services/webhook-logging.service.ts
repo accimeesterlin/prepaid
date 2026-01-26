@@ -3,7 +3,11 @@
  * Wraps webhook handlers to automatically log events and handle retries
  */
 
-import { WebhookLog, type WebhookSource, type IWebhookLog } from '@pg-prepaid/db';
+import {
+  WebhookLog,
+  type WebhookSource,
+  type IWebhookLog,
+} from "@pg-prepaid/db";
 
 export class WebhookLoggingService {
   /**
@@ -30,7 +34,7 @@ export class WebhookLoggingService {
       ipAddress: params.ipAddress,
       transactionId: params.transactionId,
       customerId: params.customerId,
-      status: 'pending',
+      status: "pending",
       attempts: 0,
       maxAttempts: 6,
       retrySchedule: [1, 5, 15, 60, 360], // 1min, 5min, 15min, 1hr, 6hr
@@ -44,10 +48,10 @@ export class WebhookLoggingService {
     webhookLogId: string,
     responseCode: number = 200,
     responseBody?: any,
-    duration?: number
+    duration?: number,
   ): Promise<void> {
     const webhookLog = await WebhookLog.findById(webhookLogId);
-    
+
     if (webhookLog) {
       await webhookLog.markSuccess(responseCode, responseBody, duration);
     }
@@ -59,10 +63,10 @@ export class WebhookLoggingService {
   async markFailed(
     webhookLogId: string,
     errorMessage: string,
-    responseCode?: number
+    responseCode?: number,
   ): Promise<void> {
     const webhookLog = await WebhookLog.findById(webhookLogId);
-    
+
     if (webhookLog) {
       await webhookLog.markFailed(errorMessage, responseCode);
     }
@@ -73,7 +77,7 @@ export class WebhookLoggingService {
    */
   async getPendingRetries(): Promise<IWebhookLog[]> {
     return await WebhookLog.find({
-      status: 'retrying',
+      status: "retrying",
       nextRetryAt: { $lte: new Date() },
     }).limit(100);
   }
@@ -88,7 +92,7 @@ export class WebhookLoggingService {
       status?: string;
       limit?: number;
       skip?: number;
-    }
+    },
   ): Promise<{ logs: IWebhookLog[]; total: number }> {
     const query: any = { orgId };
 
@@ -125,11 +129,11 @@ export class WebhookLoggingService {
     const webhookLog = await WebhookLog.findById(id);
 
     if (!webhookLog) {
-      return { success: false, error: 'Webhook log not found' };
+      return { success: false, error: "Webhook log not found" };
     }
 
     // Reset status to pending
-    webhookLog.status = 'pending';
+    webhookLog.status = "pending";
     webhookLog.attempts = 0;
     webhookLog.nextRetryAt = undefined;
     webhookLog.errorMessage = undefined;
@@ -150,7 +154,7 @@ export class WebhookLoggingService {
 
     const result = await WebhookLog.deleteMany({
       createdAt: { $lt: cutoffDate },
-      status: { $in: ['success', 'failed'] },
+      status: { $in: ["success", "failed"] },
     });
 
     return result.deletedCount || 0;

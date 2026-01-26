@@ -3,17 +3,17 @@
  * POST /api/v1/customer-auth/resend-verification
  */
 
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import { Customer } from '@pg-prepaid/db';
-import { Org } from '@pg-prepaid/db';
-import { ApiErrors } from '@/lib/api-error';
-import { createSuccessResponse } from '@/lib/api-response';
-import { emailVerificationService } from '@/lib/services/email-verification.service';
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { Customer } from "@pg-prepaid/db";
+import { Org } from "@pg-prepaid/db";
+import { ApiErrors } from "@/lib/api-error";
+import { createSuccessResponse } from "@/lib/api-response";
+import { emailVerificationService } from "@/lib/services/email-verification.service";
 
 const resendSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  orgSlug: z.string().min(1, 'Organization slug is required'),
+  email: z.string().email("Invalid email address"),
+  orgSlug: z.string().min(1, "Organization slug is required"),
 });
 
 export async function POST(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const org = await Org.findOne({ slug: data.orgSlug.toLowerCase() });
 
     if (!org) {
-      throw ApiErrors.NotFound('Organization not found');
+      throw ApiErrors.NotFound("Organization not found");
     }
 
     // Find customer
@@ -37,28 +37,33 @@ export async function POST(request: NextRequest) {
     if (!customer) {
       // Don't reveal if customer exists or not for security
       return createSuccessResponse({
-        message: 'If an account exists with this email, a verification email has been sent.',
+        message:
+          "If an account exists with this email, a verification email has been sent.",
       });
     }
 
     if (customer.emailVerified) {
-      throw ApiErrors.BadRequest('Email is already verified');
+      throw ApiErrors.BadRequest("Email is already verified");
     }
 
     // Send verification email
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `${request.nextUrl.protocol}//${request.nextUrl.host}`;
     const result = await emailVerificationService.sendVerificationEmail(
       customer,
       data.orgSlug,
-      baseUrl
+      baseUrl,
     );
 
     if (!result.success) {
-      throw ApiErrors.BadRequest(result.error || 'Failed to send verification email');
+      throw ApiErrors.BadRequest(
+        result.error || "Failed to send verification email",
+      );
     }
 
     return createSuccessResponse({
-      message: 'Verification email sent successfully',
+      message: "Verification email sent successfully",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -5,38 +5,44 @@
  * DELETE /api/v1/api-keys/[id] - Revoke API key
  */
 
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import { ApiKey } from '@pg-prepaid/db';
-import { ApiErrors } from '@/lib/api-error';
-import { createSuccessResponse, createNoContentResponse } from '@/lib/api-response';
-import { requireAuth, requireCustomerAuth } from '@/lib/auth-middleware';
-import { Permission } from '@pg-prepaid/types';
-import { hasPermission } from '@/lib/permissions';
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { ApiKey } from "@pg-prepaid/db";
+import { ApiErrors } from "@/lib/api-error";
+import {
+  createSuccessResponse,
+  createNoContentResponse,
+} from "@/lib/api-response";
+import { requireAuth, requireCustomerAuth } from "@/lib/auth-middleware";
+import { Permission } from "@pg-prepaid/types";
+import { hasPermission } from "@/lib/permissions";
 
 /**
  * GET - Get API key details
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const { searchParams } = new URL(request.url);
-  const isCustomer = searchParams.get('customer') === 'true';
+  const isCustomer = searchParams.get("customer") === "true";
 
   const apiKey = await ApiKey.findById(id);
 
   if (!apiKey) {
-    throw ApiErrors.NotFound('API key not found');
+    throw ApiErrors.NotFound("API key not found");
   }
 
   // Check ownership
   if (isCustomer) {
     const customer = await requireCustomerAuth(request);
 
-    if (apiKey.ownerId !== customer.customerId || apiKey.ownerType !== 'customer') {
-      throw ApiErrors.Forbidden('Access denied');
+    if (
+      apiKey.ownerId !== customer.customerId ||
+      apiKey.ownerType !== "customer"
+    ) {
+      throw ApiErrors.Forbidden("Access denied");
     }
   } else {
     const session = await requireAuth(request);
@@ -45,7 +51,7 @@ export async function GET(
     const isOwner = apiKey.ownerId === session.userId;
 
     if (!canViewAll && !isOwner) {
-      throw ApiErrors.Forbidden('Access denied');
+      throw ApiErrors.Forbidden("Access denied");
     }
   }
 
@@ -82,11 +88,11 @@ const updateKeySchema = z.object({
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const { searchParams } = new URL(request.url);
-  const isCustomer = searchParams.get('customer') === 'true';
+  const isCustomer = searchParams.get("customer") === "true";
 
   const body = await request.json();
   const data = updateKeySchema.parse(body);
@@ -94,34 +100,45 @@ export async function PUT(
   const apiKey = await ApiKey.findById(id);
 
   if (!apiKey) {
-    throw ApiErrors.NotFound('API key not found');
+    throw ApiErrors.NotFound("API key not found");
   }
 
   // Check ownership and permissions
   if (isCustomer) {
     const customer = await requireCustomerAuth(request);
 
-    if (apiKey.ownerId !== customer.customerId || apiKey.ownerType !== 'customer') {
-      throw ApiErrors.Forbidden('Access denied');
+    if (
+      apiKey.ownerId !== customer.customerId ||
+      apiKey.ownerType !== "customer"
+    ) {
+      throw ApiErrors.Forbidden("Access denied");
     }
 
     // Customers cannot adjust rate limits
     if (data.customRateLimit) {
-      throw ApiErrors.Forbidden('Customers cannot adjust rate limits');
+      throw ApiErrors.Forbidden("Customers cannot adjust rate limits");
     }
   } else {
     const session = await requireAuth(request);
 
-    const canManageAll = hasPermission(session.roles, Permission.MANAGE_API_KEYS);
+    const canManageAll = hasPermission(
+      session.roles,
+      Permission.MANAGE_API_KEYS,
+    );
     const isOwner = apiKey.ownerId === session.userId;
 
     if (!canManageAll && !isOwner) {
-      throw ApiErrors.Forbidden('Access denied');
+      throw ApiErrors.Forbidden("Access denied");
     }
 
     // Only admins can adjust rate limits
-    if (data.customRateLimit && !hasPermission(session.roles, Permission.ADJUST_RATE_LIMITS)) {
-      throw ApiErrors.Forbidden('Insufficient permissions to adjust rate limits');
+    if (
+      data.customRateLimit &&
+      !hasPermission(session.roles, Permission.ADJUST_RATE_LIMITS)
+    ) {
+      throw ApiErrors.Forbidden(
+        "Insufficient permissions to adjust rate limits",
+      );
     }
   }
 
@@ -137,7 +154,7 @@ export async function PUT(
   await apiKey.save();
 
   return createSuccessResponse({
-    message: 'API key updated successfully',
+    message: "API key updated successfully",
     apiKey: {
       id: apiKey._id.toString(),
       name: apiKey.name,
@@ -153,33 +170,39 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const { searchParams } = new URL(request.url);
-  const isCustomer = searchParams.get('customer') === 'true';
+  const isCustomer = searchParams.get("customer") === "true";
 
   const apiKey = await ApiKey.findById(id);
 
   if (!apiKey) {
-    throw ApiErrors.NotFound('API key not found');
+    throw ApiErrors.NotFound("API key not found");
   }
 
   // Check ownership and permissions
   if (isCustomer) {
     const customer = await requireCustomerAuth(request);
 
-    if (apiKey.ownerId !== customer.customerId || apiKey.ownerType !== 'customer') {
-      throw ApiErrors.Forbidden('Access denied');
+    if (
+      apiKey.ownerId !== customer.customerId ||
+      apiKey.ownerType !== "customer"
+    ) {
+      throw ApiErrors.Forbidden("Access denied");
     }
   } else {
     const session = await requireAuth(request);
 
-    const canRevokeAll = hasPermission(session.roles, Permission.REVOKE_API_KEYS);
+    const canRevokeAll = hasPermission(
+      session.roles,
+      Permission.REVOKE_API_KEYS,
+    );
     const isOwner = apiKey.ownerId === session.userId;
 
     if (!canRevokeAll && !isOwner) {
-      throw ApiErrors.Forbidden('Access denied');
+      throw ApiErrors.Forbidden("Access denied");
     }
   }
 
@@ -188,6 +211,6 @@ export async function DELETE(
   await apiKey.save();
 
   return createSuccessResponse({
-    message: 'API key revoked successfully',
+    message: "API key revoked successfully",
   });
 }
