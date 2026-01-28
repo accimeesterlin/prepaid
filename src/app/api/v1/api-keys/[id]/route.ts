@@ -57,7 +57,7 @@ export async function GET(
 
   return createSuccessResponse({
     apiKey: {
-      id: apiKey._id.toString(),
+      id: String(apiKey._id),
       name: apiKey.name,
       keyPrefix: apiKey.keyPrefix,
       ownerId: apiKey.ownerId,
@@ -156,7 +156,7 @@ export async function PUT(
   return createSuccessResponse({
     message: "API key updated successfully",
     apiKey: {
-      id: apiKey._id.toString(),
+      id: String(apiKey._id),
       name: apiKey.name,
       keyPrefix: apiKey.keyPrefix,
       rateLimit: apiKey.getRateLimit(),

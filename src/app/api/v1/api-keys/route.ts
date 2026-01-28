@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     return createSuccessResponse({
       keys: keys.map((key) => ({
-        id: key._id.toString(),
+        id: String(key._id),
         name: key.name,
         keyPrefix: key.keyPrefix,
         scopes: key.scopes,
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     return createSuccessResponse({
       keys: keys.map((key) => ({
-        id: key._id.toString(),
+        id: String(key._id),
         name: key.name,
         keyPrefix: key.keyPrefix,
         ownerId: key.ownerId,
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
       "API key created successfully. Store this key securely - you won't be able to see it again.",
     key: key, // Return the actual key only once
     apiKey: {
-      id: apiKey._id.toString(),
+      id: String(apiKey._id),
       name: apiKey.name,
       keyPrefix: apiKey.keyPrefix,
       scopes: apiKey.scopes,

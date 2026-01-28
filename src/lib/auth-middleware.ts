@@ -115,7 +115,7 @@ export async function requireApiKey(request: NextRequest): Promise<{
 
   // Check rate limits
   const limitCheck = await rateLimitService.checkBothLimits(
-    apiKey._id.toString(),
+    String(apiKey._id),
     apiKey.orgId,
     rateLimit,
   );
@@ -147,7 +147,7 @@ export async function requireApiKey(request: NextRequest): Promise<{
 
   // Record the request
   await rateLimitService.recordBothRequests(
-    apiKey._id.toString(),
+    String(apiKey._id),
     apiKey.orgId,
   );
 

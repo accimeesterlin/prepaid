@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   return createSuccessResponse({
     customer: {
-      id: customer._id.toString(),
+      id: String(customer._id),
       email: customer.email,
       name: customer.name,
       phoneNumber: customer.phoneNumber,

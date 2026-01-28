@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const resetUrl = `${baseUrl}/customer-portal/${data.orgSlug}/reset-password?token=${resetToken}&email=${encodeURIComponent(customer.email!)}`;
 
     // Send email
-    await sendEmail({
+    await sendEmail(org._id.toString(), {
       to: customer.email!,
       subject: "Reset Your Password",
       html: buildResetEmailHtml(customer.name || "Customer", resetUrl),

@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
     // Update session with verified status
     if (result.customer) {
       await createCustomerSession({
-        customerId: result.customer._id.toString(),
-        orgId: org._id.toString(),
+        customerId: String(result.customer._id),
+        orgId: String(org._id),
         email: result.customer.email!,
         emailVerified: true,
         name: result.customer.name,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     return createSuccessResponse({
       message: "Email verified successfully",
       customer: {
-        id: result.customer?._id.toString(),
+        id: String(result.customer?._id),
         email: result.customer?.email,
         emailVerified: true,
       },

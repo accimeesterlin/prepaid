@@ -76,8 +76,8 @@ export async function POST(request: NextRequest) {
 
     // Create session (but user needs to verify email before using balance)
     await createCustomerSession({
-      customerId: customer._id.toString(),
-      orgId: org._id.toString(),
+      customerId: String(customer._id),
+      orgId: String(org._id),
       email: customer.email!,
       emailVerified: false,
       name: customer.name,
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       message:
         "Account created successfully. Please check your email to verify your account.",
       customer: {
-        id: customer._id.toString(),
+        id: String(customer._id),
         email: customer.email,
         name: customer.name,
         emailVerified: false,

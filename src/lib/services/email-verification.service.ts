@@ -45,7 +45,8 @@ export class EmailVerificationService {
     }
 
     // Check cooldown
-    const lastSent = this.lastSentMap.get(customer._id.toString());
+    const customerId = String(customer._id);
+    const lastSent = this.lastSentMap.get(customerId);
     if (lastSent && Date.now() - lastSent < this.RESEND_COOLDOWN_MS) {
       const remainingSeconds = Math.ceil(
         (this.RESEND_COOLDOWN_MS - (Date.now() - lastSent)) / 1000,
@@ -69,7 +70,7 @@ export class EmailVerificationService {
 
     // Send email
     try {
-      await sendEmail({
+      await sendEmail(customer.orgId, {
         to: customer.email,
         subject: "Verify Your Email Address",
         html: this.buildVerificationEmailHtml(
@@ -85,7 +86,7 @@ export class EmailVerificationService {
       });
 
       // Update cooldown
-      this.lastSentMap.set(customer._id.toString(), Date.now());
+      this.lastSentMap.set(String(customer._id), Date.now());
 
       return { success: true };
     } catch (error) {
@@ -132,7 +133,7 @@ export class EmailVerificationService {
     await customer.save();
 
     // Remove from cooldown map
-    this.lastSentMap.delete(customer._id.toString());
+    this.lastSentMap.delete(String(customer._id));
 
     return { success: true, customer };
   }

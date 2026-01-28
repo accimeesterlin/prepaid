@@ -13,8 +13,8 @@ import {
   createSuccessResponse,
   createCreatedResponse,
 } from "@/lib/api-response";
-import { requireAuth, requireRole } from "@/lib/auth-middleware";
-import { UserRole, Permission } from "@pg-prepaid/types";
+import { requireAuth } from "@/lib/auth-middleware";
+import { Permission } from "@pg-prepaid/types";
 import { hasPermission } from "@/lib/permissions";
 import { emailVerificationService } from "@/lib/services/email-verification.service";
 
@@ -62,7 +62,7 @@ export async function GET(
       canUseBalance: customer.canUseBalance(),
     },
     history: history.map((h) => ({
-      id: h._id.toString(),
+      id: String(h._id),
       amount: h.amount,
       type: h.type,
       previousBalance: h.previousBalance,

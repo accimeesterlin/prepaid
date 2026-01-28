@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function CustomerPortalLayout({
   children,

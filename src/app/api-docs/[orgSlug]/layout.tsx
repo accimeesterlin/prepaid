@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { Code, Shield, Zap, Book, Key, Activity } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function ApiDocsLayout({
   children,

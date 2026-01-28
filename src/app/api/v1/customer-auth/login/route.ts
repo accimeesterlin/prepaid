@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
 
     // Create session
     await createCustomerSession({
-      customerId: customer._id.toString(),
-      orgId: org._id.toString(),
+      customerId: String(customer._id),
+      orgId: String(org._id),
       email: customer.email!,
       emailVerified: customer.emailVerified,
       name: customer.name,
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     return createSuccessResponse({
       message: "Login successful",
       customer: {
-        id: customer._id.toString(),
+        id: String(customer._id),
         email: customer.email,
         name: customer.name,
         emailVerified: customer.emailVerified,

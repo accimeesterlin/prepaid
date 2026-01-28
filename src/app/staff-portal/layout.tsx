@@ -1,10 +1,9 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function StaffPortalLayout({
   children,
@@ -12,7 +11,6 @@ export default function StaffPortalLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
 
   return (
     <LanguageProvider>

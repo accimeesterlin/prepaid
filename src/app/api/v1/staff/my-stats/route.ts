@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import { Transaction } from "@/packages/db";
-import { ApiResponse } from "@/lib/api-response";
-import { ApiError } from "@/lib/api-error";
+import { Transaction } from "@pg-prepaid/db";
+import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
+import { ApiErrors } from "@/lib/api-error";
 
 export async function GET(request: NextRequest) {
   try {
-    const { session } = await requireAuth(request);
+    const session = await requireAuth(request);
 
     // Calculate date for "this month"
     const now = new Date();
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       thisMonthStats,
     ] = await Promise.all([
       Transaction.countDocuments({ createdBy: session.userId }),
-      Transaction.aggregate([
+      Transaction.aggregate<{ _id: null; total: number }>([
         { $match: { createdBy: session.userId } },
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]).then((res) => res[0]?.total || 0),
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
         createdBy: session.userId,
         status: "pending",
       }),
-      Transaction.aggregate([
+      Transaction.aggregate<{ _id: null; count: number; amount: number }>([
         {
           $match: {
             createdBy: session.userId,
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       ]).then((res) => res[0] || { count: 0, amount: 0 }),
     ]);
 
-    return ApiResponse.success({
+    return createSuccessResponse({
       totalTransactions,
       totalAmount,
       completedTransactions,
@@ -59,6 +59,6 @@ export async function GET(request: NextRequest) {
       thisMonthAmount: thisMonthStats.amount,
     });
   } catch (error: any) {
-    return ApiError.handle(error);
+    return createErrorResponse(error);
   }
 }

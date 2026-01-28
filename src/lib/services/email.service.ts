@@ -392,3 +392,8 @@ The ${orgName} Team
     });
   }
 }
+
+// Export wrapper function for compatibility
+export async function sendEmail(orgId: string, options: EmailOptions): Promise<void> {
+  return EmailService.sendEmail(orgId, options);
+}

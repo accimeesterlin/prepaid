@@ -90,3 +90,6 @@ export function useLanguage() {
   }
   return context;
 }
+
+// Alias for compatibility
+export const useTranslation = useLanguage;

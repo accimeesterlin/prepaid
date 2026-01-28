@@ -3,14 +3,14 @@
  * Handles JWT tokens for customer authentication (separate from staff auth)
  */
 
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT, jwtVerify, JWTPayload } from "jose";
 import { cookies } from "next/headers";
 
 const secret = new TextEncoder().encode(
   process.env.CUSTOMER_JWT_SECRET || "customer-secret-key-change-in-production",
 );
 
-export interface CustomerSessionPayload {
+export interface CustomerSessionPayload extends JWTPayload {
   customerId: string;
   orgId: string;
   email: string;
@@ -55,7 +55,7 @@ export async function getCustomerSession(): Promise<CustomerSessionPayload | nul
   try {
     const { payload } = await jwtVerify(token, secret);
     return payload as CustomerSessionPayload;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -76,7 +76,7 @@ export async function verifyCustomerToken(
   try {
     const { payload } = await jwtVerify(token, secret);
     return payload as CustomerSessionPayload;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

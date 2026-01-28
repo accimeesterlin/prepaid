@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireCustomerAuth } from "@/lib/auth-middleware";
-import { Transaction } from "@/packages/db";
-import { ApiResponse } from "@/lib/api-response";
-import { ApiError } from "@/lib/api-error";
+import { Transaction } from "@pg-prepaid/db";
+import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
+import { ApiErrors } from "@/lib/api-error";
 
 export async function GET(
   request: NextRequest,
@@ -10,11 +10,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { customer } = await requireCustomerAuth(request);
+    const session = await requireCustomerAuth(request);
 
     // Ensure customer can only access their own transactions
-    if (customer._id.toString() !== id) {
-      throw ApiError.forbidden("You can only view your own transactions");
+    if (session.customerId !== id) {
+      return createErrorResponse(ApiErrors.Forbidden("You can only access your own transactions"));
     }
 
     // Parse query params
@@ -28,16 +28,17 @@ export async function GET(
 
     // Get transactions for this customer
     const [transactions, total] = await Promise.all([
-      Transaction.find({ customerId: customer._id })
+      Transaction.find({ customerId: session.customerId })
         .populate("productId", "name country")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Transaction.countDocuments({ customerId: customer._id }),
+      Transaction.countDocuments({ customerId: session.customerId }),
     ]);
 
-    return ApiResponse.success(transactions, {
+    return createSuccessResponse({
+      transactions,
       pagination: {
         page,
         limit,
@@ -48,6 +49,8 @@ export async function GET(
       },
     });
   } catch (error: any) {
-    return ApiError.handle(error);
+    return createErrorResponse(
+      ApiErrors.Internal(error.message || "Failed to fetch transactions")
+    );
   }
 }

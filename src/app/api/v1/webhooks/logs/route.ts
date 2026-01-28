@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
   return createSuccessResponse({
     logs: logs.map((log) => ({
-      id: log._id.toString(),
+      id: String(log._id),
       event: log.event,
       source: log.source,
       status: log.status,
