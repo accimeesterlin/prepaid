@@ -15,6 +15,13 @@ import {
   Receipt,
   Calendar,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Wallet,
+  Plus,
+  Minus,
+  Key,
 } from "lucide-react";
 
 const COUNTRIES = [
@@ -77,8 +84,14 @@ interface BalanceHistory {
   amount: number;
   description: string;
   createdAt: string;
-  adminId?: {
-    name: string;
+  metadata?: {
+    adminId?: string;
+    notes?: string;
+    phoneNumber?: string;
+    productName?: string;
+    orderId?: string;
+    transactionId?: string;
+    expiresAt?: string;
   };
 }
 
@@ -92,18 +105,25 @@ export default function CustomerDetailPage() {
   const [editing, setEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [balanceAction, setBalanceAction] = useState<
-    "assign" | "adjust" | "reset"
-  >("assign");
+    "add" | "withdraw" | "reset"
+  >("add");
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceDescription, setBalanceDescription] = useState("");
   const [balanceHistory, setBalanceHistory] = useState<BalanceHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPerPage] = useState(10);
   const [formData, setFormData] = useState({
     phoneNumber: "",
     email: "",
     name: "",
     country: "",
+    password: "",
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -113,6 +133,7 @@ export default function CustomerDetailPage() {
   } | null>(null);
   const [countrySearch, setCountrySearch] = useState("");
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [orgSlug, setOrgSlug] = useState<string>("");
 
   const filteredCountries = COUNTRIES.filter((country) =>
     country.toLowerCase().includes(countrySearch.toLowerCase()),
@@ -121,7 +142,26 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     fetchCustomer();
     fetchBalanceHistory();
+    fetchOrgSlug();
   }, [customerId]);
+
+  const fetchOrgSlug = async () => {
+    try {
+      const response = await fetch("/api/v1/organizations");
+      if (response.ok) {
+        const data = await response.json();
+        // Find the current organization
+        const currentOrg = data.organizations?.find(
+          (org: any) => org.isCurrent,
+        );
+        if (currentOrg) {
+          setOrgSlug(currentOrg.slug);
+        }
+      }
+    } catch (_error) {
+      console.error("Failed to fetch organization slug:", _error);
+    }
+  };
 
   const fetchCustomer = async () => {
     try {
@@ -134,6 +174,7 @@ export default function CustomerDetailPage() {
           email: data.email || "",
           name: data.name || "",
           country: data.country || "",
+          password: "",
         });
       } else if (response.status === 404) {
         setMessage({ type: "error", text: "Customer not found" });
@@ -210,10 +251,54 @@ export default function CustomerDetailPage() {
         email: customer.email || "",
         name: customer.name || "",
         country: customer.country || "",
+        password: "",
       });
     }
     setEditing(false);
     setMessage(null);
+  };
+
+  const handleSetPassword = async () => {
+    setPasswordError("");
+
+    if (!newPassword) {
+      setPasswordError("Password is required");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/v1/customers/${customerId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+
+      if (response.ok) {
+        setMessage({ type: "success", text: "Password updated successfully!" });
+        setShowPasswordModal(false);
+        setNewPassword("");
+        setConfirmPassword("");
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        const error = await response.json();
+        setPasswordError(error.error || "Failed to update password");
+      }
+    } catch (_error) {
+      setPasswordError("Failed to update password");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -239,7 +324,7 @@ export default function CustomerDetailPage() {
       );
       if (response.ok) {
         const data = await response.json();
-        setBalanceHistory(data.data || []);
+        setBalanceHistory(data.history || []);
       }
     } catch (error) {
       console.error("Failed to fetch balance history:", error);
@@ -258,23 +343,22 @@ export default function CustomerDetailPage() {
     setMessage(null);
 
     try {
-      const endpoint =
-        balanceAction === "assign"
-          ? `/api/v1/customers/${customerId}/balance`
-          : `/api/v1/customers/${customerId}/balance`;
-
-      const method = balanceAction === "assign" ? "POST" : "PUT";
+      const endpoint = `/api/v1/customers/${customerId}/balance`;
+      const method = balanceAction === "add" ? "POST" : "PUT";
 
       const body: any = {
         description: balanceDescription || `Balance ${balanceAction}`,
       };
 
-      if (balanceAction === "assign") {
+      if (balanceAction === "add") {
+        // Add balance (assign)
         body.amount = parseFloat(balanceAmount);
-      } else if (balanceAction === "adjust") {
+      } else if (balanceAction === "withdraw") {
+        // Withdraw balance (adjustment with negative amount)
         body.type = "adjustment";
-        body.amount = parseFloat(balanceAmount);
+        body.amount = -Math.abs(parseFloat(balanceAmount));
       } else if (balanceAction === "reset") {
+        // Reset to specific value
         body.type = "reset";
         body.newBalance = parseFloat(balanceAmount);
       }
@@ -303,14 +387,14 @@ export default function CustomerDetailPage() {
           text: error.error?.message || `Failed to ${balanceAction} balance`,
         });
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage({ type: "error", text: `Failed to ${balanceAction} balance` });
     } finally {
       setSaving(false);
     }
   };
 
-  const openBalanceModal = (action: "assign" | "adjust" | "reset") => {
+  const openBalanceModal = (action: "add" | "withdraw" | "reset") => {
     setBalanceAction(action);
     setBalanceAmount("");
     setBalanceDescription("");
@@ -510,6 +594,20 @@ export default function CustomerDetailPage() {
                     <span>{customer.country || "Not provided"}</span>
                   )}
                 </div>
+                {editing && (
+                  <div className="flex items-center gap-3">
+                    <Key className="h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="password"
+                      placeholder="Set password (leave blank to keep current)"
+                      className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                    />
+                  </div>
+                )}
               </div>
 
               {editing && (
@@ -563,133 +661,242 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Balance Management Card */}
-        {customer.currentBalance !== undefined && (
+        {/* Balance Management and Account Access - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Balance Management Card */}
+          {customer.currentBalance !== undefined && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Balance Management</CardTitle>
+                  <CardDescription>
+                    Manage customer prepaid balance
+                  </CardDescription>
+                </div>
+                {customer.email && orgSlug && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={`/customer-portal/${orgSlug}/login?email=${encodeURIComponent(customer.email)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Customer Login
+                      <ExternalLink className="h-4 w-4 ml-2" />
+                    </a>
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                {/* Current Balance Display */}
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="p-2 border rounded-lg">
+                    <div className="flex items-center gap-1 text-muted-foreground text-xs mb-0.5">
+                      <Wallet className="h-3 w-3" />
+                      <span>Current</span>
+                    </div>
+                    <p className="text-lg font-bold">
+                      {customer.balanceCurrency}{" "}
+                      {customer.currentBalance?.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="p-2 border rounded-lg bg-muted/30">
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Assigned
+                    </p>
+                    <p className="text-sm font-semibold text-muted-foreground">
+                      {customer.balanceCurrency}{" "}
+                      {customer.totalAssigned?.toFixed(2) || "0.00"}
+                    </p>
+                  </div>
+                  <div className="p-2 border rounded-lg bg-muted/30">
+                    <p className="text-xs text-muted-foreground mb-0.5">Used</p>
+                    <p className="text-sm font-semibold text-muted-foreground">
+                      {customer.balanceCurrency}{" "}
+                      {customer.totalUsed?.toFixed(2) || "0.00"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Balance Actions */}
+                <div className="flex gap-2 mb-4">
+                  <Button onClick={() => openBalanceModal("add")} size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Balance
+                  </Button>
+                  <Button
+                    onClick={() => openBalanceModal("withdraw")}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Minus className="h-4 w-4 mr-1" />
+                    Withdraw
+                  </Button>
+                  <Button
+                    onClick={() => openBalanceModal("reset")}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Set Balance
+                  </Button>
+                </div>
+
+                {/* Balance History */}
+                <div className="pt-4 border-t">
+                  <h3 className="font-semibold mb-4">Balance History</h3>
+                  {loadingHistory ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : balanceHistory.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">
+                      No balance history
+                    </p>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        {balanceHistory
+                          .slice(
+                            (historyPage - 1) * historyPerPage,
+                            historyPage * historyPerPage,
+                          )
+                          .map((entry) => (
+                            <div
+                              key={entry._id}
+                              className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                            >
+                              <div className="flex-1">
+                                <p className="font-medium capitalize">
+                                  {entry.type.replace("_", " ")}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {entry.description}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {formatDate(entry.createdAt)}
+                                  {entry.metadata?.adminId && ` by Admin`}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p
+                                  className={`font-bold ${entry.amount >= 0 ? "text-green-600" : "text-red-600"}`}
+                                >
+                                  {entry.amount >= 0 ? "+" : ""}
+                                  {customer.balanceCurrency}{" "}
+                                  {Math.abs(entry.amount).toFixed(2)}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {customer.balanceCurrency}{" "}
+                                  {entry.previousBalance.toFixed(2)} →{" "}
+                                  {customer.balanceCurrency}{" "}
+                                  {entry.newBalance.toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                      {balanceHistory.length > historyPerPage && (
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                          <p className="text-sm text-muted-foreground">
+                            Showing {(historyPage - 1) * historyPerPage + 1}-
+                            {Math.min(
+                              historyPage * historyPerPage,
+                              balanceHistory.length,
+                            )}{" "}
+                            of {balanceHistory.length}
+                          </p>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setHistoryPage((p) => Math.max(1, p - 1))
+                              }
+                              disabled={historyPage === 1}
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setHistoryPage((p) =>
+                                  Math.min(
+                                    Math.ceil(
+                                      balanceHistory.length / historyPerPage,
+                                    ),
+                                    p + 1,
+                                  ),
+                                )
+                              }
+                              disabled={
+                                historyPage >=
+                                Math.ceil(
+                                  balanceHistory.length / historyPerPage,
+                                )
+                              }
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Account Access Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Balance Management</CardTitle>
-              <CardDescription>Manage customer prepaid balance</CardDescription>
+              <CardTitle>Account Access</CardTitle>
+              <CardDescription>
+                Manage customer login credentials
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Current Balance Display */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white">
-                  <p className="text-sm opacity-90">Current Balance</p>
-                  <p className="text-2xl font-bold">
-                    {customer.balanceCurrency}{" "}
-                    {customer.currentBalance?.toFixed(2)}
-                  </p>
-                </div>
-                <div className="p-4 bg-gradient-to-br from-green-500 to-green-600 rounded-lg text-white">
-                  <p className="text-sm opacity-90">Total Assigned</p>
-                  <p className="text-2xl font-bold">
-                    {customer.balanceCurrency}{" "}
-                    {customer.totalAssigned?.toFixed(2) || "0.00"}
-                  </p>
-                </div>
-                <div className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg text-white">
-                  <p className="text-sm opacity-90">Total Used</p>
-                  <p className="text-2xl font-bold">
-                    {customer.balanceCurrency}{" "}
-                    {customer.totalUsed?.toFixed(2) || "0.00"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Balance Actions */}
-              <div className="flex gap-3 mb-6">
-                <Button
-                  onClick={() => openBalanceModal("assign")}
-                  className="flex-1"
-                >
-                  Assign Balance
-                </Button>
-                <Button
-                  onClick={() => openBalanceModal("adjust")}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Adjust Balance
-                </Button>
-                <Button
-                  onClick={() => openBalanceModal("reset")}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Reset Balance
-                </Button>
-              </div>
-
-              {/* Balance History */}
-              <div className="pt-4 border-t">
-                <h3 className="font-semibold mb-4">Balance History</h3>
-                {loadingHistory ? (
-                  <div className="text-center py-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Key className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Password</p>
+                      <p className="text-sm text-muted-foreground">
+                        Set or update customer login password
+                      </p>
+                    </div>
                   </div>
-                ) : balanceHistory.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
-                    No balance history
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {balanceHistory.slice(0, 10).map((entry) => (
-                      <div
-                        key={entry._id}
-                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium capitalize">
-                            {entry.type.replace("_", " ")}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {entry.description}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatDate(entry.createdAt)}
-                            {entry.adminId && ` by ${entry.adminId.name}`}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p
-                            className={`font-bold ${entry.amount >= 0 ? "text-green-600" : "text-red-600"}`}
-                          >
-                            {entry.amount >= 0 ? "+" : ""}
-                            {customer.balanceCurrency}{" "}
-                            {Math.abs(entry.amount).toFixed(2)}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {customer.balanceCurrency}{" "}
-                            {entry.previousBalance.toFixed(2)} →{" "}
-                            {customer.balanceCurrency}{" "}
-                            {entry.newBalance.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPasswordModal(true)}
+                  >
+                    <Key className="h-4 w-4 mr-2" />
+                    Set Password
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
 
         {/* Balance Action Modal */}
         <Dialog open={showBalanceModal} onOpenChange={setShowBalanceModal}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {balanceAction === "assign" && "Assign Balance"}
-                {balanceAction === "adjust" && "Adjust Balance"}
-                {balanceAction === "reset" && "Reset Balance"}
+                {balanceAction === "add" && "Add Balance"}
+                {balanceAction === "withdraw" && "Withdraw Balance"}
+                {balanceAction === "reset" && "Set Balance"}
               </DialogTitle>
               <DialogDescription>
-                {balanceAction === "assign" &&
-                  "Add balance to this customer's account"}
-                {balanceAction === "adjust" &&
-                  "Adjust the customer's balance by a specific amount (positive or negative)"}
+                {balanceAction === "add" &&
+                  "Add funds to the customer's account. This increases their available balance."}
+                {balanceAction === "withdraw" &&
+                  "Deduct funds from the customer's account. This decreases their available balance."}
                 {balanceAction === "reset" &&
-                  "Set the customer's balance to a specific value"}
+                  "Set the customer's balance to a specific amount, regardless of current balance."}
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
@@ -734,7 +941,69 @@ export default function CustomerDetailPage() {
               >
                 {saving
                   ? "Processing..."
-                  : `${balanceAction === "assign" ? "Assign" : balanceAction === "adjust" ? "Adjust" : "Reset"} Balance`}
+                  : balanceAction === "add"
+                    ? "Add Balance"
+                    : balanceAction === "withdraw"
+                      ? "Withdraw Balance"
+                      : "Reset Balance"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Password Modal */}
+        <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Set Customer Password</DialogTitle>
+              <DialogDescription>
+                Set a new password for the customer to login to their account
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              {passwordError && (
+                <p className="text-sm text-red-600">{passwordError}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setNewPassword("");
+                  setConfirmPassword("");
+                  setPasswordError("");
+                }}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSetPassword} disabled={saving}>
+                {saving ? "Saving..." : "Set Password"}
               </Button>
             </DialogFooter>
           </DialogContent>

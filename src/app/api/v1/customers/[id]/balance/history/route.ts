@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import { CustomerBalanceHistory } from "@/packages/db";
-import { ApiResponse } from "@/lib/api-response";
-import { ApiError } from "@/lib/api-error";
+import { CustomerBalanceHistory } from "@pg-prepaid/db";
+import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
+import { ApiErrors } from "@/lib/api-error";
 
 export async function GET(
   request: NextRequest,
@@ -21,13 +21,16 @@ export async function GET(
 
     // Get balance history for this customer
     const history = await CustomerBalanceHistory.find({ customerId: id })
-      .populate("adminId", "name")
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
 
-    return ApiResponse.success(history);
+    return createSuccessResponse({ history });
   } catch (error: any) {
-    return ApiError.handle(error);
+    return createErrorResponse(
+      ApiErrors.InternalServerError(
+        error.message || "Failed to fetch balance history",
+      ),
+    );
   }
 }

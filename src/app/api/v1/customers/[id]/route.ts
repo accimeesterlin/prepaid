@@ -76,8 +76,16 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { phoneNumber, email, name, country, firstName, lastName, phone } =
-      body;
+    const {
+      phoneNumber,
+      email,
+      name,
+      country,
+      firstName,
+      lastName,
+      phone,
+      password,
+    } = body;
 
     await dbConnection.connect();
 
@@ -104,6 +112,7 @@ export async function PUT(
       if (firstName !== undefined) customer.firstName = firstName;
       if (lastName !== undefined) customer.lastName = lastName;
       if (phone !== undefined) customer.phone = phone;
+      if (password) customer.passwordHash = password; // Will be hashed by pre-save hook
     }
 
     await customer.save();
