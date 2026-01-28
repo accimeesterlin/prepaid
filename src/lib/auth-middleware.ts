@@ -146,10 +146,7 @@ export async function requireApiKey(request: NextRequest): Promise<{
   }
 
   // Record the request
-  await rateLimitService.recordBothRequests(
-    String(apiKey._id),
-    apiKey.orgId,
-  );
+  await rateLimitService.recordBothRequests(String(apiKey._id), apiKey.orgId);
 
   // Update usage stats (async, don't wait)
   apiKey.incrementUsage().catch(console.error);

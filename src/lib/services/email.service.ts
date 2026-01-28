@@ -1,12 +1,12 @@
-import { dbConnection } from '@pg-prepaid/db/connection';
-import { Integration } from '@pg-prepaid/db';
-import sgMail from '@sendgrid/mail';
-import Mailgun from 'mailgun.js';
-import formData from 'form-data';
-import mailchimp from '@mailchimp/mailchimp_transactional';
+import { dbConnection } from "@pg-prepaid/db/connection";
+import { Integration } from "@pg-prepaid/db";
+import sgMail from "@sendgrid/mail";
+import Mailgun from "mailgun.js";
+import formData from "form-data";
+import mailchimp from "@mailchimp/mailchimp_transactional";
 // @ts-expect-error - zeptomail package has types but doesn't export them properly
-import { SendMailClient } from 'zeptomail';
-import { logger } from '@/lib/logger';
+import { SendMailClient } from "zeptomail";
+import { logger } from "@/lib/logger";
 
 export interface EmailOptions {
   to: string;
@@ -26,26 +26,31 @@ export class EmailService {
     const primaryProvider = await Integration.findOne({
       orgId,
       isPrimaryEmail: true,
-      status: 'active',
-    }).select('+credentials.apiKey +credentials.domain +credentials.fromEmail +credentials.fromName');
+      status: "active",
+    }).select(
+      "+credentials.apiKey +credentials.domain +credentials.fromEmail +credentials.fromName",
+    );
 
     if (!primaryProvider) {
       // Fallback to ZeptoMail using environment variables
       const zeptoApiKey = process.env.ZEPTOMAIL_API_KEY;
       const zeptoFromEmail = process.env.ZEPTOMAIL_FROM_EMAIL;
-      const zeptoFromName = process.env.ZEPTOMAIL_FROM_NAME || 'Prepaid Minutes Platform';
+      const zeptoFromName =
+        process.env.ZEPTOMAIL_FROM_NAME || "Prepaid Minutes Platform";
 
       if (!zeptoApiKey || !zeptoFromEmail) {
         throw new Error(
-          'No primary email provider configured and ZeptoMail environment variables (ZEPTOMAIL_API_KEY, ZEPTOMAIL_FROM_EMAIL) are not set'
+          "No primary email provider configured and ZeptoMail environment variables (ZEPTOMAIL_API_KEY, ZEPTOMAIL_FROM_EMAIL) are not set",
         );
       }
 
-      logger.info('Using ZeptoMail fallback from environment variables', { orgId });
+      logger.info("Using ZeptoMail fallback from environment variables", {
+        orgId,
+      });
 
       // Return a mock integration object for ZeptoMail
       return {
-        provider: 'zeptomail',
+        provider: "zeptomail",
         credentials: {
           apiKey: zeptoApiKey,
           fromEmail: zeptoFromEmail,
@@ -62,17 +67,20 @@ export class EmailService {
    */
   private static async sendWithZeptoMail(
     credentials: any,
-    options: EmailOptions
+    options: EmailOptions,
   ): Promise<void> {
     try {
       // Initialize ZeptoMail client with API token
-      const client = new SendMailClient({ url: 'api.zeptomail.com/', token: credentials.apiKey.trim() });
+      const client = new SendMailClient({
+        url: "api.zeptomail.com/",
+        token: credentials.apiKey.trim(),
+      });
 
       // Send email using the official SDK
       const response = await client.sendMail({
         from: {
           address: credentials.fromEmail,
-          name: credentials.fromName || 'No Reply',
+          name: credentials.fromName || "No Reply",
         },
         to: [
           {
@@ -83,16 +91,16 @@ export class EmailService {
         ],
         subject: options.subject,
         htmlbody: options.html,
-        textbody: options.text || '',
+        textbody: options.text || "",
       });
 
-      logger.info('Email sent via ZeptoMail', {
+      logger.info("Email sent via ZeptoMail", {
         to: options.to,
         subject: options.subject,
         response,
       });
     } catch (error: any) {
-      logger.error('ZeptoMail API Error Details', {
+      logger.error("ZeptoMail API Error Details", {
         error: error.message,
         to: options.to,
         from: credentials.fromEmail,
@@ -107,23 +115,26 @@ export class EmailService {
    */
   private static async sendWithMailgun(
     credentials: any,
-    options: EmailOptions
+    options: EmailOptions,
   ): Promise<void> {
     const mailgun = new Mailgun(formData);
     const mg = mailgun.client({
-      username: 'api',
+      username: "api",
       key: credentials.apiKey,
     });
 
     await mg.messages.create(credentials.domain, {
-      from: `${credentials.fromName || 'No Reply'} <${credentials.fromEmail}>`,
+      from: `${credentials.fromName || "No Reply"} <${credentials.fromEmail}>`,
       to: options.to,
       subject: options.subject,
-      text: options.text || '',
+      text: options.text || "",
       html: options.html,
     });
 
-    logger.info('Email sent via Mailgun', { to: options.to, subject: options.subject });
+    logger.info("Email sent via Mailgun", {
+      to: options.to,
+      subject: options.subject,
+    });
   }
 
   /**
@@ -131,7 +142,7 @@ export class EmailService {
    */
   private static async sendWithSendGrid(
     credentials: any,
-    options: EmailOptions
+    options: EmailOptions,
   ): Promise<void> {
     sgMail.setApiKey(credentials.apiKey);
 
@@ -139,14 +150,17 @@ export class EmailService {
       to: options.to,
       from: {
         email: credentials.fromEmail,
-        name: credentials.fromName || 'No Reply',
+        name: credentials.fromName || "No Reply",
       },
       subject: options.subject,
-      text: options.text || '',
+      text: options.text || "",
       html: options.html,
     });
 
-    logger.info('Email sent via SendGrid', { to: options.to, subject: options.subject });
+    logger.info("Email sent via SendGrid", {
+      to: options.to,
+      subject: options.subject,
+    });
   }
 
   /**
@@ -154,22 +168,25 @@ export class EmailService {
    */
   private static async sendWithMailchimp(
     credentials: any,
-    options: EmailOptions
+    options: EmailOptions,
   ): Promise<void> {
     const mailchimpClient = mailchimp(credentials.apiKey);
 
     await mailchimpClient.messages.send({
       message: {
         from_email: credentials.fromEmail,
-        from_name: credentials.fromName || 'No Reply',
+        from_name: credentials.fromName || "No Reply",
         to: [{ email: options.to }],
         subject: options.subject,
-        text: options.text || '',
+        text: options.text || "",
         html: options.html,
       },
     });
 
-    logger.info('Email sent via Mailchimp', { to: options.to, subject: options.subject });
+    logger.info("Email sent via Mailchimp", {
+      to: options.to,
+      subject: options.subject,
+    });
   }
 
   /**
@@ -179,7 +196,7 @@ export class EmailService {
     try {
       const provider = await this.getPrimaryEmailProvider(orgId);
 
-      logger.info('Sending email', {
+      logger.info("Sending email", {
         orgId,
         provider: provider.provider,
         to: options.to,
@@ -187,19 +204,19 @@ export class EmailService {
       });
 
       switch (provider.provider) {
-        case 'zeptomail':
+        case "zeptomail":
           await this.sendWithZeptoMail(provider.credentials, options);
           break;
 
-        case 'mailgun':
+        case "mailgun":
           await this.sendWithMailgun(provider.credentials, options);
           break;
 
-        case 'sendgrid':
+        case "sendgrid":
           await this.sendWithSendGrid(provider.credentials, options);
           break;
 
-        case 'mailchimp':
+        case "mailchimp":
           await this.sendWithMailchimp(provider.credentials, options);
           break;
 
@@ -207,7 +224,11 @@ export class EmailService {
           throw new Error(`Unsupported email provider: ${provider.provider}`);
       }
     } catch (error: any) {
-      logger.error('Failed to send email', { error: error.message, orgId, options });
+      logger.error("Failed to send email", {
+        error: error.message,
+        orgId,
+        options,
+      });
       throw error;
     }
   }
@@ -220,7 +241,7 @@ export class EmailService {
     recipientEmail: string,
     inviterName: string,
     orgName: string,
-    tempPassword?: string
+    tempPassword?: string,
   ): Promise<void> {
     const subject = `You've been invited to join ${orgName}`;
 
@@ -246,7 +267,9 @@ export class EmailService {
       <strong>${inviterName}</strong> has invited you to join <strong>${orgName}</strong> on our prepaid minutes platform.
     </p>
 
-    ${tempPassword ? `
+    ${
+      tempPassword
+        ? `
     <div style="background: #f9fafb; border-left: 4px solid #667eea; padding: 16px; margin: 24px 0; border-radius: 4px;">
       <p style="margin: 0 0 12px 0; font-weight: 600; color: #374151;">Your Temporary Password:</p>
       <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 18px; color: #667eea; letter-spacing: 1px;">
@@ -256,10 +279,12 @@ export class EmailService {
         Please change this password after your first login for security.
       </p>
     </div>
-    ` : ''}
+    `
+        : ""
+    }
 
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/login"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"}/login"
          style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">
         Log In Now
       </a>
@@ -288,9 +313,9 @@ You've been invited to join ${orgName}
 
 ${inviterName} has invited you to join ${orgName} on our prepaid minutes platform.
 
-${tempPassword ? `Your temporary password: ${tempPassword}\n\nPlease change this password after your first login for security.\n` : ''}
+${tempPassword ? `Your temporary password: ${tempPassword}\n\nPlease change this password after your first login for security.\n` : ""}
 
-Log in at: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/login
+Log in at: ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"}/login
 
 If you have any questions, please reach out to your team administrator.
 
@@ -313,10 +338,10 @@ The ${orgName} Team
     orgId: string,
     recipientEmail: string,
     resetToken: string,
-    orgName: string
+    orgName: string,
   ): Promise<void> {
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/reset-password?token=${resetToken}`;
-    const subject = 'Reset Your Password';
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"}/reset-password?token=${resetToken}`;
+    const subject = "Reset Your Password";
 
     const html = `
 <!DOCTYPE html>
@@ -394,6 +419,9 @@ The ${orgName} Team
 }
 
 // Export wrapper function for compatibility
-export async function sendEmail(orgId: string, options: EmailOptions): Promise<void> {
+export async function sendEmail(
+  orgId: string,
+  options: EmailOptions,
+): Promise<void> {
   return EmailService.sendEmail(orgId, options);
 }
