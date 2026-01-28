@@ -134,15 +134,71 @@
     "success": "Success"
   },
   "customer": {
+    "login": {
+      "title": "Customer Login",
+      "subtitle": "Sign in to access your account",
+      "email": "Email Address",
+      "emailPlaceholder": "your@email.com",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "loginBtn": "Sign In",
+      "loginButton": "Sign In",
+      "loggingIn": "Signing in...",
+      "forgotPassword": "Forgot Password?",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create Account",
+      "registerLink": "Sign up",
+      "error": "Login failed. Please try again.",
+      "invalidCredentials": "Invalid email or password",
+      "loading": "Signing in..."
+    },
     "portal": {
       "title": "Customer Portal",
       "welcome": "Welcome back, {name}",
-      "dashboard": "Dashboard",
-      "sendMinutes": "Send Minutes",
-      "transactions": "Transactions",
-      "settings": "Settings",
-      "apiKeys": "API Keys",
-      "logout": "Logout"
+      "menu": {
+        "dashboard": "Dashboard",
+        "sendMinutes": "Send Minutes",
+        "transactions": "Transactions",
+        "settings": "Settings",
+        "apiKeys": "API Keys",
+        "logout": "Logout"
+      },
+      "dashboard": {
+        "welcome": "Welcome",
+        "loadError": "Failed to load dashboard data",
+        "verifyPrompt": "Please verify your email to use your balance",
+        "verifyLink": "Verify Email",
+        "currentBalance": "Current Balance",
+        "availableToSpend": "Available to spend on mobile top-ups",
+        "sendMinutes": "Send Minutes",
+        "sendMinutesDesc": "Send airtime to any mobile number worldwide",
+        "viewHistory": "View Balance History",
+        "viewHistoryDesc": "See all your balance transactions",
+        "recentTransactions": "Recent Transactions",
+        "noTransactions": "No transactions yet",
+        "table": {
+          "date": "Date",
+          "recipient": "Recipient",
+          "product": "Product",
+          "amount": "Amount",
+          "status": "Status"
+        }
+      },
+      "sendMinutes": {
+        "title": "Send Prepaid Minutes",
+        "availableBalance": "Available Balance",
+        "recipientPhone": "Recipient Phone Number",
+        "selectProduct": "Select Product",
+        "noProducts": "No products available",
+        "productCost": "Product Cost",
+        "currentBalance": "Current Balance",
+        "remainingBalance": "Remaining Balance",
+        "sendButton": "Send Minutes",
+        "sending": "Sending...",
+        "success": "Top-up sent successfully!",
+        "error": "Failed to send top-up",
+        "loadError": "Failed to load data"
+      }
     },
     "auth": {
       "login": "Login",

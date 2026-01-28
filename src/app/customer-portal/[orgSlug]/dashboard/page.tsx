@@ -4,6 +4,24 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Alert,
+  AlertDescription,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Badge,
+  Button,
+} from "@pg-prepaid/ui";
+import { Loader2, Wallet, Send, History, AlertCircle } from "lucide-react";
 
 interface CustomerData {
   _id: string;
@@ -65,11 +83,11 @@ export default function CustomerDashboardPage({
       }
 
       const customerData = await customerRes.json();
-      setCustomer(customerData.data);
+      setCustomer(customerData.customer);
 
       // Get recent transactions
       const txRes = await fetch(
-        `/api/v1/customers/${customerData.data._id}/transactions?limit=5`,
+        `/api/v1/customers/${customerData.customer._id}/transactions?limit=5`,
         {
           credentials: "include",
         },
@@ -89,7 +107,7 @@ export default function CustomerDashboardPage({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -97,9 +115,12 @@ export default function CustomerDashboardPage({
   if (error || !customer) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error || t("portal.dashboard.loadError")}
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error || t("customer.portal.dashboard.loadError")}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -108,136 +129,152 @@ export default function CustomerDashboardPage({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Welcome Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          {t("portal.dashboard.welcome")}, {customer.firstName}!
+        <h1 className="text-3xl font-bold tracking-tight">
+          {t("customer.portal.dashboard.welcome")}, {customer.firstName}!
         </h1>
         {!customer.emailVerified && (
-          <div className="mt-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded flex items-center justify-between">
-            <span>{t("portal.dashboard.verifyPrompt")}</span>
-            <Link
-              href={`/customer-portal/${orgSlug}/verify-email`}
-              className="text-yellow-900 underline font-medium"
-            >
-              {t("portal.dashboard.verifyLink")}
-            </Link>
-          </div>
+          <Alert className="mt-4" variant="default">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {t("customer.portal.dashboard.verifyPrompt")}{" "}
+              <Link
+                href={`/customer-portal/${orgSlug}/verify-email`}
+                className="font-medium underline underline-offset-4 hover:text-primary"
+              >
+                {t("customer.portal.dashboard.verifyLink")}
+              </Link>
+            </AlertDescription>
+          </Alert>
         )}
       </div>
 
-      {/* Balance Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold">
-              {t("portal.dashboard.currentBalance")}
-            </h2>
-            <span className="text-2xl">💰</span>
-          </div>
-          <p className="text-3xl font-bold">
-            {customer.balanceCurrency} {customer.currentBalance.toFixed(2)}
-          </p>
-          <p className="text-purple-100 text-sm mt-2">
-            {t("portal.dashboard.availableToSpend")}
-          </p>
-        </div>
+      {/* Balance and Action Cards */}
+      <div className="grid gap-6 md:grid-cols-3 mb-8">
+        {/* Balance Card */}
+        <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold">
+                {t("customer.portal.dashboard.currentBalance")}
+              </CardTitle>
+              <Wallet className="h-5 w-5" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {customer.balanceCurrency} {customer.currentBalance.toFixed(2)}
+            </div>
+            <p className="text-sm opacity-90 mt-2">
+              {t("customer.portal.dashboard.availableToSpend")}
+            </p>
+          </CardContent>
+        </Card>
 
-        <Link
-          href={`/customer-portal/${orgSlug}/send-minutes`}
-          className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow border-2 border-transparent hover:border-purple-300"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {t("portal.dashboard.sendMinutes")}
-            </h2>
-            <span className="text-2xl">📱</span>
-          </div>
-          <p className="text-gray-600">
-            {t("portal.dashboard.sendMinutesDesc")}
-          </p>
+        {/* Send Minutes Card */}
+        <Link href={`/customer-portal/${orgSlug}/send-minutes`}>
+          <Card className="h-full hover:shadow-lg transition-all hover:border-primary cursor-pointer">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">
+                  {t("customer.portal.dashboard.sendMinutes")}
+                </CardTitle>
+                <Send className="h-5 w-5 text-primary" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                {t("customer.portal.dashboard.sendMinutesDesc")}
+              </CardDescription>
+            </CardContent>
+          </Card>
         </Link>
 
-        <Link
-          href={`/customer-portal/${orgSlug}/transactions`}
-          className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow border-2 border-transparent hover:border-purple-300"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {t("portal.dashboard.viewHistory")}
-            </h2>
-            <span className="text-2xl">📊</span>
-          </div>
-          <p className="text-gray-600">
-            {t("portal.dashboard.viewHistoryDesc")}
-          </p>
+        {/* View History Card */}
+        <Link href={`/customer-portal/${orgSlug}/transactions`}>
+          <Card className="h-full hover:shadow-lg transition-all hover:border-primary cursor-pointer">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">
+                  {t("customer.portal.dashboard.viewHistory")}
+                </CardTitle>
+                <History className="h-5 w-5 text-primary" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                {t("customer.portal.dashboard.viewHistoryDesc")}
+              </CardDescription>
+            </CardContent>
+          </Card>
         </Link>
       </div>
 
       {/* Recent Transactions */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          {t("portal.dashboard.recentTransactions")}
-        </h2>
-        {transactions.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
-            {t("portal.dashboard.noTransactions")}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t("portal.dashboard.table.date")}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t("portal.dashboard.table.recipient")}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t("portal.dashboard.table.product")}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t("portal.dashboard.table.amount")}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t("portal.dashboard.table.status")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {t("customer.portal.dashboard.recentTransactions")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {transactions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {t("customer.portal.dashboard.noTransactions")}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    {t("customer.portal.dashboard.table.date")}
+                  </TableHead>
+                  <TableHead>
+                    {t("customer.portal.dashboard.table.recipient")}
+                  </TableHead>
+                  <TableHead>
+                    {t("customer.portal.dashboard.table.product")}
+                  </TableHead>
+                  <TableHead>
+                    {t("customer.portal.dashboard.table.amount")}
+                  </TableHead>
+                  <TableHead>
+                    {t("customer.portal.dashboard.table.status")}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {transactions.map((tx) => (
-                  <tr key={tx._id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <TableRow key={tx._id}>
+                    <TableCell>
                       {new Date(tx.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {tx.recipientPhone}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    </TableCell>
+                    <TableCell>{tx.recipientPhone}</TableCell>
+                    <TableCell className="text-muted-foreground">
                       {tx.product?.name || "-"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    </TableCell>
+                    <TableCell>
                       {customer.balanceCurrency} {tx.amount.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
                           tx.status === "completed"
-                            ? "bg-green-100 text-green-800"
+                            ? "success"
                             : tx.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                        }`}
+                              ? "warning"
+                              : "destructive"
+                        }
                       >
                         {tx.status}
-                      </span>
-                    </td>
-                  </tr>
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -132,5 +132,73 @@
     "loading": "Cargando...",
     "error": "Error",
     "success": "Éxito"
+  },
+  "customer": {
+    "login": {
+      "title": "Inicio de Sesión de Cliente",
+      "subtitle": "Inicie sesión para acceder a su cuenta",
+      "email": "Correo Electrónico",
+      "emailPlaceholder": "su@correo.com",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Ingrese su contraseña",
+      "loginBtn": "Iniciar Sesión",
+      "loginButton": "Iniciar Sesión",
+      "loggingIn": "Iniciando sesión...",
+      "forgotPassword": "¿Olvidó su contraseña?",
+      "noAccount": "¿No tiene una cuenta?",
+      "createAccount": "Crear Cuenta",
+      "registerLink": "Registrarse",
+      "error": "Error al iniciar sesión. Inténtelo de nuevo.",
+      "invalidCredentials": "Correo electrónico o contraseña inválidos",
+      "loading": "Iniciando sesión..."
+    },
+    "portal": {
+      "title": "Portal del Cliente",
+      "welcome": "Bienvenido de nuevo, {name}",
+      "menu": {
+        "dashboard": "Panel",
+        "sendMinutes": "Enviar Minutos",
+        "transactions": "Transacciones",
+        "settings": "Configuración",
+        "apiKeys": "Claves API",
+        "logout": "Cerrar Sesión"
+      },
+      "dashboard": {
+        "welcome": "Bienvenido",
+        "loadError": "Error al cargar datos del panel",
+        "verifyPrompt": "Por favor verifique su correo para usar su saldo",
+        "verifyLink": "Verificar Correo",
+        "currentBalance": "Saldo Actual",
+        "availableToSpend": "Disponible para gastar en recargas móviles",
+        "sendMinutes": "Enviar Minutos",
+        "sendMinutesDesc": "Envíe tiempo aire a cualquier número móvil en todo el mundo",
+        "viewHistory": "Ver Historial de Saldo",
+        "viewHistoryDesc": "Vea todas sus transacciones de saldo",
+        "recentTransactions": "Transacciones Recientes",
+        "noTransactions": "Aún no hay transacciones",
+        "table": {
+          "date": "Fecha",
+          "recipient": "Destinatario",
+          "product": "Producto",
+          "amount": "Monto",
+          "status": "Estado"
+        }
+      },
+      "sendMinutes": {
+        "title": "Enviar Minutos Prepagados",
+        "availableBalance": "Saldo Disponible",
+        "recipientPhone": "Número de Teléfono del Destinatario",
+        "selectProduct": "Seleccionar Producto",
+        "noProducts": "No hay productos disponibles",
+        "productCost": "Costo del Producto",
+        "currentBalance": "Saldo Actual",
+        "remainingBalance": "Saldo Restante",
+        "sendButton": "Enviar Minutos",
+        "sending": "Enviando...",
+        "success": "¡Recarga enviada exitosamente!",
+        "error": "Error al enviar la recarga",
+        "loadError": "Error al cargar los datos"
+      }
+    }
   }
 }

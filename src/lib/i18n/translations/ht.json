@@ -132,5 +132,73 @@
     "loading": "Chaje...",
     "error": "Erè",
     "success": "Siksè"
+  },
+  "customer": {
+    "login": {
+      "title": "Koneksyon Kliyant",
+      "subtitle": "Konekte pou jwenn aksè nan kont ou",
+      "email": "Adrès Imel",
+      "emailPlaceholder": "imel.ou@egzanp.com",
+      "password": "Modpas",
+      "passwordPlaceholder": "Antre modpas ou",
+      "loginBtn": "Konekte",
+      "loginButton": "Konekte",
+      "loggingIn": "Ap konekte...",
+      "forgotPassword": "Bliye modpas?",
+      "noAccount": "Ou pa gen yon kont?",
+      "createAccount": "Kreye yon Kont",
+      "registerLink": "Enskri",
+      "error": "Koneksyon echwe. Tanpri eseye ankò.",
+      "invalidCredentials": "Imel oswa modpas pa valab",
+      "loading": "Ap konekte..."
+    },
+    "portal": {
+      "title": "Pòtal Kliyant",
+      "welcome": "Byenveni, {name}",
+      "menu": {
+        "dashboard": "Tablo Bò",
+        "sendMinutes": "Voye Minit",
+        "transactions": "Tranzaksyon",
+        "settings": "Paramèt",
+        "apiKeys": "Kle API",
+        "logout": "Dekonekte"
+      },
+      "dashboard": {
+        "welcome": "Byenveni",
+        "loadError": "Echwe pou chaje done tablo bò",
+        "verifyPrompt": "Tanpri verifye imel ou pou itilize balans ou",
+        "verifyLink": "Verifye Imel",
+        "currentBalance": "Balans Aktyèl",
+        "availableToSpend": "Disponib pou depanse sou recharge selilè",
+        "sendMinutes": "Voye Minit",
+        "sendMinutesDesc": "Voye kredi bay nenpòt nimewo selilè nan tout mond",
+        "viewHistory": "Gade Istorik Balans",
+        "viewHistoryDesc": "Gade tout tranzaksyon balans ou yo",
+        "recentTransactions": "Tranzaksyon Resan",
+        "noTransactions": "Poko gen tranzaksyon",
+        "table": {
+          "date": "Dat",
+          "recipient": "Moun ki resevwa",
+          "product": "Pwodui",
+          "amount": "Montan",
+          "status": "Estati"
+        }
+      },
+      "sendMinutes": {
+        "title": "Voye Minit Prepaye",
+        "availableBalance": "Balans Disponib",
+        "recipientPhone": "Nimewo Telefòn Moun Ki Resevwa",
+        "selectProduct": "Chwazi yon Pwodui",
+        "noProducts": "Pa gen pwodui disponib",
+        "productCost": "Pri Pwodui",
+        "currentBalance": "Balans Aktyèl",
+        "remainingBalance": "Balans Ki Rete",
+        "sendButton": "Voye Minit",
+        "sending": "Ap voye...",
+        "success": "Recharge voye avèk siksè!",
+        "error": "Erè nan voyè recharge",
+        "loadError": "Erè nan chaje done yo"
+      }
+    }
   }
 }

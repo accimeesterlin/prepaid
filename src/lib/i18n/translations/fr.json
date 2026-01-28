@@ -132,5 +132,73 @@
     "loading": "Chargement...",
     "error": "Erreur",
     "success": "Succès"
+  },
+  "customer": {
+    "login": {
+      "title": "Connexion Client",
+      "subtitle": "Connectez-vous pour accéder à votre compte",
+      "email": "Adresse Email",
+      "emailPlaceholder": "votre@email.com",
+      "password": "Mot de Passe",
+      "passwordPlaceholder": "Entrez votre mot de passe",
+      "loginBtn": "Se Connecter",
+      "loginButton": "Se Connecter",
+      "loggingIn": "Connexion en cours...",
+      "forgotPassword": "Mot de passe oublié?",
+      "noAccount": "Vous n'avez pas de compte?",
+      "createAccount": "Créer un Compte",
+      "registerLink": "S'inscrire",
+      "error": "Échec de la connexion. Veuillez réessayer.",
+      "invalidCredentials": "Email ou mot de passe invalide",
+      "loading": "Connexion en cours..."
+    },
+    "portal": {
+      "title": "Portail Client",
+      "welcome": "Bienvenue, {name}",
+      "menu": {
+        "dashboard": "Tableau de Bord",
+        "sendMinutes": "Envoyer des Minutes",
+        "transactions": "Transactions",
+        "settings": "Paramètres",
+        "apiKeys": "Clés API",
+        "logout": "Déconnexion"
+      },
+      "dashboard": {
+        "welcome": "Bienvenue",
+        "loadError": "Échec du chargement des données du tableau de bord",
+        "verifyPrompt": "Veuillez vérifier votre email pour utiliser votre solde",
+        "verifyLink": "Vérifier l'Email",
+        "currentBalance": "Solde Actuel",
+        "availableToSpend": "Disponible pour les recharges mobiles",
+        "sendMinutes": "Envoyer des Minutes",
+        "sendMinutesDesc": "Envoyez du crédit à n'importe quel numéro mobile dans le monde",
+        "viewHistory": "Voir l'Historique du Solde",
+        "viewHistoryDesc": "Consultez toutes vos transactions de solde",
+        "recentTransactions": "Transactions Récentes",
+        "noTransactions": "Aucune transaction pour le moment",
+        "table": {
+          "date": "Date",
+          "recipient": "Destinataire",
+          "product": "Produit",
+          "amount": "Montant",
+          "status": "Statut"
+        }
+      },
+      "sendMinutes": {
+        "title": "Envoyer des Minutes Prépayées",
+        "availableBalance": "Solde Disponible",
+        "recipientPhone": "Numéro de Téléphone du Destinataire",
+        "selectProduct": "Sélectionner un Produit",
+        "noProducts": "Aucun produit disponible",
+        "productCost": "Coût du Produit",
+        "currentBalance": "Solde Actuel",
+        "remainingBalance": "Solde Restant",
+        "sendButton": "Envoyer des Minutes",
+        "sending": "Envoi en cours...",
+        "success": "Recharge envoyée avec succès!",
+        "error": "Échec de l'envoi de la recharge",
+        "loadError": "Échec du chargement des données"
+      }
+    }
   }
 }

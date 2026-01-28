@@ -11,6 +11,7 @@ export {
   CardContent,
 } from "./components/card";
 export { Alert, AlertTitle, AlertDescription } from "./components/alert";
+export { Badge, badgeVariants, type BadgeProps } from "./components/badge";
 export {
   Dialog,
   DialogTrigger,
@@ -38,6 +39,16 @@ export {
   DropdownMenuSubTrigger,
   DropdownMenuRadioGroup,
 } from "./components/dropdown-menu";
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from "./components/table";
 
 // Export hooks
 export { useToast, toast } from "./hooks/use-toast";

@@ -70,7 +70,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
 
     if (typeof value !== "string") {
-      console.warn(`Translation missing for key: ${key}`);
+      console.warn(`Translation missing for key: ${key}`, { language, value });
       return key;
     }
 

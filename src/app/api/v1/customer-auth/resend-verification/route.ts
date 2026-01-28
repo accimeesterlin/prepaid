@@ -7,6 +7,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { Customer } from "@pg-prepaid/db";
 import { Org } from "@pg-prepaid/db";
+import { dbConnection } from "@pg-prepaid/db/connection";
 import { ApiErrors } from "@/lib/api-error";
 import { createSuccessResponse } from "@/lib/api-response";
 import { emailVerificationService } from "@/lib/services/email-verification.service";
@@ -18,6 +19,8 @@ const resendSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    await dbConnection.connect();
+
     const body = await request.json();
     const data = resendSchema.parse(body);
 

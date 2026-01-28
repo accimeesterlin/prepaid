@@ -5,11 +5,14 @@
 
 import { NextRequest } from "next/server";
 import { Customer } from "@pg-prepaid/db";
+import { dbConnection } from "@pg-prepaid/db/connection";
 import { ApiErrors } from "@/lib/api-error";
 import { createSuccessResponse } from "@/lib/api-response";
 import { requireCustomerAuth } from "@/lib/auth-middleware";
 
 export async function GET(request: NextRequest) {
+  await dbConnection.connect();
+
   const session = await requireCustomerAuth(request);
 
   // Get full customer details

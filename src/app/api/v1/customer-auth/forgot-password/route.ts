@@ -8,6 +8,7 @@ import { z } from "zod";
 import crypto from "crypto";
 import { Customer } from "@pg-prepaid/db";
 import { Org } from "@pg-prepaid/db";
+import { dbConnection } from "@pg-prepaid/db/connection";
 import { ApiErrors } from "@/lib/api-error";
 import { createSuccessResponse } from "@/lib/api-response";
 import { sendEmail } from "@/lib/services/email.service";
@@ -19,6 +20,8 @@ const forgotPasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    await dbConnection.connect();
+
     const body = await request.json();
     const data = forgotPasswordSchema.parse(body);
 

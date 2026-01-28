@@ -7,6 +7,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { Customer } from "@pg-prepaid/db";
 import { Org } from "@pg-prepaid/db";
+import { dbConnection } from "@pg-prepaid/db/connection";
 import { ApiErrors } from "@/lib/api-error";
 import {
   createSuccessResponse,
@@ -25,6 +26,8 @@ const registerSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    await dbConnection.connect();
+
     const body = await request.json();
     const data = registerSchema.parse(body);
 
