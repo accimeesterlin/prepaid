@@ -152,6 +152,34 @@
       "invalidCredentials": "Correo electrónico o contraseña inválidos",
       "loading": "Iniciando sesión..."
     },
+    "register": {
+      "title": "Crear Cuenta",
+      "subtitle": "Únase para comenzar a enviar recargas",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "email": "Correo Electrónico",
+      "phone": "Número de Teléfono",
+      "password": "Contraseña",
+      "confirmPassword": "Confirmar Contraseña",
+      "registerButton": "Crear Cuenta",
+      "registering": "Creando cuenta...",
+      "hasAccount": "¿Ya tiene una cuenta?",
+      "loginLink": "Iniciar sesión",
+      "success": "¡Cuenta creada exitosamente! Redirigiendo a verificación...",
+      "error": "Error al registrarse. Inténtelo de nuevo.",
+      "passwordMismatch": "Las contraseñas no coinciden"
+    },
+    "forgotPassword": {
+      "title": "Restablecer Contraseña",
+      "subtitle": "Ingrese su correo para recibir un enlace de restablecimiento",
+      "email": "Correo Electrónico",
+      "emailPlaceholder": "su@correo.com",
+      "sendButton": "Enviar Enlace",
+      "sending": "Enviando...",
+      "successMessage": "El enlace de restablecimiento ha sido enviado a su correo. Por favor revise su bandeja de entrada.",
+      "backToLogin": "Volver al Inicio",
+      "error": "Error al enviar el enlace. Inténtelo de nuevo."
+    },
     "portal": {
       "title": "Portal del Cliente",
       "welcome": "Bienvenido de nuevo, {name}",
@@ -199,6 +227,135 @@
         "error": "Error al enviar la recarga",
         "loadError": "Error al cargar los datos"
       }
+    }
+  },
+  "portal": {
+    "dashboard": {
+      "overview": "Resumen",
+      "recentTransactions": "Transacciones Recientes",
+      "noTransactions": "Aún no hay transacciones",
+      "viewAll": "Ver Todo",
+      "stats": {
+        "totalSent": "Total Enviado",
+        "successRate": "Tasa de Éxito",
+        "recipients": "Destinatarios"
+      }
+    },
+    "transactions": {
+      "title": "Historial de Transacciones",
+      "noTransactions": "Aún no hay transacciones",
+      "loadError": "Error al cargar las transacciones",
+      "table": {
+        "date": "Fecha",
+        "recipient": "Destinatario",
+        "product": "Producto",
+        "amount": "Monto",
+        "type": "Tipo",
+        "status": "Estado"
+      },
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página"
+    }
+  },
+  "customer": {
+    "verification": {
+      "title": "Verificar Su Correo",
+      "description": "Hemos enviado un correo de verificación a {email}",
+      "instructions": "Haga clic en el enlace del correo para verificar su cuenta",
+      "notReceived": "¿No recibió el correo?",
+      "resend": "Reenviar Correo de Verificación",
+      "resending": "Enviando...",
+      "resentSuccess": "Correo de verificación reenviado exitosamente",
+      "verifying": "Verificando su correo...",
+      "verified": "¡Correo verificado exitosamente!",
+      "invalid": "Enlace de verificación inválido o expirado",
+      "required": "Verificación de correo requerida",
+      "requiredDesc": "Debe verificar su correo antes de poder usar el saldo o enviar recargas",
+      "checkInbox": "Por favor revise su bandeja de entrada"
+    }
+  },
+  "api": {
+    "keys": {
+      "title": "Claves API",
+      "createNew": "Crear Clave API",
+      "create": "Crear Clave API",
+      "name": "Nombre de Clave",
+      "scopes": "Ámbitos",
+      "selectScopes": "Seleccionar Ámbitos",
+      "rateLimit": "Límite de Tasa",
+      "requests": "Solicitudes",
+      "perHour": "por hora",
+      "customLimit": "Límite Personalizado",
+      "defaultLimit": "Predeterminado: {limit} solicitudes/hora",
+      "created": "Creada",
+      "lastUsed": "Último Uso",
+      "neverUsed": "Nunca",
+      "status": "Estado",
+      "active": "Activa",
+      "inactive": "Inactiva",
+      "expired": "Expirada",
+      "revoke": "Revocar",
+      "revokeConfirm": "¿Está seguro de que desea revocar esta clave API? Esta acción no se puede deshacer.",
+      "regenerate": "Regenerar",
+      "copy": "Copiar",
+      "copied": "¡Copiado!",
+      "showKey": "Mostrar Clave",
+      "hideKey": "Ocultar Clave",
+      "keyPrefix": "Prefijo de Clave",
+      "createdSuccess": "Clave API creada exitosamente",
+      "revokedSuccess": "Clave API revocada exitosamente",
+      "warning": "Guarde esta clave de forma segura. No podrá verla nuevamente.",
+      "noKeys": "Aún no hay claves API",
+      "createFirst": "Cree su primera clave API para comenzar",
+      "usage": "Uso",
+      "totalRequests": "Total de Solicitudes",
+      "loadError": "Error al cargar las claves API",
+      "createError": "Error al crear la clave API",
+      "revokeError": "Error al revocar la clave API",
+      "table": {
+        "name": "Nombre",
+        "key": "Clave",
+        "scopes": "Ámbitos",
+        "lastUsed": "Último Uso",
+        "neverUsed": "Nunca usada",
+        "status": "Estado",
+        "active": "Activa",
+        "revoked": "Revocada",
+        "actions": "Acciones",
+        "revoke": "Revocar"
+      },
+      "modal": {
+        "createTitle": "Crear Nueva Clave API",
+        "keyCreated": "Clave API Creada",
+        "keyName": "Nombre de Clave",
+        "keyNamePlaceholder": "Mi Clave API",
+        "selectScopes": "Seleccionar Ámbitos",
+        "create": "Crear",
+        "cancel": "Cancelar",
+        "close": "Cerrar",
+        "copyKey": "Copiar Clave",
+        "copyWarning": "¡Asegúrese de copiar su clave API ahora. No podrá verla nuevamente!",
+        "copied": "¡Clave API copiada al portapapeles!"
+      }
+    }
+  },
+  "verification": {
+    "emailRequired": "Verificación de Correo Requerida",
+    "pleaseVerify": "Por favor verifique su correo para continuar",
+    "verifyNow": "Verificar Ahora",
+    "sendVerification": "Enviar Correo de Verificación",
+    "verifyEmail": {
+      "title": "Verificar Su Correo",
+      "message": "Hemos enviado un correo de verificación. Por favor revise su bandeja de entrada y haga clic en el enlace de verificación.",
+      "verifying": "Verificando su correo...",
+      "successTitle": "¡Correo Verificado!",
+      "successMessage": "Su correo ha sido verificado exitosamente. Redirigiendo al inicio de sesión...",
+      "error": "La verificación falló. El enlace puede ser inválido o estar expirado.",
+      "resendButton": "Reenviar Correo de Verificación",
+      "resending": "Enviando...",
+      "resendSuccess": "¡Correo de verificación enviado exitosamente! Por favor revise su bandeja de entrada.",
+      "resendError": "Error al reenviar el correo de verificación. Por favor intente de nuevo."
     }
   }
 }

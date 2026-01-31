@@ -152,6 +152,34 @@
       "invalidCredentials": "Imel oswa modpas pa valab",
       "loading": "Ap konekte..."
     },
+    "register": {
+      "title": "Kreye yon Kont",
+      "subtitle": "Vin jwenn nou pou kòmanse voye recharge",
+      "firstName": "Non",
+      "lastName": "Siyati",
+      "email": "Adrès Imel",
+      "phone": "Nimewo Telefòn",
+      "password": "Modpas",
+      "confirmPassword": "Konfime Modpas",
+      "registerButton": "Kreye Kont",
+      "registering": "Ap kreye kont...",
+      "hasAccount": "Ou deja gen yon kont?",
+      "loginLink": "Konekte",
+      "success": "Kont kreye avèk siksè! Ap redireksyone nan verifikasyon...",
+      "error": "Enskripsyon echwe. Tanpri eseye ankò.",
+      "passwordMismatch": "Modpas yo pa menm"
+    },
+    "forgotPassword": {
+      "title": "Reyajiste Modpas",
+      "subtitle": "Antre imel ou pou resevwa yon lyen pou reyajiste modpas",
+      "email": "Adrès Imel",
+      "emailPlaceholder": "imel.ou@egzanp.com",
+      "sendButton": "Voye Lyen",
+      "sending": "Ap voye...",
+      "successMessage": "Lyen pou reyajiste modpas voye nan imel ou. Tanpri tcheke bwat resepsyon ou.",
+      "backToLogin": "Retounen nan Koneksyon",
+      "error": "Echwe nan voyè lyen. Tanpri eseye ankò."
+    },
     "portal": {
       "title": "Pòtal Kliyant",
       "welcome": "Byenveni, {name}",
@@ -199,6 +227,133 @@
         "error": "Erè nan voyè recharge",
         "loadError": "Erè nan chaje done yo"
       }
+    },
+    "verification": {
+      "title": "Verifye Imel Ou",
+      "description": "Nou te voye yon imel verifikasyon bay {email}",
+      "instructions": "Klike sou lyen nan imel la pou verifye kont ou",
+      "notReceived": "Ou pa t resevwa imel la?",
+      "resend": "Revoye Imel Verifikasyon",
+      "resending": "Ap voye...",
+      "resentSuccess": "Imel verifikasyon revoye avèk siksè",
+      "verifying": "Ap verifye imel ou...",
+      "verified": "Imel verifye avèk siksè!",
+      "invalid": "Lyen verifikasyon pa valid oswa ekspire",
+      "required": "Verifikasyon imel obligatwa",
+      "requiredDesc": "Ou dwe verifye imel ou anvan ou ka itilize balans oswa voye recharge",
+      "checkInbox": "Tanpri tcheke bwat resepsyon ou"
+    }
+  },
+  "portal": {
+    "dashboard": {
+      "overview": "Apèsi",
+      "recentTransactions": "Tranzaksyon Resan",
+      "noTransactions": "Poko gen tranzaksyon",
+      "viewAll": "Gade Tout",
+      "stats": {
+        "totalSent": "Total Voye",
+        "successRate": "To Siksè",
+        "recipients": "Moun Ki Resevwa"
+      }
+    },
+    "transactions": {
+      "title": "Istorik Tranzaksyon",
+      "noTransactions": "Poko gen tranzaksyon",
+      "loadError": "Echwe nan chaje tranzaksyon yo",
+      "table": {
+        "date": "Dat",
+        "recipient": "Moun Ki Resevwa",
+        "product": "Pwodui",
+        "amount": "Montan",
+        "type": "Tip",
+        "status": "Estati"
+      },
+      "previous": "Anvan",
+      "next": "Apre",
+      "page": "Paj"
+    }
+  },
+  "api": {
+    "keys": {
+      "title": "Kle API",
+      "createNew": "Kreye Kle API",
+      "create": "Kreye Kle API",
+      "name": "Non Kle",
+      "scopes": "Domèn",
+      "selectScopes": "Chwazi Domèn",
+      "rateLimit": "Limit To",
+      "requests": "Demand",
+      "perHour": "pa lè",
+      "customLimit": "Limit Pèsonalize",
+      "defaultLimit": "Defo: {limit} demand/lè",
+      "created": "Kreye",
+      "lastUsed": "Dènye Itilizasyon",
+      "neverUsed": "Jamè",
+      "status": "Estati",
+      "active": "Aktif",
+      "inactive": "Inaktif",
+      "expired": "Ekspire",
+      "revoke": "Revoke",
+      "revokeConfirm": "Ou si ou vle revoke kle API sa a? Aksyon sa a pa ka defèt.",
+      "regenerate": "Rejeneere",
+      "copy": "Kopye",
+      "copied": "Kopye!",
+      "showKey": "Montre Kle",
+      "hideKey": "Kache Kle",
+      "keyPrefix": "Prefix Kle",
+      "createdSuccess": "Kle API kreye avèk siksè",
+      "revokedSuccess": "Kle API revoke avèk siksè",
+      "warning": "Kenbe kle sa a an sekirite. Ou pa pral ka wè l ankò.",
+      "noKeys": "Poko gen kle API",
+      "createFirst": "Kreye premye kle API ou pou kòmanse",
+      "usage": "Itilizasyon",
+      "totalRequests": "Total Demand",
+      "loadError": "Echwe pou chaje kle API yo",
+      "createError": "Echwe pou kreye kle API",
+      "revokeError": "Echwe pou revoke kle API",
+      "table": {
+        "name": "Non",
+        "key": "Kle",
+        "scopes": "Domèn",
+        "lastUsed": "Dènye Itilizasyon",
+        "neverUsed": "Jamè itilize",
+        "status": "Estati",
+        "active": "Aktif",
+        "revoked": "Revoke",
+        "actions": "Aksyon",
+        "revoke": "Revoke"
+      },
+      "modal": {
+        "createTitle": "Kreye Nouvo Kle API",
+        "keyCreated": "Kle API Kreye",
+        "keyName": "Non Kle",
+        "keyNamePlaceholder": "Kle API Mwen",
+        "selectScopes": "Chwazi Domèn",
+        "create": "Kreye",
+        "cancel": "Anile",
+        "close": "Fèmen",
+        "copyKey": "Kopye Kle",
+        "copyWarning": "Asire w kopye kle API ou kounye a. Ou pa pral ka wè l ankò!",
+        "copied": "Kle API kopye nan clipboard!"
+      }
+    }
+  },
+  "verification": {
+    "emailRequired": "Verifikasyon Imel Obligatwa",
+    "pleaseVerify": "Tanpri verifye imel ou pou kontinye",
+    "verifyNow": "Verifye Kounye a",
+    "sendVerification": "Voye Imel Verifikasyon",
+    "verifyEmail": {
+      "title": "Verifye Imel Ou",
+      "message": "Nou te voye yon imel verifikasyon. Tanpri tcheke bwat resepsyon ou epi klike sou lyen verifikasyon an.",
+      "verifying": "Ap verifye imel ou...",
+      "successTitle": "Imel Verifye!",
+      "successMessage": "Imel ou verifye avèk siksè. Ap redireksyone nan koneksyon...",
+      "error": "Verifikasyon echwe. Lyen an ka pa valid oswa ekspire.",
+      "resendButton": "Revoye Imel Verifikasyon",
+      "resending": "Ap voye...",
+      "resendSuccess": "Imel verifikasyon voye avèk siksè! Tanpri tcheke bwat resepsyon ou.",
+      "resendError": "Echwe nan revoye imel verifikasyon. Tanpri eseye ankò."
     }
   }
 }

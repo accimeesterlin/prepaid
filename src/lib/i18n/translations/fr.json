@@ -152,6 +152,34 @@
       "invalidCredentials": "Email ou mot de passe invalide",
       "loading": "Connexion en cours..."
     },
+    "register": {
+      "title": "Créer un Compte",
+      "subtitle": "Rejoignez-nous pour commencer à envoyer des recharges",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Adresse Email",
+      "phone": "Numéro de Téléphone",
+      "password": "Mot de Passe",
+      "confirmPassword": "Confirmer le Mot de Passe",
+      "registerButton": "Créer un Compte",
+      "registering": "Création du compte...",
+      "hasAccount": "Vous avez déjà un compte?",
+      "loginLink": "Se connecter",
+      "success": "Compte créé avec succès! Redirection vers la vérification...",
+      "error": "Échec de l'inscription. Veuillez réessayer.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas"
+    },
+    "forgotPassword": {
+      "title": "Réinitialiser le Mot de Passe",
+      "subtitle": "Entrez votre email pour recevoir un lien de réinitialisation",
+      "email": "Adresse Email",
+      "emailPlaceholder": "votre@email.com",
+      "sendButton": "Envoyer le Lien",
+      "sending": "Envoi...",
+      "successMessage": "Le lien de réinitialisation a été envoyé à votre email. Veuillez vérifier votre boîte de réception.",
+      "backToLogin": "Retour à la Connexion",
+      "error": "Échec de l'envoi du lien. Veuillez réessayer."
+    },
     "portal": {
       "title": "Portail Client",
       "welcome": "Bienvenue, {name}",
@@ -199,6 +227,133 @@
         "error": "Échec de l'envoi de la recharge",
         "loadError": "Échec du chargement des données"
       }
+    },
+    "verification": {
+      "title": "Vérifier Votre Email",
+      "description": "Nous avons envoyé un email de vérification à {email}",
+      "instructions": "Cliquez sur le lien dans l'email pour vérifier votre compte",
+      "notReceived": "Vous n'avez pas reçu l'email?",
+      "resend": "Renvoyer l'Email de Vérification",
+      "resending": "Envoi...",
+      "resentSuccess": "Email de vérification renvoyé avec succès",
+      "verifying": "Vérification de votre email...",
+      "verified": "Email vérifié avec succès!",
+      "invalid": "Lien de vérification invalide ou expiré",
+      "required": "Vérification d'email requise",
+      "requiredDesc": "Vous devez vérifier votre email avant de pouvoir utiliser le solde ou envoyer des recharges",
+      "checkInbox": "Veuillez vérifier votre boîte de réception"
+    }
+  },
+  "portal": {
+    "dashboard": {
+      "overview": "Aperçu",
+      "recentTransactions": "Transactions Récentes",
+      "noTransactions": "Aucune transaction pour le moment",
+      "viewAll": "Voir Tout",
+      "stats": {
+        "totalSent": "Total Envoyé",
+        "successRate": "Taux de Réussite",
+        "recipients": "Destinataires"
+      }
+    },
+    "transactions": {
+      "title": "Historique des Transactions",
+      "noTransactions": "Aucune transaction pour le moment",
+      "loadError": "Échec du chargement des transactions",
+      "table": {
+        "date": "Date",
+        "recipient": "Destinataire",
+        "product": "Produit",
+        "amount": "Montant",
+        "type": "Type",
+        "status": "Statut"
+      },
+      "previous": "Précédent",
+      "next": "Suivant",
+      "page": "Page"
+    }
+  },
+  "api": {
+    "keys": {
+      "title": "Clés API",
+      "createNew": "Créer une Clé API",
+      "create": "Créer une Clé API",
+      "name": "Nom de la Clé",
+      "scopes": "Portées",
+      "selectScopes": "Sélectionner les Portées",
+      "rateLimit": "Limite de Taux",
+      "requests": "Requêtes",
+      "perHour": "par heure",
+      "customLimit": "Limite Personnalisée",
+      "defaultLimit": "Par défaut: {limit} requêtes/heure",
+      "created": "Créée",
+      "lastUsed": "Dernière Utilisation",
+      "neverUsed": "Jamais",
+      "status": "Statut",
+      "active": "Active",
+      "inactive": "Inactive",
+      "expired": "Expirée",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Êtes-vous sûr de vouloir révoquer cette clé API? Cette action ne peut pas être annulée.",
+      "regenerate": "Régénérer",
+      "copy": "Copier",
+      "copied": "Copié!",
+      "showKey": "Afficher la Clé",
+      "hideKey": "Masquer la Clé",
+      "keyPrefix": "Préfixe de Clé",
+      "createdSuccess": "Clé API créée avec succès",
+      "revokedSuccess": "Clé API révoquée avec succès",
+      "warning": "Conservez cette clé en sécurité. Vous ne pourrez plus la voir.",
+      "noKeys": "Aucune clé API pour le moment",
+      "createFirst": "Créez votre première clé API pour commencer",
+      "usage": "Utilisation",
+      "totalRequests": "Total des Requêtes",
+      "loadError": "Échec du chargement des clés API",
+      "createError": "Échec de la création de la clé API",
+      "revokeError": "Échec de la révocation de la clé API",
+      "table": {
+        "name": "Nom",
+        "key": "Clé",
+        "scopes": "Portées",
+        "lastUsed": "Dernière Utilisation",
+        "neverUsed": "Jamais utilisée",
+        "status": "Statut",
+        "active": "Active",
+        "revoked": "Révoquée",
+        "actions": "Actions",
+        "revoke": "Révoquer"
+      },
+      "modal": {
+        "createTitle": "Créer une Nouvelle Clé API",
+        "keyCreated": "Clé API Créée",
+        "keyName": "Nom de la Clé",
+        "keyNamePlaceholder": "Ma Clé API",
+        "selectScopes": "Sélectionner les Portées",
+        "create": "Créer",
+        "cancel": "Annuler",
+        "close": "Fermer",
+        "copyKey": "Copier la Clé",
+        "copyWarning": "Assurez-vous de copier votre clé API maintenant. Vous ne pourrez plus la voir!",
+        "copied": "Clé API copiée dans le presse-papiers!"
+      }
+    }
+  },
+  "verification": {
+    "emailRequired": "Vérification d'Email Requise",
+    "pleaseVerify": "Veuillez vérifier votre email pour continuer",
+    "verifyNow": "Vérifier Maintenant",
+    "sendVerification": "Envoyer l'Email de Vérification",
+    "verifyEmail": {
+      "title": "Vérifier Votre Email",
+      "message": "Nous avons envoyé un email de vérification. Veuillez vérifier votre boîte de réception et cliquer sur le lien de vérification.",
+      "verifying": "Vérification de votre email...",
+      "successTitle": "Email Vérifié!",
+      "successMessage": "Votre email a été vérifié avec succès. Redirection vers la connexion...",
+      "error": "La vérification a échoué. Le lien peut être invalide ou expiré.",
+      "resendButton": "Renvoyer l'Email de Vérification",
+      "resending": "Envoi...",
+      "resendSuccess": "Email de vérification envoyé avec succès! Veuillez vérifier votre boîte de réception.",
+      "resendError": "Échec de l'envoi de l'email de vérification. Veuillez réessayer."
     }
   }
 }

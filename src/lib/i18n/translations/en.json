@@ -152,6 +152,34 @@
       "invalidCredentials": "Invalid email or password",
       "loading": "Signing in..."
     },
+    "register": {
+      "title": "Create Account",
+      "subtitle": "Join us to start sending top-ups",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email Address",
+      "phone": "Phone Number",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "registerButton": "Create Account",
+      "registering": "Creating account...",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Sign in",
+      "success": "Account created successfully! Redirecting to verification...",
+      "error": "Registration failed. Please try again.",
+      "passwordMismatch": "Passwords do not match"
+    },
+    "forgotPassword": {
+      "title": "Reset Password",
+      "subtitle": "Enter your email to receive a password reset link",
+      "email": "Email Address",
+      "emailPlaceholder": "your@email.com",
+      "sendButton": "Send Reset Link",
+      "sending": "Sending...",
+      "successMessage": "Password reset link has been sent to your email. Please check your inbox.",
+      "backToLogin": "Back to Login",
+      "error": "Failed to send reset link. Please try again."
+    },
     "portal": {
       "title": "Customer Portal",
       "welcome": "Welcome back, {name}",
@@ -287,6 +315,22 @@
         "successRate": "Success Rate",
         "recipients": "Recipients"
       }
+    },
+    "transactions": {
+      "title": "Transaction History",
+      "noTransactions": "No transactions yet",
+      "loadError": "Failed to load transactions",
+      "table": {
+        "date": "Date",
+        "recipient": "Recipient",
+        "product": "Product",
+        "amount": "Amount",
+        "type": "Type",
+        "status": "Status"
+      },
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page"
     }
   },
   "dashboard": {
@@ -368,6 +412,7 @@
   "api": {
     "keys": {
       "title": "API Keys",
+      "createNew": "Create API Key",
       "create": "Create API Key",
       "name": "Key Name",
       "scopes": "Scopes",
@@ -385,6 +430,7 @@
       "inactive": "Inactive",
       "expired": "Expired",
       "revoke": "Revoke",
+      "revokeConfirm": "Are you sure you want to revoke this API key? This action cannot be undone.",
       "regenerate": "Regenerate",
       "copy": "Copy",
       "copied": "Copied!",
@@ -397,7 +443,35 @@
       "noKeys": "No API keys yet",
       "createFirst": "Create your first API key to get started",
       "usage": "Usage",
-      "totalRequests": "Total Requests"
+      "totalRequests": "Total Requests",
+      "loadError": "Failed to load API keys",
+      "createError": "Failed to create API key",
+      "revokeError": "Failed to revoke API key",
+      "table": {
+        "name": "Name",
+        "key": "Key",
+        "scopes": "Scopes",
+        "lastUsed": "Last Used",
+        "neverUsed": "Never used",
+        "status": "Status",
+        "active": "Active",
+        "revoked": "Revoked",
+        "actions": "Actions",
+        "revoke": "Revoke"
+      },
+      "modal": {
+        "createTitle": "Create New API Key",
+        "keyCreated": "API Key Created",
+        "keyName": "Key Name",
+        "keyNamePlaceholder": "My API Key",
+        "selectScopes": "Select Scopes",
+        "create": "Create",
+        "cancel": "Cancel",
+        "close": "Close",
+        "copyKey": "Copy Key",
+        "copyWarning": "Make sure to copy your API key now. You won't be able to see it again!",
+        "copied": "API key copied to clipboard!"
+      }
     },
     "scopes": {
       "balanceRead": "Read balance",
@@ -452,6 +526,18 @@
     "emailRequired": "Email Verification Required",
     "pleaseVerify": "Please verify your email to continue",
     "verifyNow": "Verify Now",
-    "sendVerification": "Send Verification Email"
+    "sendVerification": "Send Verification Email",
+    "verifyEmail": {
+      "title": "Verify Your Email",
+      "message": "We've sent a verification email. Please check your inbox and click the verification link.",
+      "verifying": "Verifying your email...",
+      "successTitle": "Email Verified!",
+      "successMessage": "Your email has been verified successfully. Redirecting to login...",
+      "error": "Verification failed. The link may be invalid or expired.",
+      "resendButton": "Resend Verification Email",
+      "resending": "Sending...",
+      "resendSuccess": "Verification email sent successfully! Please check your inbox.",
+      "resendError": "Failed to resend verification email. Please try again."
+    }
   }
 }

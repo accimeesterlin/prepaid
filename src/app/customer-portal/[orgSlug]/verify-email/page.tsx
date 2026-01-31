@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
+import { toast } from "@pg-prepaid/ui";
 
 export default function VerifyEmailPage({
   params,
@@ -14,6 +15,7 @@ export default function VerifyEmailPage({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
   const searchParams = useSearchParams();
   const router = useRouter();
   const { t } = useTranslation();
@@ -22,15 +24,36 @@ export default function VerifyEmailPage({
     params.then((p) => setOrgSlug(p.orgSlug));
   }, [params]);
 
+  // Fetch current user's email from session
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      try {
+        const res = await fetch("/api/v1/customer-auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setUserEmail(data.customer?.email || "");
+        }
+      } catch (error) {
+        console.error("Failed to fetch user email:", error);
+      }
+    };
+
+    if (orgSlug) {
+      fetchUserEmail();
+    }
+  }, [orgSlug]);
+
   // Auto-verify if token is in URL
   useEffect(() => {
     const token = searchParams.get("token");
-    if (token && orgSlug) {
-      handleVerify(token);
+    const email = searchParams.get("email");
+
+    if (token && email && orgSlug) {
+      handleVerify(token, email);
     }
   }, [searchParams, orgSlug]);
 
-  const handleVerify = async (token: string) => {
+  const handleVerify = async (token: string, email: string) => {
     setVerifying(true);
     setError("");
 
@@ -38,13 +61,26 @@ export default function VerifyEmailPage({
       const res = await fetch("/api/v1/customer-auth/verify-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, orgSlug }),
+        body: JSON.stringify({ token, email, orgSlug }),
       });
+
+      // Only parse JSON if we have content
+      if (res.status === 204 || res.headers.get("content-length") === "0") {
+        if (!res.ok) {
+          throw new Error("Verification failed");
+        }
+        setSuccess(true);
+        setTimeout(() => {
+          router.push(`/customer-portal/${orgSlug}/login`);
+        }, 2000);
+        return;
+      }
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error?.message || "Verification failed");
+        // Handle RFC 7807 Problem Details format
+        throw new Error(data.detail || data.title || data.error?.message || "Verification failed");
       }
 
       setSuccess(true);
@@ -59,6 +95,15 @@ export default function VerifyEmailPage({
   };
 
   const handleResend = async () => {
+    if (!userEmail) {
+      toast({
+        title: t("common.error"),
+        description: "Unable to resend verification email. Please log in again.",
+        variant: "error",
+      });
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -66,18 +111,43 @@ export default function VerifyEmailPage({
       const res = await fetch("/api/v1/customer-auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgSlug }),
+        body: JSON.stringify({ email: userEmail, orgSlug }),
       });
+
+      // Only parse JSON if we have content
+      if (res.status === 204 || res.headers.get("content-length") === "0") {
+        if (!res.ok) {
+          throw new Error("Resend failed");
+        }
+        // Success with no content
+        toast({
+          title: t("common.success"),
+          description: t("verification.verifyEmail.resendSuccess"),
+          variant: "success",
+        });
+        return;
+      }
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error?.message || "Resend failed");
+        // Handle RFC 7807 Problem Details format
+        throw new Error(data.detail || data.title || data.error?.message || "Resend failed");
       }
 
-      alert(t("verification.verifyEmail.resendSuccess"));
+      toast({
+        title: t("common.success"),
+        description: t("verification.verifyEmail.resendSuccess"),
+        variant: "success",
+      });
     } catch (err: any) {
-      setError(err.message || t("verification.verifyEmail.resendError"));
+      const errorMessage = err.message || t("verification.verifyEmail.resendError");
+      setError(errorMessage);
+      toast({
+        title: t("common.error"),
+        description: errorMessage,
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }

@@ -23,20 +23,33 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = Math.min(
-      parseInt(searchParams.get("limit") || "20", 10),
+      parseInt(searchParams.get("limit") || "10", 10),
       100,
     );
     const skip = (page - 1) * limit;
+    const search = searchParams.get("search") || "";
+
+    // Build query filter
+    const query: any = { customerId: session.customerId };
+
+    // Add search filter if provided
+    if (search) {
+      query.$or = [
+        { recipientPhone: { $regex: search, $options: "i" } },
+        { orderId: { $regex: search, $options: "i" } },
+        { status: { $regex: search, $options: "i" } },
+      ];
+    }
 
     // Get transactions for this customer
     const [transactions, total] = await Promise.all([
-      Transaction.find({ customerId: session.customerId })
+      Transaction.find(query)
         .populate("productId", "name country")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Transaction.countDocuments({ customerId: session.customerId }),
+      Transaction.countDocuments(query),
     ]);
 
     return createSuccessResponse({

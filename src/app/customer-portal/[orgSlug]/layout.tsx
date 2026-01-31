@@ -71,7 +71,7 @@ function CustomerPortalContent({
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-screen">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -83,11 +83,11 @@ function CustomerPortalContent({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:relative lg:z-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-screen lg:h-full">
           {/* Sidebar header */}
           <div className="flex items-center justify-between h-16 px-4 border-b lg:hidden">
             <span className="text-lg font-semibold text-gray-900">Menu</span>
@@ -112,7 +112,7 @@ function CustomerPortalContent({
                     "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors",
                     isActive
                       ? "bg-primary text-primary-foreground"
-                      : "text-gray-700 hover:bg-gray-100"
+                      : "text-gray-700 hover:bg-gray-100",
                   )}
                 >
                   <item.icon className="h-5 w-5 mr-3" />
@@ -174,9 +174,9 @@ export default function CustomerPortalLayout({
 
   return (
     <LanguageProvider>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col">
+      <div className="h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white shadow-sm sticky top-0 z-30">
+        <header className="bg-white shadow-sm z-30 flex-shrink-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center">
@@ -195,21 +195,11 @@ export default function CustomerPortalLayout({
         </header>
 
         {/* Main Content with Sidebar */}
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           <CustomerPortalContent orgSlug={orgSlug} isAuthPage={isAuthPage}>
             {children}
           </CustomerPortalContent>
         </div>
-
-        {/* Footer */}
-        <footer className="bg-white border-t">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <p className="text-center text-gray-500 text-sm">
-              © {new Date().getFullYear()} Prepaid Minutes. All rights
-              reserved.
-            </p>
-          </div>
-        </footer>
       </div>
     </LanguageProvider>
   );

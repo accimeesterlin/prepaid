@@ -49,7 +49,12 @@
       "Bash(ps:*)",
       "WebFetch(domain:www.zoho.com)",
       "Bash(nslookup:*)",
-      "Bash(yarn tsc:*)"
+      "Bash(yarn tsc:*)",
+      "Bash(/dev/null)",
+      "Bash(for file in src/lib/i18n/translations/*.json)",
+      "Bash(do echo \"Checking $file...\")",
+      "Bash(done)",
+      "Bash(do python3 -m json.tool \"$file\")"
     ],
     "deny": [],
     "ask": []
