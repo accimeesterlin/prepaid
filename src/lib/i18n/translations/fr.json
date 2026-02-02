@@ -271,6 +271,29 @@
       "previous": "Précédent",
       "next": "Suivant",
       "page": "Page"
+    },
+    "settings": {
+      "title": "Paramètres du Compte",
+      "loadError": "Échec du chargement des paramètres",
+      "updateSuccess": "Profil mis à jour avec succès",
+      "updateError": "Échec de la mise à jour du profil",
+      "passwordMismatch": "Les mots de passe ne correspondent pas",
+      "passwordUpdateSuccess": "Mot de passe mis à jour avec succès",
+      "passwordUpdateError": "Échec de la mise à jour du mot de passe",
+      "profileInfo": "Informations du Profil",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Adresse Email",
+      "emailNote": "L'email ne peut pas être modifié. Contactez le support si vous devez le mettre à jour.",
+      "phone": "Numéro de Téléphone",
+      "saveChanges": "Enregistrer les Modifications",
+      "saving": "Enregistrement...",
+      "changePassword": "Changer le Mot de Passe",
+      "currentPassword": "Mot de Passe Actuel",
+      "newPassword": "Nouveau Mot de Passe",
+      "confirmPassword": "Confirmer le Mot de Passe",
+      "updatePassword": "Mettre à Jour le Mot de Passe",
+      "updating": "Mise à jour..."
     }
   },
   "api": {

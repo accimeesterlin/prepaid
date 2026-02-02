@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { toast } from "@pg-prepaid/ui";
+import { toast, Button, Alert, AlertDescription } from "@pg-prepaid/ui";
 
 export default function VerifyEmailPage({
   params,
@@ -159,7 +159,7 @@ export default function VerifyEmailPage({
         <div className="text-center">
           {verifying ? (
             <>
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 {t("verification.verifyEmail.verifying")}
               </h1>
@@ -176,7 +176,7 @@ export default function VerifyEmailPage({
             </>
           ) : (
             <>
-              <div className="text-purple-500 text-5xl mb-4">✉</div>
+              <div className="text-primary text-5xl mb-4">✉</div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 {t("verification.verifyEmail.title")}
               </h1>
@@ -185,20 +185,20 @@ export default function VerifyEmailPage({
               </p>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                  {error}
-                </div>
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
-              <button
+              <Button
                 onClick={handleResend}
                 disabled={loading}
-                className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full"
               >
                 {loading
                   ? t("verification.verifyEmail.resending")
                   : t("verification.verifyEmail.resendButton")}
-              </button>
+              </Button>
             </>
           )}
         </div>

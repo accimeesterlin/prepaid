@@ -331,6 +331,29 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page"
+    },
+    "settings": {
+      "title": "Account Settings",
+      "loadError": "Failed to load settings",
+      "updateSuccess": "Profile updated successfully",
+      "updateError": "Failed to update profile",
+      "passwordMismatch": "Passwords do not match",
+      "passwordUpdateSuccess": "Password updated successfully",
+      "passwordUpdateError": "Failed to update password",
+      "profileInfo": "Profile Information",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email Address",
+      "emailNote": "Email cannot be changed. Contact support if you need to update it.",
+      "phone": "Phone Number",
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "changePassword": "Change Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password",
+      "updatePassword": "Update Password",
+      "updating": "Updating..."
     }
   },
   "dashboard": {

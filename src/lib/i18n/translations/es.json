@@ -256,6 +256,29 @@
       "previous": "Anterior",
       "next": "Siguiente",
       "page": "Página"
+    },
+    "settings": {
+      "title": "Configuración de Cuenta",
+      "loadError": "Error al cargar la configuración",
+      "updateSuccess": "Perfil actualizado exitosamente",
+      "updateError": "Error al actualizar el perfil",
+      "passwordMismatch": "Las contraseñas no coinciden",
+      "passwordUpdateSuccess": "Contraseña actualizada exitosamente",
+      "passwordUpdateError": "Error al actualizar la contraseña",
+      "profileInfo": "Información del Perfil",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "email": "Correo Electrónico",
+      "emailNote": "El correo no se puede cambiar. Contacte al soporte si necesita actualizarlo.",
+      "phone": "Número de Teléfono",
+      "saveChanges": "Guardar Cambios",
+      "saving": "Guardando...",
+      "changePassword": "Cambiar Contraseña",
+      "currentPassword": "Contraseña Actual",
+      "newPassword": "Nueva Contraseña",
+      "confirmPassword": "Confirmar Contraseña",
+      "updatePassword": "Actualizar Contraseña",
+      "updating": "Actualizando..."
     }
   },
   "customer": {

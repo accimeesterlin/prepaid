@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
+import { Button, Input, Label, Alert, AlertDescription } from "@pg-prepaid/ui";
 
 export default function ForgotPasswordPage({
   params,
@@ -60,57 +61,56 @@ export default function ForgotPasswordPage({
         </div>
 
         {success ? (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-            <p className="mb-2">
-              {t("customer.forgotPassword.successMessage")}
-            </p>
-            <Link
-              href={`/customer-portal/${orgSlug}/login`}
-              className="text-green-800 underline font-medium"
-            >
-              {t("customer.forgotPassword.backToLogin")}
-            </Link>
-          </div>
+          <Alert className="bg-green-50 border-green-200">
+            <AlertDescription className="text-green-700">
+              <p className="mb-2">
+                {t("customer.forgotPassword.successMessage")}
+              </p>
+              <Link
+                href={`/customer-portal/${orgSlug}/login`}
+                className="text-green-800 underline font-medium"
+              >
+                {t("customer.forgotPassword.backToLogin")}
+              </Link>
+            </AlertDescription>
+          </Alert>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                {error}
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <Label htmlFor="email">
                 {t("customer.forgotPassword.email")}
-              </label>
-              <input
+              </Label>
+              <Input
                 id="email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                 placeholder={t("customer.forgotPassword.emailPlaceholder")}
+                className="mt-1"
               />
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full"
             >
               {loading
                 ? t("customer.forgotPassword.sending")
                 : t("customer.forgotPassword.sendButton")}
-            </button>
+            </Button>
 
             <div className="text-center">
               <Link
                 href={`/customer-portal/${orgSlug}/login`}
-                className="text-sm text-purple-600 hover:text-purple-700"
+                className="text-sm text-primary hover:underline"
               >
                 {t("customer.forgotPassword.backToLogin")}
               </Link>

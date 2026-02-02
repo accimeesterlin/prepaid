@@ -3,14 +3,21 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
+import { Button } from "@pg-prepaid/ui";
+import { Input } from "@pg-prepaid/ui";
+import { Label } from "@pg-prepaid/ui";
+import { Alert, AlertDescription } from "@pg-prepaid/ui";
 
 interface CustomerData {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  emailVerified: boolean;
+  _id?: string;
+  id?: string;
+  name?: string;
+  email?: string;
+  phoneNumber?: string;
+  emailVerified?: boolean;
+  currentBalance?: number;
+  balanceCurrency?: string;
+  createdAt?: string;
 }
 
 export default function SettingsPage({
@@ -21,7 +28,8 @@ export default function SettingsPage({
   const [orgSlug, setOrgSlug] = useState<string>("");
   const [customer, setCustomer] = useState<CustomerData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
@@ -62,11 +70,12 @@ export default function SettingsPage({
       }
 
       const data = await res.json();
-      setCustomer(data.data);
+      const customerData = data.customer;
+      setCustomer(customerData);
       setFormData({
-        firstName: data.data.firstName,
-        lastName: data.data.lastName,
-        phone: data.data.phone,
+        firstName: customerData.name?.split(' ')[0] || '',
+        lastName: customerData.name?.split(' ').slice(1).join(' ') || '',
+        phone: customerData.phoneNumber || '',
       });
     } catch (err: any) {
       setError(err.message || t("portal.settings.loadError"));
@@ -77,29 +86,42 @@ export default function SettingsPage({
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
+    setSavingProfile(true);
     setError("");
     setSuccess("");
 
     try {
-      const res = await fetch(`/api/v1/customers/${customer?._id}`, {
+      const customerId = customer?.id || customer?._id;
+      console.log('Updating customer:', customerId);
+      console.log('Form data:', formData);
+
+      const res = await fetch(`/api/v1/customers/${customerId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+        }),
       });
 
+      console.log('Response status:', res.status);
+      const responseData = await res.json();
+      console.log('Response data:', responseData);
+
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error?.message || "Update failed");
+        throw new Error(responseData.error || responseData.detail || responseData.title || "Update failed");
       }
 
       setSuccess(t("portal.settings.updateSuccess"));
+      // Reload customer data to show updated info
       await loadCustomerData();
     } catch (err: any) {
+      console.error('Update error:', err);
       setError(err.message || t("portal.settings.updateError"));
     } finally {
-      setSaving(false);
+      setSavingProfile(false);
     }
   };
 
@@ -111,12 +133,13 @@ export default function SettingsPage({
       return;
     }
 
-    setSaving(true);
+    setSavingPassword(true);
     setError("");
     setSuccess("");
 
     try {
-      const res = await fetch(`/api/v1/customers/${customer?._id}/password`, {
+      const customerId = customer?.id || customer?._id;
+      const res = await fetch(`/api/v1/customers/${customerId}/password`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -127,8 +150,8 @@ export default function SettingsPage({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error?.message || "Password update failed");
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.detail || errorData.title || "Password update failed");
       }
 
       setSuccess(t("portal.settings.passwordUpdateSuccess"));
@@ -140,14 +163,14 @@ export default function SettingsPage({
     } catch (err: any) {
       setError(err.message || t("portal.settings.passwordUpdateError"));
     } finally {
-      setSaving(false);
+      setSavingPassword(false);
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -163,16 +186,72 @@ export default function SettingsPage({
       </h1>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-          {success}
-        </div>
+        <Alert className="mb-4 bg-green-50 border-green-200 text-green-700">
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
       )}
+
+      {/* Account Overview */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Account Overview
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <p className="text-sm text-gray-500">Full Name</p>
+            <p className="text-base font-semibold text-gray-900">
+              {customer.name || 'Not provided'}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Email Address</p>
+            <div className="flex items-center gap-2">
+              <p className="text-base font-semibold text-gray-900">
+                {customer.email}
+              </p>
+              {customer.emailVerified ? (
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                  Verified
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                  Unverified
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Phone Number</p>
+            <p className="text-base font-semibold text-gray-900">
+              {customer.phoneNumber || 'Not provided'}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Account Balance</p>
+            <p className="text-base font-semibold text-gray-900">
+              {customer.balanceCurrency} {customer.currentBalance?.toFixed(2) || '0.00'}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Member Since</p>
+            <p className="text-base font-semibold text-gray-900">
+              {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : 'N/A'}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Account ID</p>
+            <p className="text-base font-mono text-sm text-gray-900">
+              {customer.id || customer._id}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Profile Information */}
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -182,14 +261,11 @@ export default function SettingsPage({
 
         <form onSubmit={handleUpdateProfile} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="firstName"
-                className="block text-sm font-medium text-gray-700"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="firstName">
                 {t("portal.settings.firstName")}
-              </label>
-              <input
+              </Label>
+              <Input
                 id="firstName"
                 type="text"
                 required
@@ -197,18 +273,14 @@ export default function SettingsPage({
                 onChange={(e) =>
                   setFormData({ ...formData, firstName: e.target.value })
                 }
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="lastName"
-                className="block text-sm font-medium text-gray-700"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="lastName">
                 {t("portal.settings.lastName")}
-              </label>
-              <input
+              </Label>
+              <Input
                 id="lastName"
                 type="text"
                 required
@@ -216,38 +288,31 @@ export default function SettingsPage({
                 onChange={(e) =>
                   setFormData({ ...formData, lastName: e.target.value })
                 }
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
           </div>
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="email">
               {t("portal.settings.email")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="email"
               type="email"
               disabled
-              value={customer.email}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+              value={customer?.email || ""}
+              className="bg-muted cursor-not-allowed"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {t("portal.settings.emailNote")}
             </p>
           </div>
 
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="phone">
               {t("portal.settings.phone")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="phone"
               type="tel"
               required
@@ -255,19 +320,14 @@ export default function SettingsPage({
               onChange={(e) =>
                 setFormData({ ...formData, phone: e.target.value })
               }
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full md:w-auto px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving
+          <Button type="submit" disabled={savingProfile} className="w-full md:w-auto">
+            {savingProfile
               ? t("portal.settings.saving")
               : t("portal.settings.saveChanges")}
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -278,14 +338,11 @@ export default function SettingsPage({
         </h2>
 
         <form onSubmit={handleUpdatePassword} className="space-y-4">
-          <div>
-            <label
-              htmlFor="currentPassword"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword">
               {t("portal.settings.currentPassword")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="currentPassword"
               type="password"
               required
@@ -296,18 +353,14 @@ export default function SettingsPage({
                   currentPassword: e.target.value,
                 })
               }
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="newPassword"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">
               {t("portal.settings.newPassword")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="newPassword"
               type="password"
               required
@@ -319,18 +372,14 @@ export default function SettingsPage({
                   newPassword: e.target.value,
                 })
               }
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">
               {t("portal.settings.confirmPassword")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="confirmPassword"
               type="password"
               required
@@ -342,19 +391,14 @@ export default function SettingsPage({
                   confirmPassword: e.target.value,
                 })
               }
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full md:w-auto px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving
+          <Button type="submit" disabled={savingPassword} className="w-full md:w-auto">
+            {savingPassword
               ? t("portal.settings.updating")
               : t("portal.settings.updatePassword")}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

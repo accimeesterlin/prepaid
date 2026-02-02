@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
+import { Button, Input, Label, Alert, AlertDescription, toast } from "@pg-prepaid/ui";
 
 interface ApiKey {
   _id: string;
@@ -133,7 +134,7 @@ export default function ApiKeysPage({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -145,21 +146,20 @@ export default function ApiKeysPage({
           <h1 className="text-3xl font-bold text-gray-900">
             {t("api.keys.title")}
           </h1>
-          <button
+          <Button
             onClick={() => {
               setShowCreateModal(true);
               setCreatedKey(null);
             }}
-            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
           >
             {t("api.keys.createNew")}
-          </button>
+          </Button>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {apiKeys.length === 0 ? (
@@ -205,7 +205,7 @@ export default function ApiKeysPage({
                         {key.scopes.map((scope) => (
                           <span
                             key={scope}
-                            className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800"
+                            className="px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary"
                           >
                             {scope}
                           </span>
@@ -265,24 +265,29 @@ export default function ApiKeysPage({
                     {createdKey}
                   </div>
                 </div>
-                <button
+                <Button
                   onClick={() => {
                     navigator.clipboard.writeText(createdKey);
-                    alert(t("api.keys.modal.copied"));
+                    toast({
+                      title: "Copied!",
+                      description: t("api.keys.modal.copied"),
+                      variant: "success",
+                    });
                   }}
-                  className="w-full mb-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                  className="w-full mb-2"
                 >
                   {t("api.keys.modal.copyKey")}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setShowCreateModal(false);
                     setCreatedKey(null);
                   }}
-                  className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                  className="w-full"
                 >
                   {t("api.keys.modal.close")}
-                </button>
+                </Button>
               </>
             ) : (
               <>
@@ -291,10 +296,10 @@ export default function ApiKeysPage({
                 </h2>
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Label className="mb-1">
                       {t("api.keys.modal.keyName")}
-                    </label>
-                    <input
+                    </Label>
+                    <Input
                       type="text"
                       required
                       value={newKeyData.name}
@@ -302,14 +307,13 @@ export default function ApiKeysPage({
                         setNewKeyData({ ...newKeyData, name: e.target.value })
                       }
                       placeholder={t("api.keys.modal.keyNamePlaceholder")}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Label className="mb-2">
                       {t("api.keys.modal.selectScopes")}
-                    </label>
+                    </Label>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {availableScopes.map((scope) => (
                         <label key={scope.value} className="flex items-center">
@@ -317,7 +321,7 @@ export default function ApiKeysPage({
                             type="checkbox"
                             checked={newKeyData.scopes.includes(scope.value)}
                             onChange={() => toggleScope(scope.value)}
-                            className="mr-2 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            className="mr-2 h-4 w-4 text-primary focus:ring-ring border-input rounded"
                           />
                           <span className="text-sm text-gray-700">
                             {scope.label}
@@ -328,20 +332,21 @@ export default function ApiKeysPage({
                   </div>
 
                   <div className="flex space-x-2">
-                    <button
+                    <Button
                       type="submit"
                       disabled={newKeyData.scopes.length === 0}
-                      className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1"
                     >
                       {t("api.keys.modal.create")}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={() => setShowCreateModal(false)}
-                      className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                      className="flex-1"
                     >
                       {t("api.keys.modal.cancel")}
-                    </button>
+                    </Button>
                   </div>
                 </form>
               </>

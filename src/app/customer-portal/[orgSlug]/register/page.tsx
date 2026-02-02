@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
+import { Button, Input, Label, Alert, AlertDescription } from "@pg-prepaid/ui";
 
 export default function CustomerRegisterPage({
   params,
@@ -92,141 +93,117 @@ export default function CustomerRegisterPage({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-              {t("customer.register.success")}
-            </div>
+            <Alert className="bg-green-50 border-green-200 text-green-700">
+              <AlertDescription>{t("customer.register.success")}</AlertDescription>
+            </Alert>
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="firstName"
-                className="block text-sm font-medium text-gray-700"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="firstName">
                 {t("customer.register.firstName")}
-              </label>
-              <input
+              </Label>
+              <Input
                 id="firstName"
                 type="text"
                 required
                 value={formData.firstName}
                 onChange={(e) => handleChange("firstName", e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="lastName"
-                className="block text-sm font-medium text-gray-700"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="lastName">
                 {t("customer.register.lastName")}
-              </label>
-              <input
+              </Label>
+              <Input
                 id="lastName"
                 type="text"
                 required
                 value={formData.lastName}
                 onChange={(e) => handleChange("lastName", e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
           </div>
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="email">
               {t("customer.register.email")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="email"
               type="email"
               required
               value={formData.email}
               onChange={(e) => handleChange("email", e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="phone">
               {t("customer.register.phone")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="phone"
               type="tel"
               required
               value={formData.phone}
               onChange={(e) => handleChange("phone", e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               placeholder="+1234567890"
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="password">
               {t("customer.register.password")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="password"
               type="password"
               required
               value={formData.password}
               onChange={(e) => handleChange("password", e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               minLength={8}
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">
               {t("customer.register.confirmPassword")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="confirmPassword"
               type="password"
               required
               value={formData.confirmPassword}
               onChange={(e) => handleChange("confirmPassword", e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               minLength={8}
             />
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={loading || success}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full"
           >
             {loading
               ? t("customer.register.registering")
               : t("customer.register.registerButton")}
-          </button>
+          </Button>
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             {t("customer.register.hasAccount")}{" "}
             <Link
               href={`/customer-portal/${orgSlug}/login`}
-              className="text-purple-600 hover:text-purple-700 font-medium"
+              className="text-primary hover:underline font-medium"
             >
               {t("customer.register.loginLink")}
             </Link>

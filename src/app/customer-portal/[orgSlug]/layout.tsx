@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LanguageProvider, useTranslation } from "@/lib/i18n/LanguageContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { cn } from "@pg-prepaid/ui";
+import { cn, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, Badge } from "@pg-prepaid/ui";
 import {
   LayoutDashboard,
   Send,
@@ -15,6 +15,8 @@ import {
   LogOut,
   Menu,
   X,
+  User,
+  ChevronDown,
 } from "lucide-react";
 
 function CustomerPortalContent({
@@ -154,6 +156,16 @@ function CustomerPortalContent({
   );
 }
 
+interface CustomerData {
+  id: string;
+  email?: string;
+  name?: string;
+  phoneNumber: string;
+  emailVerified: boolean;
+  currentBalance: number;
+  balanceCurrency: string;
+}
+
 export default function CustomerPortalLayout({
   children,
   params,
@@ -162,6 +174,7 @@ export default function CustomerPortalLayout({
   params: Promise<{ orgSlug: string }>;
 }) {
   const [orgSlug, setOrgSlug] = useState<string>("");
+  const [customer, setCustomer] = useState<CustomerData | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -169,28 +182,148 @@ export default function CustomerPortalLayout({
     params.then((p) => setOrgSlug(p.orgSlug));
   }, [params]);
 
+  // Fetch customer data for authenticated pages
+  useEffect(() => {
+    const isAuthPage =
+      pathname?.includes("/login") ||
+      pathname?.includes("/register") ||
+      pathname?.includes("/forgot-password") ||
+      pathname?.includes("/reset-password") ||
+      pathname?.includes("/verify-email");
+
+    if (!isAuthPage && orgSlug) {
+      fetch("/api/v1/customer-auth/me", { credentials: "include" })
+        .then((res) => {
+          if (res.ok) {
+            return res.json();
+          }
+          return null;
+        })
+        .then((data) => {
+          if (data?.customer) {
+            setCustomer(data.customer);
+          }
+        })
+        .catch(() => {
+          // Silently fail - user will be redirected by page-level auth
+        });
+    }
+  }, [pathname, orgSlug]);
+
   const isAuthPage =
     pathname?.includes("/login") || pathname?.includes("/register");
 
   return (
     <LanguageProvider>
-      <div className="h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col overflow-hidden">
+      <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white shadow-sm z-30 flex-shrink-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
+        <header className="bg-white shadow-sm z-30 flex-shrink-0 w-full">
+          <div className="flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8 w-full">
               <div className="flex items-center">
                 <Link
                   href={`/customer-portal/${orgSlug}`}
-                  className="text-2xl font-bold text-purple-600"
+                  className="text-2xl font-bold text-primary"
                 >
                   Customer Portal
                 </Link>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-4">
                 <LanguageSwitcher />
+
+                {/* User Menu - only show on authenticated pages */}
+                {!isAuthPage && customer && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                      <div className="flex items-center gap-3">
+                        {/* User Avatar */}
+                        <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                          {customer.name ? customer.name.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
+                        </div>
+
+                        {/* User Info - Hide on mobile */}
+                        <div className="hidden md:flex flex-col items-start">
+                          <span className="text-sm font-medium text-gray-900">
+                            {customer.name || "Customer"}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {customer.email || customer.phoneNumber}
+                          </span>
+                        </div>
+
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      </div>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent align="end" className="w-64">
+                      <DropdownMenuLabel>
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            {customer.name || "Customer"}
+                          </p>
+                          <p className="text-xs leading-none text-muted-foreground">
+                            {customer.email || customer.phoneNumber}
+                          </p>
+                        </div>
+                      </DropdownMenuLabel>
+
+                      <DropdownMenuSeparator />
+
+                      <div className="px-2 py-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">Balance</span>
+                          <Badge variant="default" className="font-semibold">
+                            {customer.balanceCurrency} {customer.currentBalance.toFixed(2)}
+                          </Badge>
+                        </div>
+                        {!customer.emailVerified && (
+                          <div className="mt-2">
+                            <Badge variant="destructive" className="text-xs">
+                              Email Not Verified
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/customer-portal/${orgSlug}/dashboard`}
+                          className="cursor-pointer"
+                        >
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/customer-portal/${orgSlug}/settings`}
+                          className="cursor-pointer"
+                        >
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Settings</span>
+                        </Link>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          await fetch("/api/v1/customer-auth/logout", {
+                            method: "POST",
+                          });
+                          router.push(`/customer-portal/${orgSlug}/login`);
+                        }}
+                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
-            </div>
           </div>
         </header>
 

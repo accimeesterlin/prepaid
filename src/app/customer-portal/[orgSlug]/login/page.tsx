@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
+import { Button, Input, Label, Alert, AlertDescription } from "@pg-prepaid/ui";
 
 export default function CustomerLoginPage({
   params,
@@ -61,43 +62,35 @@ export default function CustomerLoginPage({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="email">
               {t("customer.login.email")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               placeholder={t("customer.login.emailPlaceholder")}
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
+          <div className="space-y-2">
+            <Label htmlFor="password">
               {t("customer.login.password")}
-            </label>
-            <input
+            </Label>
+            <Input
               id="password"
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               placeholder={t("customer.login.passwordPlaceholder")}
             />
           </div>
@@ -105,29 +98,29 @@ export default function CustomerLoginPage({
           <div className="flex items-center justify-between">
             <Link
               href={`/customer-portal/${orgSlug}/forgot-password`}
-              className="text-sm text-purple-600 hover:text-purple-700"
+              className="text-sm text-primary hover:underline"
             >
               {t("customer.login.forgotPassword")}
             </Link>
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full"
           >
             {loading
               ? t("customer.login.loggingIn")
               : t("customer.login.loginButton")}
-          </button>
+          </Button>
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             {t("customer.login.noAccount")}{" "}
             <Link
               href={`/customer-portal/${orgSlug}/register`}
-              className="text-purple-600 hover:text-purple-700 font-medium"
+              className="text-primary hover:underline font-medium"
             >
               {t("customer.login.registerLink")}
             </Link>

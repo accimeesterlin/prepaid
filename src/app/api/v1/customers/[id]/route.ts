@@ -47,15 +47,15 @@ export async function PUT(
   try {
     // Try customer auth first
     let isCustomer = false;
-    let customerId = null;
+    let customerAuthId = null;
 
     try {
       const customerAuth = await import("@/lib/auth-middleware").then(
         (m) => m.requireCustomerAuth,
       );
-      const { customer } = await customerAuth(request);
+      const customerSession = await customerAuth(request);
       isCustomer = true;
-      customerId = customer._id;
+      customerAuthId = customerSession.customerId;
     } catch (e) {
       // Not a customer, try staff auth
     }
@@ -63,7 +63,7 @@ export async function PUT(
     const { id } = await params;
 
     // If customer, ensure they can only update themselves
-    if (isCustomer && customerId?.toString() !== id) {
+    if (isCustomer && customerAuthId?.toString() !== id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -100,22 +100,50 @@ export async function PUT(
 
     // Allow customer to update limited fields
     if (isCustomer) {
-      if (firstName !== undefined) customer.firstName = firstName;
-      if (lastName !== undefined) customer.lastName = lastName;
-      if (phone !== undefined) customer.phone = phone;
+      console.log('[Customer Update] Before:', {
+        name: customer.name,
+        phoneNumber: customer.phoneNumber
+      });
+      console.log('[Customer Update] Request body:', { firstName, lastName, phone, phoneNumber });
+
+      // Customers can update their name and phone
+      if (firstName !== undefined && lastName !== undefined) {
+        customer.name = `${firstName} ${lastName}`.trim();
+        console.log('[Customer Update] Set name to:', customer.name);
+      } else if (name !== undefined) {
+        customer.name = name;
+      }
+      if (phone !== undefined) {
+        customer.phoneNumber = phone;
+        console.log('[Customer Update] Set phoneNumber to:', customer.phoneNumber);
+      }
+      if (phoneNumber !== undefined) {
+        customer.phoneNumber = phoneNumber;
+      }
     } else {
       // Staff can update all fields
       if (phoneNumber) customer.phoneNumber = phoneNumber;
       if (email !== undefined) customer.email = email;
       if (name !== undefined) customer.name = name;
       if (country !== undefined) customer.country = country;
-      if (firstName !== undefined) customer.firstName = firstName;
-      if (lastName !== undefined) customer.lastName = lastName;
-      if (phone !== undefined) customer.phone = phone;
+      if (firstName !== undefined && lastName !== undefined) {
+        customer.name = `${firstName} ${lastName}`.trim();
+      }
+      if (phone !== undefined) customer.phoneNumber = phone;
       if (password) customer.passwordHash = password; // Will be hashed by pre-save hook
     }
 
+    console.log('[Customer Update] After updates:', {
+      name: customer.name,
+      phoneNumber: customer.phoneNumber
+    });
+
     await customer.save();
+
+    console.log('[Customer Update] After save:', {
+      name: customer.name,
+      phoneNumber: customer.phoneNumber
+    });
 
     return NextResponse.json(customer);
   } catch (error) {

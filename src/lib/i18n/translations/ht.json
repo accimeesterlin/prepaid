@@ -271,6 +271,29 @@
       "previous": "Anvan",
       "next": "Apre",
       "page": "Paj"
+    },
+    "settings": {
+      "title": "Paramèt Kont",
+      "loadError": "Echwe nan chaje paramèt yo",
+      "updateSuccess": "Pwofil mete ajou avèk siksè",
+      "updateError": "Echwe nan mete ajou pwofil",
+      "passwordMismatch": "Modpas yo pa menm",
+      "passwordUpdateSuccess": "Modpas mete ajou avèk siksè",
+      "passwordUpdateError": "Echwe nan mete ajou modpas",
+      "profileInfo": "Enfòmasyon Pwofil",
+      "firstName": "Non",
+      "lastName": "Siyati",
+      "email": "Adrès Imel",
+      "emailNote": "Ou pa ka chanje imel. Kontakte sipò si ou bezwen mete l ajou.",
+      "phone": "Nimewo Telefòn",
+      "saveChanges": "Anrejistre Chanjman",
+      "saving": "Ap anrejistre...",
+      "changePassword": "Chanje Modpas",
+      "currentPassword": "Modpas Aktyèl",
+      "newPassword": "Nouvo Modpas",
+      "confirmPassword": "Konfime Modpas",
+      "updatePassword": "Mete Ajou Modpas",
+      "updating": "Ap mete ajou..."
     }
   },
   "api": {
