@@ -3,17 +3,17 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { Button, Input, Label, Alert, AlertDescription, toast } from "@pg-prepaid/ui";
+import { Button, Input, Label, Alert, AlertDescription, toast, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@pg-prepaid/ui";
 
 interface ApiKey {
-  _id: string;
+  id: string;
   keyPrefix: string;
   name: string;
   scopes: string[];
   lastUsedAt?: string;
   createdAt: string;
   expiresAt?: string;
-  isActive: boolean;
+  isActive?: boolean;
 }
 
 export default function ApiKeysPage({
@@ -24,6 +24,7 @@ export default function ApiKeysPage({
   const [orgSlug, setOrgSlug] = useState<string>("");
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newKeyData, setNewKeyData] = useState({
@@ -31,6 +32,7 @@ export default function ApiKeysPage({
     scopes: [] as string[],
   });
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [keyToRevoke, setKeyToRevoke] = useState<ApiKey | null>(null);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -56,7 +58,7 @@ export default function ApiKeysPage({
   const loadApiKeys = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/api-keys", {
+      const res = await fetch("/api/v1/api-keys?customer=true", {
         credentials: "include",
       });
 
@@ -69,7 +71,7 @@ export default function ApiKeysPage({
       }
 
       const data = await res.json();
-      setApiKeys(data.data || []);
+      setApiKeys(data.keys || data.data || []);
     } catch (err: any) {
       setError(err.message || t("api.keys.loadError"));
     } finally {
@@ -80,9 +82,10 @@ export default function ApiKeysPage({
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setCreating(true);
 
     try {
-      const res = await fetch("/api/v1/api-keys", {
+      const res = await fetch("/api/v1/api-keys?customer=true", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -90,24 +93,37 @@ export default function ApiKeysPage({
       });
 
       const data = await res.json();
+      console.log("API Response:", data);
 
       if (!res.ok) {
-        throw new Error(data.error?.message || "Failed to create API key");
+        throw new Error(data.error?.message || data.detail || "Failed to create API key");
       }
 
-      setCreatedKey(data.data.fullKey);
-      setNewKeyData({ name: "", scopes: [] });
-      await loadApiKeys();
+      // The API returns the key directly in the response
+      const fullKey = data.key;
+      console.log("Full key:", fullKey);
+
+      if (fullKey) {
+        setCreatedKey(fullKey);
+        setNewKeyData({ name: "", scopes: [] });
+        await loadApiKeys();
+      } else {
+        console.error("No API key found in response:", data);
+        throw new Error("API key was created but not returned in response");
+      }
     } catch (err: any) {
+      console.error("Create API key error:", err);
       setError(err.message || t("api.keys.createError"));
+    } finally {
+      setCreating(false);
     }
   };
 
-  const handleRevoke = async (keyId: string) => {
-    if (!confirm(t("api.keys.revokeConfirm"))) return;
+  const handleRevoke = async () => {
+    if (!keyToRevoke) return;
 
     try {
-      const res = await fetch(`/api/v1/api-keys/${keyId}`, {
+      const res = await fetch(`/api/v1/api-keys/${keyToRevoke.id}?customer=true`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -117,8 +133,15 @@ export default function ApiKeysPage({
       }
 
       await loadApiKeys();
+      setKeyToRevoke(null);
+      toast({
+        title: "Success",
+        description: t("api.keys.revokeSuccess") || "API key revoked successfully",
+        variant: "success",
+      });
     } catch (err: any) {
       setError(err.message || t("api.keys.revokeError"));
+      setKeyToRevoke(null);
     }
   };
 
@@ -128,6 +151,20 @@ export default function ApiKeysPage({
       scopes: prev.scopes.includes(scope)
         ? prev.scopes.filter((s) => s !== scope)
         : [...prev.scopes, scope],
+    }));
+  };
+
+  const selectAllScopes = () => {
+    setNewKeyData((prev) => ({
+      ...prev,
+      scopes: availableScopes.map((scope) => scope.value),
+    }));
+  };
+
+  const deselectAllScopes = () => {
+    setNewKeyData((prev) => ({
+      ...prev,
+      scopes: [],
     }));
   };
 
@@ -193,7 +230,7 @@ export default function ApiKeysPage({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {apiKeys.map((key) => (
-                  <tr key={key._id}>
+                  <tr key={key.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {key.name}
                     </td>
@@ -220,20 +257,20 @@ export default function ApiKeysPage({
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          key.isActive
+                          key.isActive !== false
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {key.isActive
+                        {key.isActive !== false
                           ? t("api.keys.table.active")
                           : t("api.keys.table.revoked")}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {key.isActive && (
+                      {key.isActive !== false && (
                         <button
-                          onClick={() => handleRevoke(key._id)}
+                          onClick={() => setKeyToRevoke(key)}
                           className="text-red-600 hover:text-red-900"
                         >
                           {t("api.keys.table.revoke")}
@@ -249,22 +286,22 @@ export default function ApiKeysPage({
       </div>
 
       {/* Create API Key Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
-            {createdKey ? (
-              <>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
-                  {t("api.keys.modal.keyCreated")}
-                </h2>
-                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-4">
-                  <p className="text-sm text-yellow-800 mb-2">
-                    {t("api.keys.modal.copyWarning")}
-                  </p>
-                  <div className="bg-white p-3 rounded border border-yellow-300 font-mono text-sm break-all">
-                    {createdKey}
-                  </div>
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-md">
+          {createdKey ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{t("api.keys.modal.keyCreated")}</DialogTitle>
+              </DialogHeader>
+              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded my-4">
+                <p className="text-sm text-yellow-800 mb-2">
+                  {t("api.keys.modal.copyWarning")}
+                </p>
+                <div className="bg-white p-3 rounded border border-yellow-300 font-mono text-sm break-all">
+                  {createdKey}
                 </div>
+              </div>
+              <DialogFooter className="flex-col sm:flex-col gap-2">
                 <Button
                   onClick={() => {
                     navigator.clipboard.writeText(createdKey);
@@ -274,7 +311,7 @@ export default function ApiKeysPage({
                       variant: "success",
                     });
                   }}
-                  className="w-full mb-2"
+                  className="w-full"
                 >
                   {t("api.keys.modal.copyKey")}
                 </Button>
@@ -288,72 +325,125 @@ export default function ApiKeysPage({
                 >
                   {t("api.keys.modal.close")}
                 </Button>
-              </>
-            ) : (
-              <>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
-                  {t("api.keys.modal.createTitle")}
-                </h2>
-                <form onSubmit={handleCreate} className="space-y-4">
-                  <div>
-                    <Label className="mb-1">
-                      {t("api.keys.modal.keyName")}
-                    </Label>
-                    <Input
-                      type="text"
-                      required
-                      value={newKeyData.name}
-                      onChange={(e) =>
-                        setNewKeyData({ ...newKeyData, name: e.target.value })
-                      }
-                      placeholder={t("api.keys.modal.keyNamePlaceholder")}
-                    />
-                  </div>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>{t("api.keys.modal.createTitle")}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreate} className="space-y-4">
+                <div>
+                  <Label className="mb-1">
+                    {t("api.keys.modal.keyName")}
+                  </Label>
+                  <Input
+                    type="text"
+                    required
+                    value={newKeyData.name}
+                    onChange={(e) =>
+                      setNewKeyData({ ...newKeyData, name: e.target.value })
+                    }
+                    placeholder={t("api.keys.modal.keyNamePlaceholder")}
+                  />
+                </div>
 
-                  <div>
-                    <Label className="mb-2">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>
                       {t("api.keys.modal.selectScopes")}
                     </Label>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {availableScopes.map((scope) => (
-                        <label key={scope.value} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={newKeyData.scopes.includes(scope.value)}
-                            onChange={() => toggleScope(scope.value)}
-                            className="mr-2 h-4 w-4 text-primary focus:ring-ring border-input rounded"
-                          />
-                          <span className="text-sm text-gray-700">
-                            {scope.label}
-                          </span>
-                        </label>
-                      ))}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAllScopes}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        Select All
+                      </button>
+                      <span className="text-xs text-gray-400">|</span>
+                      <button
+                        type="button"
+                        onClick={deselectAllScopes}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        Deselect All
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex space-x-2">
-                    <Button
-                      type="submit"
-                      disabled={newKeyData.scopes.length === 0}
-                      className="flex-1"
-                    >
-                      {t("api.keys.modal.create")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowCreateModal(false)}
-                      className="flex-1"
-                    >
-                      {t("api.keys.modal.cancel")}
-                    </Button>
+                  <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
+                    {availableScopes.map((scope) => (
+                      <label key={scope.value} className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={newKeyData.scopes.includes(scope.value)}
+                          onChange={() => toggleScope(scope.value)}
+                          className="mr-2 h-4 w-4 text-primary focus:ring-ring border-input rounded cursor-pointer"
+                        />
+                        <span className="text-sm text-gray-700">
+                          {scope.label}
+                        </span>
+                      </label>
+                    ))}
                   </div>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+                </div>
+
+                <DialogFooter className="flex gap-2">
+                  <Button
+                    type="submit"
+                    disabled={newKeyData.scopes.length === 0 || creating}
+                    className="flex-1"
+                  >
+                    {creating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      t("api.keys.modal.create")
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1"
+                    disabled={creating}
+                  >
+                    {t("api.keys.modal.cancel")}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke Confirmation Dialog */}
+      <AlertDialog open={!!keyToRevoke} onOpenChange={(open: boolean) => !open && setKeyToRevoke(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("api.keys.revokeConfirm") || "Are you sure you want to revoke this API key? This action cannot be undone and the key will immediately stop working."}
+              {keyToRevoke && (
+                <div className="mt-2 p-2 bg-muted rounded text-sm font-mono">
+                  {keyToRevoke.name}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRevoke}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Revoke Key
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

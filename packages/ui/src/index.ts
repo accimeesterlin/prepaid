@@ -21,6 +21,19 @@ export {
   DialogDescription,
   DialogFooter,
 } from "./components/dialog";
+export {
+  AlertDialog,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "./components/alert-dialog";
 export { Toast, Toaster, type ToastProps } from "./components/toast";
 export {
   DropdownMenu,

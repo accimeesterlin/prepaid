@@ -17,6 +17,7 @@ import {
   X,
   User,
   ChevronDown,
+  BookOpen,
 } from "lucide-react";
 
 function CustomerPortalContent({
@@ -50,14 +51,19 @@ function CustomerPortalContent({
       icon: History,
     },
     {
+      name: "API Keys",
+      href: `/customer-portal/${orgSlug}/api-keys`,
+      icon: Key,
+    },
+    {
+      name: "API Docs",
+      href: `/customer-portal/${orgSlug}/api-docs`,
+      icon: BookOpen,
+    },
+    {
       name: t("customer.portal.menu.settings"),
       href: `/customer-portal/${orgSlug}/settings`,
       icon: Settings,
-    },
-    {
-      name: t("customer.portal.menu.apiKeys"),
-      href: `/customer-portal/${orgSlug}/api-keys`,
-      icon: Key,
     },
   ];
 

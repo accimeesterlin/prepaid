@@ -54,7 +54,8 @@
       "Bash(for file in src/lib/i18n/translations/*.json)",
       "Bash(do echo \"Checking $file...\")",
       "Bash(done)",
-      "Bash(do python3 -m json.tool \"$file\")"
+      "Bash(do python3 -m json.tool \"$file\")",
+      "Bash(yarn workspace @pg-prepaid/ui add:*)"
     ],
     "deny": [],
     "ask": []
