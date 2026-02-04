@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -22,10 +22,11 @@ import {
   Globe,
   DollarSign,
   User,
-} from 'lucide-react';
-import { Button } from '@pg-prepaid/ui';
-import { cn } from '@/lib/utils';
-import { OrganizationSwitcher } from './organization-switcher';
+  Shield,
+} from "lucide-react";
+import { Button } from "@pg-prepaid/ui";
+import { cn } from "@/lib/utils";
+import { OrganizationSwitcher } from "./organization-switcher";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -34,46 +35,59 @@ interface DashboardLayoutProps {
 // Organized navigation with sections
 const navigationSections = [
   {
-    title: 'Overview',
+    title: "Overview",
     items: [
-      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-    ]
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+    ],
   },
   {
-    title: 'Storefront',
+    title: "Storefront",
     items: [
-      { name: 'Settings', href: '/dashboard/storefront', icon: Store },
-      { name: 'Pricing', href: '/dashboard/pricing', icon: DollarSign },
-      { name: 'Discounts', href: '/dashboard/discounts', icon: Tag },
-      { name: 'Countries', href: '/dashboard/countries', icon: Globe },
-    ]
+      { name: "Settings", href: "/dashboard/storefront", icon: Store },
+      { name: "Pricing", href: "/dashboard/pricing", icon: DollarSign },
+      { name: "Discounts", href: "/dashboard/discounts", icon: Tag },
+      { name: "Countries", href: "/dashboard/countries", icon: Globe },
+    ],
   },
   {
-    title: 'Business',
+    title: "Business",
     items: [
-      { name: 'Transactions', href: '/dashboard/transactions', icon: ShoppingCart },
-      { name: 'Customers', href: '/dashboard/customers', icon: Users },
-    ]
+      {
+        name: "Transactions",
+        href: "/dashboard/transactions",
+        icon: ShoppingCart,
+      },
+      { name: "Customers", href: "/dashboard/customers", icon: Users },
+    ],
   },
   {
-    title: 'Configuration',
+    title: "Configuration",
     items: [
-      { name: 'Team Members', href: '/dashboard/team', icon: Users },
-      { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
-      { name: 'Payment Settings', href: '/dashboard/settings/payment', icon: CreditCard },
-      { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-    ]
-  }
+      { name: "Team Members", href: "/dashboard/team", icon: Users },
+      { name: "Integrations", href: "/dashboard/integrations", icon: Plug },
+      {
+        name: "Payment Settings",
+        href: "/dashboard/settings/payment",
+        icon: CreditCard,
+      },
+      { name: "Audit Logs", href: "/dashboard/audit", icon: Shield },
+      { name: "Settings", href: "/dashboard/settings", icon: Settings },
+    ],
+  },
 ];
 
 // Flatten for active item detection
-const navigation = navigationSections.flatMap(section => section.items);
+const navigation = navigationSections.flatMap((section) => section.items);
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [_organization, setOrganization] = useState<{ name: string } | null>(null);
-  const [user, setUser] = useState<{ email: string; roles: string[] } | null>(null);
+  const [_organization, setOrganization] = useState<{ name: string } | null>(
+    null,
+  );
+  const [user, setUser] = useState<{ email: string; roles: string[] } | null>(
+    null,
+  );
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -85,35 +99,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const fetchOrganization = async () => {
     try {
-      const response = await fetch('/api/v1/organization');
+      const response = await fetch("/api/v1/organization");
       if (response.ok) {
         const data = await response.json();
         setOrganization(data);
       }
     } catch (error) {
-      console.error('Failed to fetch organization:', error);
+      console.error("Failed to fetch organization:", error);
     }
   };
 
   const fetchUser = async () => {
     try {
-      const response = await fetch('/api/v1/auth/me');
+      const response = await fetch("/api/v1/auth/me");
       if (response.ok) {
         const data = await response.json();
         setUser(data);
       }
     } catch (error) {
-      console.error('Failed to fetch user:', error);
+      console.error("Failed to fetch user:", error);
     }
   };
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/v1/auth/logout', { method: 'POST' });
-      router.push('/');
+      await fetch("/api/v1/auth/logout", { method: "POST" });
+      router.push("/");
     } catch (err) {
-      console.error('Logout failed:', err);
-      router.push('/');
+      console.error("Logout failed:", err);
+      router.push("/");
     }
   };
 
@@ -130,8 +144,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 transform bg-background border-r transition-transform duration-200 ease-in-out lg:translate-x-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          "fixed inset-y-0 left-0 z-50 w-64 transform bg-background border-r transition-transform duration-200 ease-in-out lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex h-full flex-col">
@@ -158,12 +172,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <nav className="flex-1 overflow-y-auto px-3 py-4">
             {(() => {
               // Find the best matching navigation item (most specific match)
-              const activeItem = navigation.find(nav => pathname === nav.href) ||
-                                 navigation.filter(nav => pathname.startsWith(nav.href + '/'))
-                                          .sort((a, b) => b.href.length - a.href.length)[0];
+              const activeItem =
+                navigation.find((nav) => pathname === nav.href) ||
+                navigation
+                  .filter((nav) => pathname.startsWith(nav.href + "/"))
+                  .sort((a, b) => b.href.length - a.href.length)[0];
 
               return navigationSections.map((section, sectionIdx) => (
-                <div key={section.title} className={sectionIdx > 0 ? 'mt-6' : ''}>
+                <div
+                  key={section.title}
+                  className={sectionIdx > 0 ? "mt-6" : ""}
+                >
                   <h3 className="mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     {section.title}
                   </h3>
@@ -175,10 +194,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                           key={item.name}
                           href={item.href}
                           className={cn(
-                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                             isActive
-                              ? 'bg-primary text-primary-foreground'
-                              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
                           )}
                           onClick={() => setSidebarOpen(false)}
                         >
@@ -244,9 +263,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   />
                   <div className="absolute right-0 mt-2 w-64 rounded-md border bg-popover text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95">
                     <div className="p-3 border-b">
-                      <p className="text-sm font-medium">{user?.email || 'Loading...'}</p>
+                      <p className="text-sm font-medium">
+                        {user?.email || "Loading..."}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {user?.roles?.join(', ') || 'User'}
+                        {user?.roles?.join(", ") || "User"}
                       </p>
                     </div>
                     <div className="p-1">
