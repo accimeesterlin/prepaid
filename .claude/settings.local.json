@@ -57,7 +57,12 @@
       "Bash(do python3 -m json.tool \"$file\")",
       "Bash(yarn workspace @pg-prepaid/ui add:*)",
       "Bash(npm uninstall:*)",
-      "Bash(claude:*)"
+      "Bash(claude:*)",
+      "Bash(for f in /Users/esterlingaccime/Desktop/projects/learning/app/pg-prepaid-minutes/src/lib/i18n/translations/*.json)",
+      "Bash(do)",
+      "Bash(for f in es fr ht)",
+      "Bash(echo:*)",
+      "Bash(tail:*)"
     ],
     "deny": [],
     "ask": []
