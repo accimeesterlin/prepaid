@@ -55,7 +55,9 @@
       "Bash(do echo \"Checking $file...\")",
       "Bash(done)",
       "Bash(do python3 -m json.tool \"$file\")",
-      "Bash(yarn workspace @pg-prepaid/ui add:*)"
+      "Bash(yarn workspace @pg-prepaid/ui add:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(claude:*)"
     ],
     "deny": [],
     "ask": []

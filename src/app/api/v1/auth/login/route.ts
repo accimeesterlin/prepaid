@@ -1,15 +1,16 @@
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import { dbConnection } from '@pg-prepaid/db/connection';
-import { User } from '@pg-prepaid/db/models/user.model';
-import { verifyPassword, createToken, createSessionCookie } from '@/lib/auth';
-import { ApiErrors, handleApiError } from '@/lib/api-error';
-import { createSuccessResponse } from '@/lib/api-response';
-import { logger } from '@/lib/logger';
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { dbConnection } from "@pg-prepaid/db/connection";
+import { User } from "@pg-prepaid/db/models/user.model";
+import { UserOrganization } from "@pg-prepaid/db";
+import { verifyPassword, createToken, createSessionCookie } from "@/lib/auth";
+import { ApiErrors, handleApiError } from "@/lib/api-error";
+import { createSuccessResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
 export async function POST(request: NextRequest) {
@@ -23,10 +24,10 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       const errors = validation.error.errors.map((err) => ({
-        field: err.path.join('.'),
+        field: err.path.join("."),
         message: err.message,
       }));
-      throw ApiErrors.UnprocessableEntity('Validation failed', { errors });
+      throw ApiErrors.UnprocessableEntity("Validation failed", { errors });
     }
 
     const { email, password } = validation.data;
@@ -34,28 +35,62 @@ export async function POST(request: NextRequest) {
     // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      throw ApiErrors.Unauthorized('Invalid email or password');
+      throw ApiErrors.Unauthorized("Invalid email or password");
     }
 
     // Check if user is active
     if (!user.isActive) {
-      throw ApiErrors.Forbidden('Account is inactive');
+      throw ApiErrors.Forbidden("Account is inactive");
     }
 
     // Verify password
     const isValidPassword = await verifyPassword(password, user.passwordHash);
     if (!isValidPassword) {
-      throw ApiErrors.Unauthorized('Invalid email or password');
+      throw ApiErrors.Unauthorized("Invalid email or password");
     }
 
-    logger.info('User logged in', { userId: user._id.toString(), email: user.email });
+    logger.info("User logged in", {
+      userId: user._id.toString(),
+      email: user.email,
+    });
+
+    // Ensure we have a default organization for the session.
+    // Some users may not have `user.orgId` set (e.g. invited users).
+    // Pick the most recent active UserOrganization and persist it on the user record.
+    let sessionOrgId = user.orgId ? user.orgId.toString() : undefined;
+
+    if (!sessionOrgId) {
+      const userOrg = await UserOrganization.findOne({
+        userId: user._id,
+        isActive: true,
+      })
+        .sort({ joinedAt: -1 })
+        .populate("orgId");
+      if (userOrg && (userOrg as any).orgId) {
+        try {
+          const orgIdStr =
+            (userOrg as any).orgId._id?.toString() ||
+            (userOrg as any).orgId.toString();
+          sessionOrgId = orgIdStr;
+          // Persist the chosen default org on the user so future logins are consistent
+          user.orgId = sessionOrgId as any;
+          await user.save();
+        } catch (err) {
+          // Non-fatal: if saving fails, still continue with a session org if found
+          logger.warn("Failed to persist default orgId on user", {
+            userId: user._id.toString(),
+            error: err,
+          });
+        }
+      }
+    }
 
     // Create session token
     const token = await createToken({
       userId: user._id.toString(),
       email: user.email,
       roles: user.roles,
-      orgId: user.orgId.toString(),
+      orgId: sessionOrgId || "",
     });
 
     // Create response with session cookie
@@ -68,11 +103,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    response.headers.set('Set-Cookie', createSessionCookie(token));
+    response.headers.set("Set-Cookie", createSessionCookie(token));
 
     return response;
   } catch (error) {
-    logger.error('Login error', { error });
+    logger.error("Login error", { error });
     return handleApiError(error);
   }
 }

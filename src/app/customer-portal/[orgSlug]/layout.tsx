@@ -144,7 +144,7 @@ function CustomerPortalContent({
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-full">
+      <div className="flex-1 flex flex-col min-h-full overflow-hidden">
         {/* Mobile menu button */}
         <div className="lg:hidden sticky top-0 z-10 bg-white border-b px-4 py-3">
           <button
@@ -156,7 +156,7 @@ function CustomerPortalContent({
         </div>
 
         {/* Page content */}
-        <div className="flex-1">{children}</div>
+        <div className="flex-1 overflow-y-auto">{children}</div>
       </div>
     </div>
   );

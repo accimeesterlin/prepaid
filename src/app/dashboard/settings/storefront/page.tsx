@@ -1,7 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Save, Store, Globe, DollarSign, Tag, Palette, CreditCard, ShoppingCart, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from "react";
+import {
+  Save,
+  Store,
+  Globe,
+  DollarSign,
+  Tag,
+  Palette,
+  CreditCard,
+  ShoppingCart,
+  AlertTriangle,
+} from "lucide-react";
 import {
   Button,
   Card,
@@ -9,27 +19,30 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-} from '@pg-prepaid/ui';
-import { DashboardLayout } from '@/components/dashboard-layout';
+} from "@pg-prepaid/ui";
+import { DashboardLayout } from "@/components/dashboard-layout";
 
 const POPULAR_COUNTRIES = [
-  { code: 'US', name: 'United States' },
-  { code: 'GB', name: 'United Kingdom' },
-  { code: 'PG', name: 'Papua New Guinea' },
-  { code: 'HT', name: 'Haiti' },
-  { code: 'JM', name: 'Jamaica' },
-  { code: 'AF', name: 'Afghanistan' },
-  { code: 'MX', name: 'Mexico' },
-  { code: 'IN', name: 'India' },
-  { code: 'PH', name: 'Philippines' },
-  { code: 'NG', name: 'Nigeria' },
+  { code: "US", name: "United States" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "PG", name: "Papua New Guinea" },
+  { code: "HT", name: "Haiti" },
+  { code: "JM", name: "Jamaica" },
+  { code: "AF", name: "Afghanistan" },
+  { code: "MX", name: "Mexico" },
+  { code: "IN", name: "India" },
+  { code: "PH", name: "Philippines" },
+  { code: "NG", name: "Nigeria" },
 ];
 
 export default function StorefrontSettingsPage() {
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchSettings();
@@ -37,13 +50,13 @@ export default function StorefrontSettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('/api/v1/storefront/settings');
+      const response = await fetch("/api/v1/storefront/settings");
       if (response.ok) {
         const data = await response.json();
         setSettings(data.settings);
       }
     } catch (_error) {
-      console.error('Failed to fetch settings:', _error);
+      console.error("Failed to fetch settings:", _error);
     } finally {
       setLoading(false);
     }
@@ -54,23 +67,56 @@ export default function StorefrontSettingsPage() {
     setMessage(null);
 
     try {
-      const response = await fetch('/api/v1/storefront/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/v1/storefront/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
 
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Settings saved successfully!' });
+        setMessage({ type: "success", text: "Settings saved successfully!" });
         setTimeout(() => setMessage(null), 3000);
       } else {
         const error = await response.json();
-        setMessage({ type: 'error', text: error.error || 'Failed to save settings' });
+        setMessage({
+          type: "error",
+          text: error.error || "Failed to save settings",
+        });
       }
     } catch (_error) {
-      setMessage({ type: 'error', text: 'Failed to save settings' });
+      setMessage({ type: "error", text: "Failed to save settings" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleStorefront = async () => {
+    const newIsActive = !settings.isActive;
+    // Optimistically update UI
+    setSettings({ ...settings, isActive: newIsActive });
+
+    try {
+      const response = await fetch("/api/v1/storefront/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: newIsActive }),
+      });
+
+      if (!response.ok) {
+        // Revert on error
+        setSettings({ ...settings, isActive: !newIsActive });
+        const error = await response.json();
+        setMessage({
+          type: "error",
+          text: error.error || "Failed to update storefront status",
+        });
+        setTimeout(() => setMessage(null), 3000);
+      }
+    } catch (_error) {
+      // Revert on error
+      setSettings({ ...settings, isActive: !newIsActive });
+      setMessage({ type: "error", text: "Failed to update storefront status" });
+      setTimeout(() => setMessage(null), 3000);
     }
   };
 
@@ -107,7 +153,9 @@ export default function StorefrontSettingsPage() {
     return (
       <DashboardLayout>
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Failed to load storefront settings</p>
+          <p className="text-muted-foreground">
+            Failed to load storefront settings
+          </p>
         </div>
       </DashboardLayout>
     );
@@ -119,7 +167,9 @@ export default function StorefrontSettingsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Storefront Settings</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Storefront Settings
+            </h1>
             <p className="text-muted-foreground mt-1">
               Configure your public storefront for selling top-ups
             </p>
@@ -128,26 +178,24 @@ export default function StorefrontSettingsPage() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Storefront</span>
               <button
-                onClick={() =>
-                  setSettings({ ...settings, isActive: !settings.isActive })
-                }
+                onClick={toggleStorefront}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  settings.isActive ? 'bg-primary' : 'bg-gray-300'
+                  settings.isActive ? "bg-primary" : "bg-gray-300"
                 }`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.isActive ? 'translate-x-6' : 'translate-x-1'
+                    settings.isActive ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
               </button>
               <span className="text-sm font-medium">
-                {settings.isActive ? 'Active' : 'Inactive'}
+                {settings.isActive ? "Active" : "Inactive"}
               </span>
             </div>
             <Button onClick={handleSave} disabled={saving}>
               <Save className="h-4 w-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </div>
@@ -156,9 +204,9 @@ export default function StorefrontSettingsPage() {
         {message && (
           <div
             className={`p-4 rounded-lg text-sm ${
-              message.type === 'success'
-                ? 'bg-green-50 text-green-800 border border-green-200'
-                : 'bg-red-50 text-red-800 border border-red-200'
+              message.type === "success"
+                ? "bg-green-50 text-green-800 border border-green-200"
+                : "bg-red-50 text-red-800 border border-red-200"
             }`}
           >
             {message.text}
@@ -188,23 +236,31 @@ export default function StorefrontSettingsPage() {
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    branding: { ...settings.branding, businessName: e.target.value },
+                    branding: {
+                      ...settings.branding,
+                      businessName: e.target.value,
+                    },
                   })
                 }
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Description</label>
+              <label className="block text-sm font-medium mb-2">
+                Description
+              </label>
               <textarea
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 rows={3}
                 placeholder="Brief description of your service..."
-                value={settings.branding.description || ''}
+                value={settings.branding.description || ""}
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    branding: { ...settings.branding, description: e.target.value },
+                    branding: {
+                      ...settings.branding,
+                      description: e.target.value,
+                    },
                   })
                 }
               />
@@ -212,31 +268,41 @@ export default function StorefrontSettingsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Support Email</label>
+                <label className="block text-sm font-medium mb-2">
+                  Support Email
+                </label>
                 <input
                   type="email"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="support@example.com"
-                  value={settings.branding.supportEmail || ''}
+                  value={settings.branding.supportEmail || ""}
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      branding: { ...settings.branding, supportEmail: e.target.value },
+                      branding: {
+                        ...settings.branding,
+                        supportEmail: e.target.value,
+                      },
                     })
                   }
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Support Phone</label>
+                <label className="block text-sm font-medium mb-2">
+                  Support Phone
+                </label>
                 <input
                   type="tel"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="+1 (555) 123-4567"
-                  value={settings.branding.supportPhone || ''}
+                  value={settings.branding.supportPhone || ""}
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      branding: { ...settings.branding, supportPhone: e.target.value },
+                      branding: {
+                        ...settings.branding,
+                        supportPhone: e.target.value,
+                      },
                     })
                   }
                 />
@@ -244,7 +310,9 @@ export default function StorefrontSettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Primary Color</label>
+              <label className="block text-sm font-medium mb-2">
+                Primary Color
+              </label>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
@@ -253,7 +321,10 @@ export default function StorefrontSettingsPage() {
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      branding: { ...settings.branding, primaryColor: e.target.value },
+                      branding: {
+                        ...settings.branding,
+                        primaryColor: e.target.value,
+                      },
                     })
                   }
                 />
@@ -264,7 +335,10 @@ export default function StorefrontSettingsPage() {
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      branding: { ...settings.branding, primaryColor: e.target.value },
+                      branding: {
+                        ...settings.branding,
+                        primaryColor: e.target.value,
+                      },
                     })
                   }
                 />
@@ -292,7 +366,10 @@ export default function StorefrontSettingsPage() {
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    countries: { ...settings.countries, allEnabled: e.target.checked },
+                    countries: {
+                      ...settings.countries,
+                      allEnabled: e.target.checked,
+                    },
                   })
                 }
                 className="h-4 w-4"
@@ -314,8 +391,8 @@ export default function StorefrontSettingsPage() {
                       onClick={() => toggleCountry(country.code)}
                       className={`px-4 py-2 text-sm rounded-lg border transition-colors text-left ${
                         settings.countries.enabled.includes(country.code)
-                          ? 'bg-primary text-white border-primary'
-                          : 'bg-white hover:bg-gray-50 border-gray-300'
+                          ? "bg-primary text-white border-primary"
+                          : "bg-white hover:bg-gray-50 border-gray-300"
                       }`}
                     >
                       {country.name}
@@ -351,9 +428,14 @@ export default function StorefrontSettingsPage() {
               <div className="flex-1">
                 <h4 className="font-medium text-sm mb-1">Pricing Rules</h4>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Create flexible pricing rules with percentage and fixed markups, target specific countries or regions, and set priority-based pricing.
+                  Create flexible pricing rules with percentage and fixed
+                  markups, target specific countries or regions, and set
+                  priority-based pricing.
                 </p>
-                <a href="/dashboard/pricing" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                <a
+                  href="/dashboard/pricing"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
                   Manage Pricing Rules →
                 </a>
               </div>
@@ -368,9 +450,13 @@ export default function StorefrontSettingsPage() {
               <div className="flex-1">
                 <h4 className="font-medium text-sm mb-1">Discount Codes</h4>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Create promotional discount codes with usage limits, expiration dates, and country restrictions.
+                  Create promotional discount codes with usage limits,
+                  expiration dates, and country restrictions.
                 </p>
-                <a href="/dashboard/discounts" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                <a
+                  href="/dashboard/discounts"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
                   Manage Discounts →
                 </a>
               </div>
@@ -398,7 +484,10 @@ export default function StorefrontSettingsPage() {
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      paymentMethods: { ...settings.paymentMethods, stripe: e.target.checked },
+                      paymentMethods: {
+                        ...settings.paymentMethods,
+                        stripe: e.target.checked,
+                      },
                     })
                   }
                   className="h-4 w-4"
@@ -412,7 +501,10 @@ export default function StorefrontSettingsPage() {
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      paymentMethods: { ...settings.paymentMethods, paypal: e.target.checked },
+                      paymentMethods: {
+                        ...settings.paymentMethods,
+                        paypal: e.target.checked,
+                      },
                     })
                   }
                   className="h-4 w-4"
@@ -426,7 +518,10 @@ export default function StorefrontSettingsPage() {
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      paymentMethods: { ...settings.paymentMethods, pgpay: e.target.checked },
+                      paymentMethods: {
+                        ...settings.paymentMethods,
+                        pgpay: e.target.checked,
+                      },
                     })
                   }
                   className="h-4 w-4"
@@ -463,8 +558,14 @@ export default function StorefrontSettingsPage() {
                       },
                     };
                     // Ensure at least one is enabled
-                    if (!e.target.checked && !newSettings.productTypes.topupsEnabled) {
-                      setMessage({ type: 'error', text: 'At least one product type must be enabled' });
+                    if (
+                      !e.target.checked &&
+                      !newSettings.productTypes.topupsEnabled
+                    ) {
+                      setMessage({
+                        type: "error",
+                        text: "At least one product type must be enabled",
+                      });
                       return;
                     }
                     setSettings(newSettings);
@@ -473,9 +574,12 @@ export default function StorefrontSettingsPage() {
                   className="h-4 w-4"
                 />
                 <div className="flex-1">
-                  <label className="text-sm font-medium text-blue-900">Enable Fixed Plans</label>
+                  <label className="text-sm font-medium text-blue-900">
+                    Enable Fixed Plans
+                  </label>
                   <p className="text-xs text-blue-700 mt-0.5">
-                    Fixed-value plans with specific data, voice, and SMS benefits
+                    Fixed-value plans with specific data, voice, and SMS
+                    benefits
                   </p>
                 </div>
               </div>
@@ -493,8 +597,14 @@ export default function StorefrontSettingsPage() {
                       },
                     };
                     // Ensure at least one is enabled
-                    if (!e.target.checked && !newSettings.productTypes.plansEnabled) {
-                      setMessage({ type: 'error', text: 'At least one product type must be enabled' });
+                    if (
+                      !e.target.checked &&
+                      !newSettings.productTypes.plansEnabled
+                    ) {
+                      setMessage({
+                        type: "error",
+                        text: "At least one product type must be enabled",
+                      });
                       return;
                     }
                     setSettings(newSettings);
@@ -503,7 +613,9 @@ export default function StorefrontSettingsPage() {
                   className="h-4 w-4"
                 />
                 <div className="flex-1">
-                  <label className="text-sm font-medium text-blue-900">Enable Variable Top-ups</label>
+                  <label className="text-sm font-medium text-blue-900">
+                    Enable Variable Top-ups
+                  </label>
                   <p className="text-xs text-blue-700 mt-0.5">
                     Flexible top-ups where customers can enter custom amounts
                   </p>
@@ -512,7 +624,8 @@ export default function StorefrontSettingsPage() {
 
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-xs text-amber-800">
-                  <strong>Note:</strong> At least one product type must be enabled for your storefront to function.
+                  <strong>Note:</strong> At least one product type must be
+                  enabled for your storefront to function.
                 </p>
               </div>
             </div>
@@ -546,7 +659,9 @@ export default function StorefrontSettingsPage() {
                 }
                 className="h-4 w-4"
               />
-              <label className="text-sm font-medium">Enable balance threshold protection</label>
+              <label className="text-sm font-medium">
+                Enable balance threshold protection
+              </label>
             </div>
 
             {settings.balanceThreshold?.enabled && (
@@ -575,10 +690,12 @@ export default function StorefrontSettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Currency</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Currency
+                    </label>
                     <select
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={settings.balanceThreshold?.currency ?? 'USD'}
+                      value={settings.balanceThreshold?.currency ?? "USD"}
                       onChange={(e) =>
                         setSettings({
                           ...settings,
@@ -599,9 +716,11 @@ export default function StorefrontSettingsPage() {
 
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-xs text-red-800">
-                    <strong>Protection Enabled:</strong> Customers will not be able to complete purchases if your
-                    DingConnect balance falls below {settings.balanceThreshold?.currency ?? 'USD'} {settings.balanceThreshold?.minimumBalance ?? 100}.
-                    They will see a friendly message asking them to try again later.
+                    <strong>Protection Enabled:</strong> Customers will not be
+                    able to complete purchases if your DingConnect balance falls
+                    below {settings.balanceThreshold?.currency ?? "USD"}{" "}
+                    {settings.balanceThreshold?.minimumBalance ?? 100}. They
+                    will see a friendly message asking them to try again later.
                   </p>
                 </div>
               </>
@@ -610,7 +729,8 @@ export default function StorefrontSettingsPage() {
             {!settings.balanceThreshold?.enabled && (
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-muted-foreground">
-                  Balance threshold protection is disabled. Purchases will be allowed regardless of your DingConnect balance.
+                  Balance threshold protection is disabled. Purchases will be
+                  allowed regardless of your DingConnect balance.
                 </p>
               </div>
             )}
@@ -645,9 +765,12 @@ export default function StorefrontSettingsPage() {
                 className="h-4 w-4"
               />
               <div className="flex-1">
-                <label className="text-sm font-medium text-amber-900">Test Mode (Validate Only)</label>
+                <label className="text-sm font-medium text-amber-900">
+                  Test Mode (Validate Only)
+                </label>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  When enabled, transactions will only be validated without actually sending top-ups. Use this for testing.
+                  When enabled, transactions will only be validated without
+                  actually sending top-ups. Use this for testing.
                 </p>
               </div>
             </div>
@@ -655,14 +778,17 @@ export default function StorefrontSettingsPage() {
             {settings.topupSettings?.validateOnly ? (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-xs text-amber-800">
-                  <strong>⚠️ Test Mode Active:</strong> All transactions will only be validated. No actual top-ups will be sent to customers.
-                  This is useful for testing your storefront before going live.
+                  <strong>⚠️ Test Mode Active:</strong> All transactions will
+                  only be validated. No actual top-ups will be sent to
+                  customers. This is useful for testing your storefront before
+                  going live.
                 </p>
               </div>
             ) : (
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-xs text-green-800">
-                  <strong>✓ Live Mode Active:</strong> Transactions will send actual top-ups to customers via DingConnect.
+                  <strong>✓ Live Mode Active:</strong> Transactions will send
+                  actual top-ups to customers via DingConnect.
                 </p>
               </div>
             )}
@@ -673,7 +799,7 @@ export default function StorefrontSettingsPage() {
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={saving} size="lg">
             <Save className="h-5 w-5 mr-2" />
-            {saving ? 'Saving...' : 'Save All Changes'}
+            {saving ? "Saving..." : "Save All Changes"}
           </Button>
         </div>
       </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge } from "@pg-prepaid/ui";
-import { Code, BookOpen, Key, Zap } from "lucide-react";
+import { Code, BookOpen, Key, Zap, ChevronDown, ChevronRight } from "lucide-react";
 
 export default function ApiDocsPage({
   params,
@@ -11,11 +11,32 @@ export default function ApiDocsPage({
   params: Promise<{ orgSlug: string }>;
 }) {
   const [orgSlug, setOrgSlug] = useState<string>("");
+  const [expandedEndpoints, setExpandedEndpoints] = useState<Set<number>>(new Set());
   const { t } = useTranslation();
 
   useEffect(() => {
     params.then((p) => setOrgSlug(p.orgSlug));
   }, [params]);
+
+  const toggleEndpoint = (index: number) => {
+    setExpandedEndpoints((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    setExpandedEndpoints(new Set(endpoints.map((_, i) => i)));
+  };
+
+  const collapseAll = () => {
+    setExpandedEndpoints(new Set());
+  };
 
   const endpoints = [
     {
@@ -443,41 +464,75 @@ export default function ApiDocsPage({
 
       {/* API Endpoints */}
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900">API Endpoints</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">API Endpoints</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={expandAll}
+              className="text-sm text-primary hover:underline font-medium"
+            >
+              Expand All
+            </button>
+            <span className="text-sm text-gray-400">|</span>
+            <button
+              onClick={collapseAll}
+              className="text-sm text-primary hover:underline font-medium"
+            >
+              Collapse All
+            </button>
+          </div>
+        </div>
 
-        {endpoints.map((endpoint, index) => (
-          <Card key={index}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Badge
-                      variant={endpoint.method === "GET" ? "default" : "secondary"}
-                      className="font-mono"
-                    >
-                      {endpoint.method}
-                    </Badge>
-                    <code className="text-sm font-mono text-gray-700">
-                      {endpoint.path}
-                    </code>
+        {endpoints.map((endpoint, index) => {
+          const isExpanded = expandedEndpoints.has(index);
+          return (
+            <Card key={index}>
+              <CardHeader
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => toggleEndpoint(index)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      {isExpanded ? (
+                        <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                      )}
+                      <Badge
+                        variant={endpoint.method === "GET" ? "default" : "secondary"}
+                        className="font-mono"
+                      >
+                        {endpoint.method}
+                      </Badge>
+                      <code className="text-sm font-mono text-gray-700">
+                        {endpoint.path}
+                      </code>
+                    </div>
+                    <CardDescription className="ml-8">{endpoint.description}</CardDescription>
                   </div>
-                  <CardDescription>{endpoint.description}</CardDescription>
                 </div>
-              </div>
 
-              {endpoint.scopes && (
-                <div className="flex items-center gap-2 mt-3">
-                  <span className="text-xs font-semibold text-gray-500">Required Scopes:</span>
-                  {endpoint.scopes.map((scope) => (
-                    <Badge key={scope} variant="outline" className="text-xs">
-                      {scope}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </CardHeader>
+                {endpoint.scopes && endpoint.scopes.length > 0 && (
+                  <div className="flex items-center gap-2 mt-3 ml-8">
+                    <span className="text-xs font-semibold text-gray-500">Required Scopes:</span>
+                    {endpoint.scopes.map((scope) => (
+                      <Badge key={scope} variant="outline" className="text-xs">
+                        {scope}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
 
-            <CardContent className="space-y-4">
+                {endpoint.note && (
+                  <div className="bg-blue-50 border border-blue-200 p-2 rounded text-sm text-blue-800 mt-3 ml-8">
+                    <strong>Note:</strong> {endpoint.note}
+                  </div>
+                )}
+              </CardHeader>
+
+              {isExpanded && (
+                <CardContent className="space-y-4 border-t">
               {endpoint.params && (
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Query Parameters:</h4>
@@ -502,17 +557,19 @@ export default function ApiDocsPage({
                 </div>
               )}
 
-              {endpoint.example && (
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Example Response:</h4>
-                  <div className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto">
-                    <pre>{JSON.stringify(endpoint.example.response, null, 2)}</pre>
-                  </div>
-                </div>
+                  {endpoint.example && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Example Response:</h4>
+                      <div className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto">
+                        <pre>{JSON.stringify(endpoint.example.response, null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
               )}
-            </CardContent>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       {/* Rate Limits */}
