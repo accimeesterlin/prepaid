@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     if (!pendingUpgrade || pendingUpgrade.orderId !== orderId) {
       return createErrorResponse(
         "Payment is being processed. Please wait a moment and refresh.",
-        202
+        202,
       );
     }
 
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
             "subscription.status": "active",
             "subscription.currentPeriodStart": new Date(),
             "subscription.currentPeriodEnd": new Date(
-              Date.now() + daysToAdd * 24 * 60 * 60 * 1000
+              Date.now() + daysToAdd * 24 * 60 * 60 * 1000,
             ),
             "subscription.prepaidMonths": months,
             "subscription.lastPayment": {
@@ -109,14 +109,14 @@ export async function POST(req: NextRequest) {
             pendingUpgrade.tier,
             "for",
             months,
-            "months"
+            "months",
           );
 
           return createSuccessResponse({
             status: "completed",
             tier: pendingUpgrade.tier,
             currentPeriodEnd: new Date(
-              Date.now() + daysToAdd * 24 * 60 * 60 * 1000
+              Date.now() + daysToAdd * 24 * 60 * 60 * 1000,
             ),
             prepaidMonths: months,
             message: "Subscription activated successfully",
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
     console.error("Error verifying subscription payment:", error);
     return createErrorResponse(
       error.message || "Failed to verify subscription payment",
-      500
+      500,
     );
   }
 }
