@@ -13,6 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CreditCard,
   TrendingUp,
   Clock,
@@ -22,6 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getTierInfo, getNextTier, SubscriptionTier } from "@/lib/pricing";
+import { DashboardLayout } from "@/components/dashboard-layout";
 
 interface SubscriptionData {
   tier: SubscriptionTier;
@@ -45,6 +53,8 @@ export default function BillingPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [upgrading, setUpgrading] = useState(false);
+  const [selectedMonths, setSelectedMonths] = useState(1);
 
   useEffect(() => {
     fetchSubscription();
@@ -53,10 +63,21 @@ export default function BillingPage() {
   const fetchSubscription = async () => {
     try {
       const response = await fetch("/api/v1/subscriptions/current");
-      if (!response.ok) throw new Error("Failed to fetch subscription");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("API Error:", errorData);
+        throw new Error(
+          errorData.error ||
+            `HTTP ${response.status}: Failed to fetch subscription`,
+        );
+      }
       const data = await response.json();
-      setSubscription(data.data);
+      console.log("Subscription data:", data);
+
+      // The API returns data directly, not wrapped in { data: ... }
+      setSubscription(data);
     } catch (err) {
+      console.error("Fetch error:", err);
       setError(
         err instanceof Error ? err.message : "Failed to load subscription",
       );
@@ -65,22 +86,70 @@ export default function BillingPage() {
     }
   };
 
+  const handleUpgrade = async (tier: SubscriptionTier) => {
+    try {
+      setUpgrading(true);
+      const response = await fetch("/api/v1/subscriptions/upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier, months: selectedMonths }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to create upgrade payment");
+      }
+
+      const data = await response.json();
+
+      // Redirect to PGPay checkout
+      window.location.href = data.redirectUrl;
+    } catch (err) {
+      console.error("Upgrade error:", err);
+      alert(err instanceof Error ? err.message : "Failed to upgrade");
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const calculateDiscountedPrice = (monthlyFee: number, months: number) => {
+    const total = monthlyFee * months;
+    let discount = 0;
+    if (months === 3) discount = 0.05;
+    if (months === 6) discount = 0.1;
+    if (months === 12) discount = 0.15;
+    return total * (1 - discount);
+  };
+
+  const getDiscountLabel = (months: number) => {
+    if (months === 3) return "Save 5%";
+    if (months === 6) return "Save 10%";
+    if (months === 12) return "Save 15%";
+    return "";
+  };
+
   if (loading) {
-    return <LoadingSkeleton />;
+    return (
+      <DashboardLayout>
+        <LoadingSkeleton />
+      </DashboardLayout>
+    );
   }
 
   if (error || !subscription) {
     return (
-      <div className="p-8">
-        <Card className="border-destructive">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p>{error || "Failed to load billing information"}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <DashboardLayout>
+        <div className="p-8">
+          <Card className="border-destructive">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <p>{error || "Failed to load billing information"}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -92,160 +161,264 @@ export default function BillingPage() {
   );
 
   return (
-    <div className="space-y-8 p-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Billing & Subscription</h1>
-        <p className="text-muted-foreground">
-          Manage your subscription and view your usage
-        </p>
-      </div>
+    <DashboardLayout>
+      <div className="space-y-8 p-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Billing & Subscription</h1>
+          <p className="text-muted-foreground">
+            Manage your subscription and view your usage
+          </p>
+        </div>
 
-      {/* Current Plan Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                {tierInfo.name} Plan
-                <Badge
-                  variant={
-                    subscription.status === "active" ? "default" : "secondary"
-                  }
-                >
-                  {subscription.status}
-                </Badge>
-              </CardTitle>
-              <CardDescription>{tierInfo.description}</CardDescription>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold">
-                ${subscription.monthlyFee}
-              </div>
-              <div className="text-sm text-muted-foreground">per month</div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {daysUntilRenewal > 0
-                    ? `Renews in ${daysUntilRenewal} days`
-                    : "Renews today"}
-                </span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Transaction Fee: {subscription.transactionFeePercentage}%
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              {nextTier && (
-                <Button asChild>
-                  <Link href={`/dashboard/billing/upgrade?to=${nextTier}`}>
-                    <ArrowUpRight className="h-4 w-4 mr-2" />
-                    Upgrade to {getTierInfo(nextTier).name}
-                  </Link>
-                </Button>
-              )}
-              <Button variant="outline" asChild>
-                <Link href="/pricing">View All Plans</Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Usage Statistics */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <UsageCard
-          title="Transactions"
-          current={subscription.usage.transactions}
-          limit={subscription.usage.transactionLimit}
-          icon={TrendingUp}
-        />
-        <UsageCard
-          title="Team Members"
-          current={subscription.usage.teamMembers}
-          limit={subscription.usage.teamMemberLimit}
-          icon={CheckCircle2}
-        />
-        <UsageCard
-          title="Organizations"
-          current={subscription.usage.organizations}
-          limit={subscription.usage.organizationLimit}
-          icon={CreditCard}
-        />
-      </div>
-
-      {/* Features Included */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Features Included</CardTitle>
-          <CardDescription>What you get with your current plan</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-4">
-            {tierInfo.highlights.map((feature, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                <span>{feature}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Payment Method */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Method</CardTitle>
-          <CardDescription>Manage your billing information</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <CreditCard className="h-8 w-8 text-muted-foreground" />
+        {/* Current Plan Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between">
               <div>
-                <p className="font-medium">•••• •••• •••• 4242</p>
-                <p className="text-sm text-muted-foreground">Expires 12/2025</p>
+                <CardTitle className="flex items-center gap-2">
+                  {tierInfo.name} Plan
+                  <Badge
+                    variant={
+                      subscription.status === "active" ? "default" : "secondary"
+                    }
+                  >
+                    {subscription.status}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>{tierInfo.description}</CardDescription>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold">
+                  ${subscription.monthlyFee}
+                </div>
+                <div className="text-sm text-muted-foreground">per month</div>
               </div>
             </div>
-            <Button variant="outline">Update</Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    {daysUntilRenewal > 0
+                      ? `Renews in ${daysUntilRenewal} days`
+                      : "Renews today"}
+                  </span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Transaction Fee: {subscription.transactionFeePercentage}%
+                </div>
+              </div>
 
-      {/* Billing History */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Billing History</CardTitle>
-          <CardDescription>Your past invoices and payments</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <BillingHistoryRow
-              date="Jan 1, 2026"
-              amount={subscription.monthlyFee}
-              status="paid"
-            />
-            <BillingHistoryRow
-              date="Dec 1, 2025"
-              amount={subscription.monthlyFee}
-              status="paid"
-            />
-            <BillingHistoryRow
-              date="Nov 1, 2025"
-              amount={subscription.monthlyFee}
-              status="paid"
-            />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              {nextTier && (
+                <div className="space-y-4 pt-2">
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <label className="text-sm font-medium">Prepay for:</label>
+                      <Select
+                        value={selectedMonths.toString()}
+                        onValueChange={(value) =>
+                          setSelectedMonths(parseInt(value))
+                        }
+                      >
+                        <SelectTrigger className="w-full mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">
+                            1 Month - $
+                            {getTierInfo(nextTier).features.monthlyFee}
+                          </SelectItem>
+                          <SelectItem value="3">
+                            3 Months - $
+                            {calculateDiscountedPrice(
+                              getTierInfo(nextTier).features.monthlyFee,
+                              3,
+                            ).toFixed(2)}
+                            <Badge
+                              variant="secondary"
+                              className="ml-2 bg-green-50 text-green-700"
+                            >
+                              Save 5%
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="6">
+                            6 Months - $
+                            {calculateDiscountedPrice(
+                              getTierInfo(nextTier).features.monthlyFee,
+                              6,
+                            ).toFixed(2)}
+                            <Badge
+                              variant="secondary"
+                              className="ml-2 bg-green-50 text-green-700"
+                            >
+                              Save 10%
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="12">
+                            12 Months - $
+                            {calculateDiscountedPrice(
+                              getTierInfo(nextTier).features.monthlyFee,
+                              12,
+                            ).toFixed(2)}
+                            <Badge
+                              variant="secondary"
+                              className="ml-2 bg-green-50 text-green-700"
+                            >
+                              Save 15%
+                            </Badge>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total: $
+                        {calculateDiscountedPrice(
+                          getTierInfo(nextTier).features.monthlyFee,
+                          selectedMonths,
+                        ).toFixed(2)}
+                        {selectedMonths > 1 && (
+                          <span className="text-green-600 font-medium">
+                            {" "}
+                            • {getDiscountLabel(selectedMonths)}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                {nextTier && (
+                  <Button
+                    onClick={() => handleUpgrade(nextTier)}
+                    disabled={upgrading}
+                  >
+                    {upgrading ? (
+                      "Processing..."
+                    ) : (
+                      <>
+                        <ArrowUpRight className="h-4 w-4 mr-2" />
+                        Upgrade to {getTierInfo(nextTier).name}
+                      </>
+                    )}
+                  </Button>
+                )}
+                <Button variant="outline" asChild>
+                  <Link href="/pricing">View All Plans</Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Usage Statistics */}
+        <div className="grid md:grid-cols-3 gap-6">
+          <UsageCard
+            title="Transactions"
+            current={subscription.usage.transactions}
+            limit={subscription.usage.transactionLimit}
+            icon={TrendingUp}
+          />
+          <UsageCard
+            title="Team Members"
+            current={subscription.usage.teamMembers}
+            limit={subscription.usage.teamMemberLimit}
+            icon={CheckCircle2}
+          />
+          <UsageCard
+            title="Organizations"
+            current={subscription.usage.organizations}
+            limit={subscription.usage.organizationLimit}
+            icon={CreditCard}
+          />
+        </div>
+
+        {/* Features Included */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Features Included</CardTitle>
+            <CardDescription>
+              What you get with your current plan
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-4">
+              {tierInfo.highlights.map((feature, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment Method */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Method</CardTitle>
+            <CardDescription>
+              Powered by PGPay - Secure payment processing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">PGPay</p>
+                  <p className="text-sm text-muted-foreground">
+                    Card, Bank Transfer, Mobile Money
+                  </p>
+                </div>
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-green-700 border-green-200"
+                >
+                  Active
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                All payments are processed securely through PGPay. You can pay
+                using credit/debit cards, bank transfers, or mobile money.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Billing History */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing History</CardTitle>
+            <CardDescription>Your past invoices and payments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <BillingHistoryRow
+                date="Jan 1, 2026"
+                amount={subscription.monthlyFee}
+                status="paid"
+              />
+              <BillingHistoryRow
+                date="Dec 1, 2025"
+                amount={subscription.monthlyFee}
+                status="paid"
+              />
+              <BillingHistoryRow
+                date="Nov 1, 2025"
+                amount={subscription.monthlyFee}
+                status="paid"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 }
 

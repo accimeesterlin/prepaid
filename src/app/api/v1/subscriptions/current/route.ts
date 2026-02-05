@@ -8,10 +8,26 @@ export async function GET(req: NextRequest) {
   try {
     const user = await requireAuth(req);
 
+    console.log("User session:", {
+      userId: user.userId,
+      email: user.email,
+      orgId: user.orgId,
+    });
+
     // Get organization
     const organization = await Organization.findById(user.orgId);
+
     if (!organization) {
-      return createErrorResponse("Organization not found", 404);
+      console.error("Organization not found for orgId:", user.orgId);
+
+      // Check if any organizations exist
+      const orgCount = await Organization.countDocuments();
+      console.log("Total organizations in database:", orgCount);
+
+      return createErrorResponse(
+        `Organization not found. User orgId: ${user.orgId}. Please contact support.`,
+        404,
+      );
     }
 
     // Get tier info

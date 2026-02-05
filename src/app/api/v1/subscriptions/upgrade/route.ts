@@ -1,0 +1,147 @@
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/auth-middleware";
+import { Organization } from "@pg-prepaid/db";
+import { getTierInfo, SubscriptionTier } from "@/lib/pricing";
+import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
+import { PGPayService } from "@/lib/services/pgpay.service";
+
+export async function POST(req: NextRequest) {
+  try {
+    const user = await requireAuth(req);
+    const body = await req.json();
+    const { tier, months = 1 } = body as {
+      tier: SubscriptionTier;
+      months?: number;
+    };
+
+    // Validate tier
+    if (!tier || !Object.values(SubscriptionTier).includes(tier)) {
+      return createErrorResponse("Invalid subscription tier", 400);
+    }
+
+    // Validate months (1, 3, 6, 12)
+    const validMonths = [1, 3, 6, 12];
+    if (!validMonths.includes(months)) {
+      return createErrorResponse(
+        "Invalid number of months. Choose 1, 3, 6, or 12",
+        400,
+      );
+    }
+
+    // Get organization
+    const organization = await Organization.findById(user.orgId);
+    if (!organization) {
+      return createErrorResponse("Organization not found", 404);
+    }
+
+    // Check if already on this tier
+    if (organization.subscriptionTier === tier) {
+      return createErrorResponse("Already subscribed to this tier", 400);
+    }
+
+    // Get tier info
+    const tierInfo = getTierInfo(tier);
+
+    // Calculate total amount based on months
+    const monthlyFee = tierInfo.features.monthlyFee;
+    const totalAmount = monthlyFee * months;
+
+    // Apply discount for longer commitments
+    let discount = 0;
+    if (months === 3) discount = 0.05; // 5% off
+    if (months === 6) discount = 0.1; // 10% off
+    if (months === 12) discount = 0.15; // 15% off
+
+    const finalAmount = totalAmount * (1 - discount);
+    const discountAmount = totalAmount - finalAmount;
+
+    // Prevent downgrade via this endpoint
+    const currentTierOrder = {
+      starter: 0,
+      growth: 1,
+      scale: 2,
+      enterprise: 3,
+    };
+    const currentOrder =
+      currentTierOrder[organization.subscriptionTier || "starter"];
+    const newOrder = currentTierOrder[tier];
+
+    if (newOrder <= currentOrder) {
+      return createErrorResponse("Please contact support for downgrades", 400);
+    }
+
+    // Initialize PGPay service
+    const pgPayUserId = process.env.PGPAY_USER_ID;
+    const pgPayEnvironment =
+      (process.env.PGPAY_ENVIRONMENT as "sandbox" | "production") || "sandbox";
+
+    if (!pgPayUserId) {
+      console.error("PGPAY_USER_ID not configured");
+      return createErrorResponse("Payment service not configured", 500);
+    }
+
+    const pgPayService = new PGPayService({
+      userId: pgPayUserId,
+      environment: pgPayEnvironment,
+    });
+
+    // Create payment request
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
+    const orderId = `sub-${organization._id}-${tier}-${months}m-${Date.now()}`;
+
+    const paymentRequest = {
+      amount: finalAmount,
+      currency: "usd" as const,
+      orderId,
+      customerEmail: user.email,
+      customerFirstName: organization.name.split(" ")[0] || "Customer",
+      customerLastName:
+        organization.name.split(" ").slice(1).join(" ") || "User",
+      successUrl: `${baseUrl}/payment/success?type=subscription&orderId=${orderId}`,
+      errorUrl: `${baseUrl}/payment/cancel?type=subscription&orderId=${orderId}`,
+      description: `${tierInfo.name} Plan - ${months} Month${months > 1 ? "s" : ""} Prepaid${discount > 0 ? ` (${(discount * 100).toFixed(0)}% discount)` : ""}`,
+      metadata: {
+        organizationId: String(organization._id),
+        userId: user.userId,
+        tier,
+        months,
+        monthlyFee,
+        discount: discountAmount,
+        type: "subscription",
+      },
+      webhookUrl: `${baseUrl}/api/v1/webhooks/pgpay/subscription`,
+    };
+
+    // Create payment
+    const paymentResponse = await pgPayService.createPayment(paymentRequest);
+
+    // Store pending subscription upgrade in organization
+    await Organization.findByIdAndUpdate(organization._id, {
+      "subscription.pendingUpgrade": {
+        tier,
+        months,
+        orderId,
+        token: paymentResponse.token,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+      },
+    });
+
+    return createSuccessResponse({
+      orderId,
+      token: paymentResponse.token,
+      redirectUrl: paymentResponse.redirectUrl,
+      amount: finalAmount,
+      monthlyFee,
+      months,
+      discount: discountAmount,
+      tier: tierInfo.name,
+    });
+  } catch (error: any) {
+    console.error("Error creating subscription upgrade:", error);
+    return createErrorResponse(
+      error.message || "Failed to create upgrade payment",
+      500,
+    );
+  }
+}

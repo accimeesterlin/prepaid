@@ -21,6 +21,7 @@ function PaymentSuccessContent() {
     // PGPay returns 'token' not 'pgPayToken' in the success redirect
     const pgPayToken = searchParams.get('token') || searchParams.get('pgPayToken');
     const paymentStatus = searchParams.get('status');
+    const paymentType = searchParams.get('type') || 'transaction'; // 'subscription' or 'transaction'
 
     setOrderId(orderIdParam);
 
@@ -30,11 +31,15 @@ function PaymentSuccessContent() {
       return;
     }
 
+    // Detect payment type from orderId if not in params
+    const isSubscription = paymentType === 'subscription' || orderIdParam?.startsWith('sub-');
+
     // Log the received parameters for debugging
     console.log('Payment success params:', {
       orderId: orderIdParam,
       token: pgPayToken?.substring(0, 20) + '...',
       status: paymentStatus,
+      type: isSubscription ? 'subscription' : 'transaction',
     });
 
     // Track retry attempts to prevent infinite loops
@@ -44,9 +49,10 @@ function PaymentSuccessContent() {
     // Verify the payment
     const verifyPayment = async () => {
       try {
-        console.log('Calling verification API...', { orderId: orderIdParam, hasToken: !!pgPayToken });
+        console.log('Calling verification API...', { orderId: orderIdParam, hasToken: !!pgPayToken, isSubscription });
 
-        const response = await fetch('/api/v1/payments/verify', {
+        const verifyEndpoint = isSubscription ? '/api/v1/subscriptions/verify' : '/api/v1/payments/verify';
+        const response = await fetch(verifyEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ orderId: orderIdParam, pgPayToken }),
@@ -73,15 +79,23 @@ function PaymentSuccessContent() {
 
           if (result.status === 'completed') {
             setStatus('success');
-            setMessage(result.testMode
-              ? 'Test transaction completed successfully. No actual top-up was sent.'
-              : 'Your payment has been confirmed and your top-up has been delivered!');
+            if (isSubscription) {
+              setMessage(`Subscription activated successfully! You now have ${result.tier || 'your new'} plan access${result.prepaidMonths ? ` for ${result.prepaidMonths} month${result.prepaidMonths > 1 ? 's' : ''}` : ''}.`);
+            } else {
+              setMessage(result.testMode
+                ? 'Test transaction completed successfully. No actual top-up was sent.'
+                : 'Your payment has been confirmed and your top-up has been delivered!');
+            }
           } else if (result.status === 'processing') {
             setStatus('success');
-            setMessage('Your payment is confirmed. Your top-up is being processed and will be delivered shortly.');
+            setMessage(isSubscription 
+              ? 'Your subscription payment is being processed.'
+              : 'Your payment is confirmed. Your top-up is being processed and will be delivered shortly.');
           } else if (result.status === 'paid') {
             setStatus('success');
-            setMessage('Your payment has been confirmed! Your top-up is being sent now.');
+            setMessage(isSubscription
+              ? 'Your subscription payment has been confirmed!'
+              : 'Your payment has been confirmed! Your top-up is being sent now.');
           } else if (result.status === 'failed') {
             // Payment was confirmed but top-up failed
             setStatus('error');
@@ -251,7 +265,14 @@ function PaymentSuccessContent() {
                   <p className="text-green-800">
                     <strong>What happens next?</strong>
                   </p>
-                  {testMode ? (
+                  {orderId?.startsWith('sub-') ? (
+                    <ul className="list-disc list-inside text-green-700 mt-2 space-y-1 text-left">
+                      <li>Your subscription is now active</li>
+                      <li>You have full access to your plan features</li>
+                      <li>You&apos;ll receive a confirmation email shortly</li>
+                      <li>View your subscription details in the billing page</li>
+                    </ul>
+                  ) : testMode ? (
                     <ul className="list-disc list-inside text-green-700 mt-2 space-y-1 text-left">
                       <li>Payment verification is complete (test mode)</li>
                       <li>Transaction recorded in database with test flag</li>
@@ -269,19 +290,38 @@ function PaymentSuccessContent() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => router.push('/')}
-                  >
-                    Return Home
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={() => router.push('/store/trellis')}
-                  >
-                    Send Another Top-up
-                  </Button>
+                  {orderId?.startsWith('sub-') ? (
+                    <>
+                      <Button
+                        className="flex-1"
+                        onClick={() => router.push('/dashboard/billing')}
+                      >
+                        View Subscription
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => router.push('/dashboard')}
+                      >
+                        Go to Dashboard
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => router.push('/')}
+                      >
+                        Return Home
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={() => router.push('/store/trellis')}
+                      >
+                        Send Another Top-up
+                      </Button>
+                    </>
+                  )}
                 </div>
               </>
             )}

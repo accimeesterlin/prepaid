@@ -20,6 +20,8 @@ import {
   ArrowRight,
   Wallet,
   RefreshCw,
+  Zap,
+  Crown,
 } from "lucide-react";
 import {
   Button,
@@ -96,6 +98,9 @@ export default function DashboardPage() {
   const [orgSlug, setOrgSlug] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [showStorefrontModal, setShowStorefrontModal] = useState(false);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>("starter");
+  const [transactionCount, setTransactionCount] = useState<number>(0);
+  const [transactionLimit, setTransactionLimit] = useState<number>(200);
   const [providerBalance, setProviderBalance] =
     useState<ProviderBalance | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
@@ -126,11 +131,32 @@ export default function DashboardPage() {
       await fetchMetrics();
       await fetchRecentTransactions();
       await fetchBalance();
+      await fetchSubscriptionInfo();
     } catch (err) {
       console.error("Auth check error:", err);
       router.push("/login");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSubscriptionInfo = async () => {
+    try {
+      const response = await fetch("/api/v1/subscriptions/current");
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionTier(data.organization?.subscriptionTier || "starter");
+      }
+
+      // Fetch usage
+      const usageResponse = await fetch("/api/v1/subscriptions/usage");
+      if (usageResponse.ok) {
+        const usageData = await usageResponse.json();
+        setTransactionCount(usageData.usage?.transactions || 0);
+        setTransactionLimit(usageData.limits?.transactions || 200);
+      }
+    } catch (error) {
+      console.error("Failed to fetch subscription info:", error);
     }
   };
 
@@ -268,6 +294,164 @@ export default function DashboardPage() {
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Visit
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Subscription Plan Card */}
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {subscriptionTier === "starter" && (
+                <Zap className="h-5 w-5 text-blue-600" />
+              )}
+              {subscriptionTier === "growth" && (
+                <TrendingUp className="h-5 w-5 text-green-600" />
+              )}
+              {subscriptionTier === "scale" && (
+                <Crown className="h-5 w-5 text-purple-600" />
+              )}
+              {subscriptionTier === "enterprise" && (
+                <Crown className="h-5 w-5 text-amber-600" />
+              )}
+              Your Subscription Plan
+            </CardTitle>
+            <CardDescription>
+              Manage your billing and view usage limits
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-2xl font-bold capitalize">
+                    {subscriptionTier}
+                  </p>
+                  {subscriptionTier === "starter" && (
+                    <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">
+                      Free
+                    </span>
+                  )}
+                  {subscriptionTier === "growth" && (
+                    <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full font-medium">
+                      $149/mo
+                    </span>
+                  )}
+                  {subscriptionTier === "scale" && (
+                    <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full font-medium">
+                      $499/mo
+                    </span>
+                  )}
+                  {subscriptionTier === "enterprise" && (
+                    <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full font-medium">
+                      Custom
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {transactionCount} /{" "}
+                  {transactionLimit === 999999 ? "Unlimited" : transactionLimit}{" "}
+                  transactions this month
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push("/dashboard/billing")}
+                >
+                  View Billing
+                </Button>
+                {subscriptionTier === "starter" && (
+                  <Button
+                    size="sm"
+                    onClick={() => router.push("/pricing")}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600"
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
+                    Upgrade Plan
+                  </Button>
+                )}
+                {subscriptionTier !== "starter" &&
+                  subscriptionTier !== "enterprise" && (
+                    <Button
+                      size="sm"
+                      onClick={() => router.push("/pricing")}
+                      variant="secondary"
+                    >
+                      <Crown className="h-4 w-4 mr-2" />
+                      Upgrade
+                    </Button>
+                  )}
+              </div>
+            </div>
+
+            {/* Progress bar for transaction usage */}
+            {transactionLimit !== 999999 && (
+              <div className="space-y-2">
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${
+                      (transactionCount / transactionLimit) * 100 > 80
+                        ? "bg-red-500"
+                        : (transactionCount / transactionLimit) * 100 > 60
+                          ? "bg-amber-500"
+                          : "bg-green-500"
+                    }`}
+                    style={{
+                      width: `${Math.min((transactionCount / transactionLimit) * 100, 100)}%`,
+                    }}
+                  />
+                </div>
+                {(transactionCount / transactionLimit) * 100 > 80 && (
+                  <p className="text-xs text-amber-600 font-medium">
+                    ⚠️ You're approaching your transaction limit. Consider
+                    upgrading to avoid interruptions.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Plan benefits summary */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-muted-foreground">
+                  {subscriptionTier === "starter" && "1 Organization"}
+                  {subscriptionTier === "growth" && "3 Organizations"}
+                  {(subscriptionTier === "scale" ||
+                    subscriptionTier === "enterprise") &&
+                    "Unlimited Orgs"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-muted-foreground">
+                  {subscriptionTier === "starter" && "4% Fee"}
+                  {subscriptionTier === "growth" && "2% Fee"}
+                  {subscriptionTier === "scale" && "1% Fee"}
+                  {subscriptionTier === "enterprise" && "0.5% Fee"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-muted-foreground">
+                  {subscriptionTier === "starter" && "Basic Support"}
+                  {subscriptionTier === "growth" && "API Access"}
+                  {subscriptionTier === "scale" && "White Label"}
+                  {subscriptionTier === "enterprise" && "Dedicated Support"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-muted-foreground">
+                  {subscriptionTier === "starter" && "Global Top-ups"}
+                  {subscriptionTier === "growth" && "Webhooks"}
+                  {(subscriptionTier === "scale" ||
+                    subscriptionTier === "enterprise") &&
+                    "Priority Processing"}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>

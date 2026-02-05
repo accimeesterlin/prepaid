@@ -18,6 +18,24 @@ export interface IOrganization extends Document {
     status: "active" | "cancelled" | "past_due";
     currentPeriodStart?: Date;
     currentPeriodEnd?: Date;
+    prepaidMonths?: number;
+    pendingUpgrade?: {
+      tier: string;
+      months: number;
+      orderId: string;
+      token: string;
+      status?: string;
+      createdAt: Date;
+      expiresAt: Date;
+      lastChecked?: Date;
+    };
+    lastPayment?: {
+      orderId: string;
+      amount: number;
+      months: number;
+      status: string;
+      paidAt: Date;
+    };
   };
   // New pricing tier fields
   subscriptionTier: "starter" | "growth" | "scale" | "enterprise";
@@ -213,5 +231,5 @@ OrganizationSchema.index({ email: 1 });
 OrganizationSchema.index({ createdAt: -1 });
 
 export const Organization: Model<IOrganization> =
-  mongoose.models.Organization ||
-  mongoose.model<IOrganization>("Organization", OrganizationSchema);
+  mongoose.models.Org ||
+  mongoose.model<IOrganization>("Org", OrganizationSchema);
