@@ -388,7 +388,7 @@
     "getStarted": "Commencer"
   },
   "homepage": {
-    "badge": "Propulsé par DingConnect & Reloadly · 150+ Pays",
+    "badge": "Recharges Mobiles Mondiales · 150+ Pays",
     "heroTitle1": "Vendez des recharges prépayées.",
     "heroTitle2": "Évoluez sans limites.",
     "heroSubtitle": "Une plateforme en marque blanche pour revendre du crédit mobile et des données dans le monde entier. Définissez vos propres prix, gérez votre équipe et traitez les recharges — le tout depuis un tableau de bord puissant.",
@@ -407,7 +407,7 @@
       "step1Title": "Créez Votre Organisation",
       "step1Desc": "Inscrivez-vous en quelques secondes. Configurez votre organisation, invitez votre équipe et définissez les rôles — tout depuis un seul tableau de bord.",
       "step2Title": "Connectez et Synchronisez les Produits",
-      "step2Desc": "Liez votre compte DingConnect ou Reloadly avec une seule clé API. Les produits de plus de 150 pays se synchronisent automatiquement dans votre catalogue.",
+      "step2Desc": "Connectez votre compte de fournisseur de recharges avec une seule clé API. Les produits de plus de 150 pays se synchronisent automatiquement dans votre catalogue.",
       "step3Title": "Commencez à Gagner",
       "step3Desc": "Définissez vos prix, lancez votre boutique sous marque propre et commencez à traiter les recharges. Les revenus arrivent dans votre portefeuille instantanément."
     },
@@ -416,7 +416,7 @@
       "title": "Tout ce que vous avez besoin pour revendre",
       "subtitle": "Conçu pour la vitesse, l'échelle et la flexibilité que les entreprises modernes exigent.",
       "globalTitle": "Réseau de Recharge Mondial",
-      "globalDesc": "Touchez des clients dans plus de 150 pays via DingConnect et Reloadly. Crédit téléphonique, données, SMS, voix et forfaits — tout en un seul endroit.",
+      "globalDesc": "Touchez des clients dans plus de 150 pays avec notre réseau de recharges intégré. Crédit téléphonique, données, SMS, voix et forfaits — tout en un seul endroit.",
       "pricingTitle": "Moteur de Tarification Intelligent",
       "pricingDesc": "Règles de tarification par région, majorations par produit, tarification personnalisée par pays et pipelines de remises automatiques. Un contrôle total.",
       "walletTitle": "Système de Portefeuille et de Solde",
@@ -481,7 +481,7 @@
       "badge": "FAQ",
       "title": "Questions courantes",
       "q1": "Combien de temps pour que je puisse commencer à vendre des recharges ?",
-      "a1": "Vous pouvez être en ligne en moins de 10 minutes. Créez un compte, connectez votre clé API DingConnect ou Reloadly, configurez la marque de votre boutique et vous êtes prêt. Aucun code requis.",
+      "a1": "Vous pouvez être en ligne en moins de 10 minutes. Créez un compte, connectez votre clé API de fournisseur de recharges, configurez la marque de votre boutique et vous êtes prêt. Aucun code requis.",
       "q2": "Quelles méthodes de paiement prend en charge la plateforme ?",
       "a2": "PGPay est entièrement intégré avec une confirmation de paiement vérifiée par webhooks. Les intégrations Stripe et PayPal sont également disponibles. Vous choisissez quelles méthodes de paiement activer par organisation.",
       "q3": "Comment fonctionne le système de portefeuille ?",
@@ -610,9 +610,9 @@
         "description": "Pour les vraies entreprises qui vendent quotidiennement",
         "highlight1": "Jusqu'à 3 Organisations",
         "highlight2": "Jusqu'à 5 Membres de l'Équipe",
-        "highlight3": "Marque Blanche Partielle",
-        "highlight4": "Accès API Client",
-        "highlight5": "Analytique Complète & Webhooks",
+        "highlight3": "Transactions Illimitées",
+        "highlight4": "Marque Blanche Partielle",
+        "highlight5": "Accès API Client",
         "cta": "Démarrer le Plan Croissance"
       },
       "scale": {
@@ -623,7 +623,7 @@
         "highlight3": "Marque Blanche Complète",
         "highlight4": "Domaine Personnalisé",
         "highlight5": "Traitement Prioritaire",
-        "cta": "Démarrer le Plan Scale"
+        "cta": "Contacter les Ventes"
       },
       "enterprise": {
         "name": "Partenaire Infrastructure",

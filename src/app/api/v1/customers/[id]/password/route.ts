@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireCustomerAuth } from "@/lib/auth-middleware";
-import { Customer } from "@/packages/db";
-import { ApiResponse } from "@/lib/api-response";
-import { ApiError } from "@/lib/api-error";
+import { Customer } from "@pg-prepaid/db";
+import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
 import { z } from "zod";
 
 const updatePasswordSchema = z.object({
@@ -16,11 +15,17 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const { customer } = await requireCustomerAuth(request);
+    const customerSession = await requireCustomerAuth(request);
+
+    // Fetch customer from database
+    const customer = await Customer.findById(customerSession.customerId);
+    if (!customer) {
+      return createErrorResponse("Customer not found", 404);
+    }
 
     // Ensure customer can only update their own password
-    if (customer._id.toString() !== id) {
-      throw ApiError.forbidden("You can only update your own password");
+    if (String(customer._id) !== id) {
+      return createErrorResponse("You can only update your own password", 403);
     }
 
     const body = await request.json();
@@ -29,17 +34,20 @@ export async function PUT(
     // Verify current password
     const isValid = await customer.comparePassword(currentPassword);
     if (!isValid) {
-      throw ApiError.unauthorized("Current password is incorrect");
+      return createErrorResponse("Current password is incorrect", 401);
     }
 
     // Update password
     customer.passwordHash = newPassword; // Will be hashed by pre-save hook
     await customer.save();
 
-    return ApiResponse.success(null, {
+    return createSuccessResponse({
       message: "Password updated successfully",
     });
   } catch (error: any) {
-    return ApiError.handle(error);
+    return createErrorResponse(
+      error.message || "Failed to update password",
+      500,
+    );
   }
 }

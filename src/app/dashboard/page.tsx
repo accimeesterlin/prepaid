@@ -193,9 +193,22 @@ export default function DashboardPage() {
       if (response.ok) {
         const data = await response.json();
         setProviderBalance(data);
+      } else {
+        const errorData = await response.json();
+        console.error("Balance API error:", errorData);
+        setProviderBalance({
+          provider: null,
+          balance: null,
+          currency: null,
+        });
       }
     } catch (error) {
       console.error("Failed to fetch provider balance:", error);
+      setProviderBalance({
+        provider: null,
+        balance: null,
+        currency: null,
+      });
     } finally {
       setLoadingBalance(false);
     }
@@ -299,162 +312,155 @@ export default function DashboardPage() {
         </Card>
 
         {/* Subscription Plan Card */}
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {subscriptionTier === "starter" && (
-                <Zap className="h-5 w-5 text-blue-600" />
-              )}
-              {subscriptionTier === "growth" && (
-                <TrendingUp className="h-5 w-5 text-green-600" />
-              )}
-              {subscriptionTier === "scale" && (
-                <Crown className="h-5 w-5 text-purple-600" />
-              )}
-              {subscriptionTier === "enterprise" && (
-                <Crown className="h-5 w-5 text-amber-600" />
-              )}
-              Your Subscription Plan
-            </CardTitle>
-            <CardDescription>
-              Manage your billing and view usage limits
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold capitalize">
-                    {subscriptionTier}
-                  </p>
-                  {subscriptionTier === "starter" && (
-                    <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">
-                      Free
-                    </span>
-                  )}
-                  {subscriptionTier === "growth" && (
-                    <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full font-medium">
-                      $149/mo
-                    </span>
-                  )}
-                  {subscriptionTier === "scale" && (
-                    <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full font-medium">
-                      $499/mo
-                    </span>
-                  )}
-                  {subscriptionTier === "enterprise" && (
-                    <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full font-medium">
-                      Custom
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {transactionCount} /{" "}
-                  {transactionLimit === 999999 ? "Unlimited" : transactionLimit}{" "}
-                  transactions this month
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push("/dashboard/billing")}
-                >
-                  View Billing
-                </Button>
-                {subscriptionTier === "starter" && (
-                  <Button
-                    size="sm"
-                    onClick={() => router.push("/pricing")}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600"
-                  >
-                    <Crown className="h-4 w-4 mr-2" />
-                    Upgrade Plan
-                  </Button>
-                )}
-                {subscriptionTier !== "starter" &&
-                  subscriptionTier !== "enterprise" && (
+        {(() => {
+          const tiers: Record<
+            string,
+            {
+              icon: React.ReactNode;
+              price: string;
+              badge: string;
+              benefits: string[];
+            }
+          > = {
+            starter: {
+              icon: <Zap className="h-4 w-4 text-blue-600" />,
+              price: "Free",
+              badge: "bg-blue-100 text-blue-700",
+              benefits: ["1 Org", "4% Fee", "Basic Support", "Global Top-ups"],
+            },
+            growth: {
+              icon: <TrendingUp className="h-4 w-4 text-green-600" />,
+              price: "$149/mo",
+              badge: "bg-green-100 text-green-700",
+              benefits: ["3 Orgs", "2% Fee", "API Access", "Webhooks"],
+            },
+            scale: {
+              icon: <Crown className="h-4 w-4 text-purple-600" />,
+              price: "$499/mo",
+              badge: "bg-purple-100 text-purple-700",
+              benefits: [
+                "Unlimited Orgs",
+                "1% Fee",
+                "White Label",
+                "Priority Processing",
+              ],
+            },
+            enterprise: {
+              icon: <Crown className="h-4 w-4 text-amber-600" />,
+              price: "Custom",
+              badge: "bg-amber-100 text-amber-700",
+              benefits: [
+                "Unlimited Orgs",
+                "0.5% Fee",
+                "Dedicated Support",
+                "Priority Processing",
+              ],
+            },
+          };
+          const tier = tiers[subscriptionTier] || tiers.starter;
+          const usagePercent =
+            transactionLimit === 999999
+              ? 0
+              : (transactionCount / transactionLimit) * 100;
+          const showUpgrade = subscriptionTier !== "enterprise";
+
+          return (
+            <Card className="border-border shadow-md">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  {/* Left: tier name + usage */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      {tier.icon}
+                      <p className="text-lg font-bold capitalize">
+                        {subscriptionTier}
+                      </p>
+                      <span
+                        className={`px-2 py-0.5 text-xs rounded-full font-medium ${tier.badge}`}
+                      >
+                        {tier.price}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right: buttons */}
+                  <div className="flex items-center gap-2">
                     <Button
+                      variant="outline"
                       size="sm"
-                      onClick={() => router.push("/pricing")}
-                      variant="secondary"
+                      onClick={() => router.push("/dashboard/billing")}
                     >
-                      <Crown className="h-4 w-4 mr-2" />
-                      Upgrade
+                      Billing
                     </Button>
-                  )}
-              </div>
-            </div>
-
-            {/* Progress bar for transaction usage */}
-            {transactionLimit !== 999999 && (
-              <div className="space-y-2">
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all ${
-                      (transactionCount / transactionLimit) * 100 > 80
-                        ? "bg-red-500"
-                        : (transactionCount / transactionLimit) * 100 > 60
-                          ? "bg-amber-500"
-                          : "bg-green-500"
-                    }`}
-                    style={{
-                      width: `${Math.min((transactionCount / transactionLimit) * 100, 100)}%`,
-                    }}
-                  />
+                    {showUpgrade && (
+                      <Button
+                        size="sm"
+                        onClick={() => router.push("/pricing")}
+                        className={
+                          subscriptionTier === "starter"
+                            ? "bg-gradient-to-r from-blue-600 to-purple-600"
+                            : ""
+                        }
+                        variant={
+                          subscriptionTier === "starter"
+                            ? "default"
+                            : "secondary"
+                        }
+                      >
+                        <Crown className="h-3.5 w-3.5 mr-1.5" />
+                        Upgrade
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                {(transactionCount / transactionLimit) * 100 > 80 && (
-                  <p className="text-xs text-amber-600 font-medium">
-                    ⚠️ You're approaching your transaction limit. Consider
-                    upgrading to avoid interruptions.
-                  </p>
-                )}
-              </div>
-            )}
 
-            {/* Plan benefits summary */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-muted-foreground">
-                  {subscriptionTier === "starter" && "1 Organization"}
-                  {subscriptionTier === "growth" && "3 Organizations"}
-                  {(subscriptionTier === "scale" ||
-                    subscriptionTier === "enterprise") &&
-                    "Unlimited Orgs"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-muted-foreground">
-                  {subscriptionTier === "starter" && "4% Fee"}
-                  {subscriptionTier === "growth" && "2% Fee"}
-                  {subscriptionTier === "scale" && "1% Fee"}
-                  {subscriptionTier === "enterprise" && "0.5% Fee"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-muted-foreground">
-                  {subscriptionTier === "starter" && "Basic Support"}
-                  {subscriptionTier === "growth" && "API Access"}
-                  {subscriptionTier === "scale" && "White Label"}
-                  {subscriptionTier === "enterprise" && "Dedicated Support"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-muted-foreground">
-                  {subscriptionTier === "starter" && "Global Top-ups"}
-                  {subscriptionTier === "growth" && "Webhooks"}
-                  {(subscriptionTier === "scale" ||
-                    subscriptionTier === "enterprise") &&
-                    "Priority Processing"}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                {/* Usage bar + benefits row */}
+                <div className="mt-4 space-y-3">
+                  {/* Transaction usage */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 flex items-center gap-2">
+                      <div className="flex-1 bg-muted rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${
+                            usagePercent > 80
+                              ? "bg-red-500"
+                              : usagePercent > 60
+                                ? "bg-amber-500"
+                                : "bg-green-500"
+                          }`}
+                          style={{ width: `${Math.min(usagePercent, 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {transactionCount} /{" "}
+                        {transactionLimit === 999999 ? "∞" : transactionLimit}{" "}
+                        txns
+                      </span>
+                    </div>
+                    {usagePercent > 80 && transactionLimit !== 999999 && (
+                      <span className="text-xs text-amber-600 font-medium whitespace-nowrap">
+                        Approaching limit
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Benefits as inline pills */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {tier.benefits.map((b) => (
+                      <span
+                        key={b}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full"
+                      >
+                        <CheckCircle className="h-3 w-3 text-green-600" />
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -599,16 +605,34 @@ export default function DashboardPage() {
                 )}
 
                 {providerBalance.error && (
-                  <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <XCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                    <div className="text-sm text-amber-800">
-                      <p className="font-medium">
-                        Failed to fetch live balance
-                      </p>
-                      <p className="text-xs mt-1">
-                        Showing last cached value. Error:{" "}
-                        {providerBalance.error}
-                      </p>
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <XCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-amber-900">
+                          {providerBalance.error}
+                        </p>
+                        {providerBalance.balance !== null && (
+                          <p className="text-xs text-amber-700 mt-1">
+                            Showing last cached balance from{" "}
+                            {providerBalance.lastSync
+                              ? new Date(
+                                  providerBalance.lastSync,
+                                ).toLocaleString()
+                              : "previous sync"}
+                          </p>
+                        )}
+                        {providerBalance.error.includes("credentials") && (
+                          <button
+                            onClick={() =>
+                              router.push("/dashboard/integrations")
+                            }
+                            className="text-xs text-amber-700 underline mt-2 hover:text-amber-900"
+                          >
+                            Update integration settings →
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

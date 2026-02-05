@@ -28,6 +28,7 @@ export function PricingCards({ variant = "homepage", showAllFeatures = false }: 
           const info = getTierInfo(tier);
           const isPopular = tier === SubscriptionTier.GROWTH;
           const isEnterprise = tier === SubscriptionTier.ENTERPRISE;
+          const isScale = tier === SubscriptionTier.SCALE;
 
           const features = showAllFeatures
             ? info.highlights
@@ -111,7 +112,7 @@ export function PricingCards({ variant = "homepage", showAllFeatures = false }: 
                 ))}
               </ul>
 
-              <Link href={isEnterprise ? "/contact-sales" : isPopular ? "/signup" : "/pricing"} className="mt-8">
+              <Link href={isEnterprise || isScale ? "/contact-sales" : isPopular ? "/signup" : "/pricing"} className="mt-8">
                 <Button
                   className={`w-full h-10 font-semibold text-sm ${
                     isPopular

@@ -1,12 +1,11 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import { Transaction } from "@/packages/db";
-import { ApiResponse } from "@/lib/api-response";
-import { ApiError } from "@/lib/api-error";
+import { Transaction } from "@pg-prepaid/db";
+import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
-    const { session } = await requireAuth(request);
+    const user = await requireAuth(request);
 
     // Get query params
     const { searchParams } = new URL(request.url);
@@ -19,16 +18,17 @@ export async function GET(request: NextRequest) {
 
     // Get transactions created by this user
     const [transactions, total] = await Promise.all([
-      Transaction.find({ createdBy: session.userId })
+      Transaction.find({ createdBy: user.userId })
         .populate("productId", "name country")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Transaction.countDocuments({ createdBy: session.userId }),
+      Transaction.countDocuments({ createdBy: user.userId }),
     ]);
 
-    return ApiResponse.success(transactions, {
+    return createSuccessResponse({
+      transactions,
       pagination: {
         page,
         limit,
@@ -39,6 +39,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    return ApiError.handle(error);
+    return createErrorResponse(
+      error.message || "Failed to fetch transactions",
+      500,
+    );
   }
 }

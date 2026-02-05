@@ -388,7 +388,7 @@
     "getStarted": "Kòmanse"
   },
   "homepage": {
-    "badge": "Sipòte pa DingConnect & Reloadly · 150+ Peyi",
+    "badge": "Recharj Mobil Mond Antye · 150+ Peyi",
     "heroTitle1": "Vann rechaj prepaye.",
     "heroTitle2": "Grandi san limit.",
     "heroSubtitle": "Yon platfòm mak blan pou revann rechaj mobil ak done nan tout mond lan. Fikse pwòp pri ou, jere ekip ou, epi trete rechaj yo — tout nan yon sèl tablo pibò ki gen pouvwa.",
@@ -407,7 +407,7 @@
       "step1Title": "Kreye Òganizasyon Ou",
       "step1Desc": "Enskri nan yon kil segonn. Konfigure òganizasyon ou, envite ekip ou, epi konfigure wòl yo — tout nan yon sèl tablo bò.",
       "step2Title": "Konekte ak Synchronize Pwodui",
-      "step2Desc": "Lye kont DingConnect ou oswa Reloadly ou ak yon sèl kle API. Pwodui nan 150+ peyi synchronize otomatikman nan katalòg ou.",
+      "step2Desc": "Konekte kont founisè recharj ou ak yon sèl kle API. Pwodui nan 150+ peyi synchronize otomatikman nan katalòg ou.",
       "step3Title": "Kòmanse Gagnen",
       "step3Desc": "Fikse pri ou, lanse boutik ou ak mak pwòp ou, epi kòmanse trete rechaj. Revenus rive nan monedè ou imedyatman."
     },
@@ -416,7 +416,7 @@
       "title": "Tout sa ou bezwen pou revann",
       "subtitle": "Konstruit pou vitès, echèl, ak fleksibilite biznis modèn yo bezwen.",
       "globalTitle": "Rezto Rechaj Global",
-      "globalDesc": "Jwenn kliyant nan 150+ peyi traversè DingConnect ak Reloadly. Kredi telefòn, done, SMS, vwa, ak pwodui konbine — tout nan yon sèl plase.",
+      "globalDesc": "Jwenn kliyant nan 150+ peyi ak rezo recharj entegre nou an. Kredi telefòn, done, SMS, vwa, ak pwodui konbine — tout nan yon sèl plase.",
       "pricingTitle": "Motè Pri Intelijan",
       "pricingDesc": "Regèl pri pa rejyon, majorasyon pa pwodui, pri pèsonalize pa peyi, ak pipeline rabè otomatik. Kontrol total.",
       "walletTitle": "Sistèm Monedè ak Balans",
@@ -481,7 +481,7 @@
       "badge": "Kesyon",
       "title": "Kesyon Komun",
       "q1": "Kijan vite mwen ka kòmanse vendre rechaj?",
-      "a1": "Ou ka gen lè nan mwen 10 minit. Kreye yon kont, konekte kle API DingConnect ou oswa Reloadly ou, konfigure mak boutik ou, epi ou pare. Pa bezwen kòd.",
+      "a1": "Ou ka gen lè nan mwen 10 minit. Kreye yon kont, konekte kle API founisè recharj ou, konfigure mak boutik ou, epi ou pare. Pa bezwen kòd.",
       "q2": "Ki metòd peman platfòm sipòte?",
       "a2": "PGPay entièrement integre ak konfimrasyon peman verifye pa webhooks. Intègrasyon Stripe ak PayPal osi disponib. Ou chwazi ki metòd peman aktive pa org.",
       "q3": "Kijan sistèm monedè fonksyone?",
@@ -610,9 +610,9 @@
         "description": "Pou biznis reyèl ki vann chak jou",
         "highlight1": "Jiska 3 Òganizasyon",
         "highlight2": "Jiska 5 Manm Ekip",
-        "highlight3": "Mak Blan Parsyèl",
-        "highlight4": "Aksè API Kliyant",
-        "highlight5": "Analitik Konplè ak Webhooks",
+        "highlight3": "Transaksyon Ilimité",
+        "highlight4": "Mak Blan Parsyèl",
+        "highlight5": "Aksè API Kliyant",
         "cta": "Kòmanse Plan Grodi"
       },
       "scale": {
@@ -623,7 +623,7 @@
         "highlight3": "Mak Blan Konplè",
         "highlight4": "Domèn Pèsonalize",
         "highlight5": "Trete Prioritè",
-        "cta": "Kòmanse Plan Scale"
+        "cta": "Kontakte Lavant"
       },
       "enterprise": {
         "name": "Partenè Infrastrukti",

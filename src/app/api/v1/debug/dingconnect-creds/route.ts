@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     return createSuccessResponse({
       found: true,
       integration: {
-        id: integration._id.toString(),
+        id: String(integration._id),
         provider: integration.provider,
         status: integration.status,
         environment: integration.environment,

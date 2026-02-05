@@ -388,7 +388,7 @@
     "getStarted": "Comenzar"
   },
   "homepage": {
-    "badge": "Impulsado por DingConnect & Reloadly · 150+ Países",
+    "badge": "Recargas Móviles Globales · 150+ Países",
     "heroTitle1": "Vende recargas prepago.",
     "heroTitle2": "Escala sin límites.",
     "heroSubtitle": "Una plataforma de marca blanca para revender tiempo aire móvil y datos en todo el mundo. Establece tus propios precios, gestiona tu equipo y procesa recargas — todo desde un potente panel de control.",
@@ -407,7 +407,7 @@
       "step1Title": "Crea Tu Organización",
       "step1Desc": "Regístrate en segundos. Configura tu organización, invita a tu equipo y configura los roles — todo desde un solo panel de control.",
       "step2Title": "Conecta y Sincroniza Productos",
-      "step2Desc": "Enlaza tu cuenta de DingConnect o Reloadly con una sola clave API. Los productos de más de 150 países se sincronizan automáticamente en tu catálogo.",
+      "step2Desc": "Conecta tu cuenta de proveedor de recargas con una sola clave API. Los productos de más de 150 países se sincronizan automáticamente en tu catálogo.",
       "step3Title": "Empieza a Ganar",
       "step3Desc": "Establece tus precios, lanza tu tienda con marca propia y comienza a procesar recargas. Los ingresos llegan a tu monedero al instante."
     },
@@ -416,7 +416,7 @@
       "title": "Todo lo que necesitas para revender",
       "subtitle": "Construido para rapidez, escala y la flexibilidad que exigen las empresas modernas.",
       "globalTitle": "Red de Recargas Global",
-      "globalDesc": "Alcanza clientes en más de 150 países a través de DingConnect y Reloadly. Tiempo aire, datos, SMS, voz y productos combinados — todo en un solo lugar.",
+      "globalDesc": "Alcanza clientes en más de 150 países con nuestra red de recargas integrada. Tiempo aire, datos, SMS, voz y productos combinados — todo en un solo lugar.",
       "pricingTitle": "Motor de Precios Inteligente",
       "pricingDesc": "Reglas de precios por región, márgenes por producto, precios personalizados por país y tuberías de descuentos automáticas. Control total.",
       "walletTitle": "Sistema de Monedero y Saldo",
@@ -481,7 +481,7 @@
       "badge": "FAQ",
       "title": "Preguntas comunes",
       "q1": "¿Qué tan rápido puedo empezar a vender recargas?",
-      "a1": "Puedes estar en vivo en menos de 10 minutos. Crea una cuenta, conecta tu clave API de DingConnect o Reloadly, configura la marca de tu tienda y listo. No se requiere código.",
+      "a1": "Puedes estar en vivo en menos de 10 minutos. Crea una cuenta, conecta tu clave API de proveedor de recargas, configura la marca de tu tienda y listo. No se requiere código.",
       "q2": "¿Qué métodos de pago soporta la plataforma?",
       "a2": "PGPay está completamente integrado con confirmación de pago verificada por webhooks. Las integraciones de Stripe y PayPal también están disponibles. Tú eliges qué métodos de pago habilitar por organización.",
       "q3": "¿Cómo funciona el sistema de monedero?",
@@ -610,9 +610,9 @@
         "description": "Para empresas reales que venden diariamente",
         "highlight1": "Hasta 3 Organizaciones",
         "highlight2": "Hasta 5 Miembros del Equipo",
-        "highlight3": "Marca Blanca Parcial",
-        "highlight4": "Acceso a API del Cliente",
-        "highlight5": "Analítica Completa y Webhooks",
+        "highlight3": "Transacciones Ilimitadas",
+        "highlight4": "Marca Blanca Parcial",
+        "highlight5": "Acceso a API del Cliente",
         "cta": "Iniciar Plan de Crecimiento"
       },
       "scale": {
@@ -623,7 +623,7 @@
         "highlight3": "Marca Blanca Completa",
         "highlight4": "Dominio Personalizado",
         "highlight5": "Procesamiento Prioritario",
-        "cta": "Iniciar Plan Scale"
+        "cta": "Contactar Ventas"
       },
       "enterprise": {
         "name": "Socio de Infraestructura",

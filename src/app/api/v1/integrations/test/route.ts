@@ -120,76 +120,32 @@ export async function POST(request: NextRequest) {
 
 // Test DingConnect connection
 async function testDingConnect(credentials: any, _environment?: string) {
-  // DingConnect only has production API
-  const baseUrl = 'https://api.dingconnect.com';
+  const { DingConnectService } = await import('@/lib/services/dingconnect.service');
 
-  // Test with GetBalance endpoint to verify credentials
-  const response = await fetch(`${baseUrl}/api/V1/GetBalance`, {
-    method: 'GET',
-    headers: {
-      'api_key': credentials.apiKey,
-      'Content-Type': 'application/json',
-    },
-  });
+  const dingService = new DingConnectService({ apiKey: credentials.apiKey });
+  const balanceData = await dingService.getBalance();
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`DingConnect API error: ${response.status} - ${errorText || response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  // GetBalance returns: { "Balance": 0, "CurrencyCode": "USD" }
   return {
-    balance: data.Balance || 0,
-    currency: data.CurrencyCode || 'USD',
+    balance: balanceData.AccountBalance,
+    currency: balanceData.CurrencyCode,
   };
 }
 
 // Test Reloadly connection
 async function testReloadly(credentials: any, environment: string) {
-  const baseUrl = environment === 'sandbox'
-    ? 'https://topups-sandbox.reloadly.com'
-    : 'https://topups.reloadly.com';
+  const { ReloadlyService } = await import('@/lib/services/reloadly.service');
 
-  // Get OAuth token first
-  const tokenResponse = await fetch('https://auth.reloadly.com/oauth/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      client_id: credentials.clientId,
-      client_secret: credentials.clientSecret,
-      grant_type: 'client_credentials',
-      audience: baseUrl,
-    }),
+  const reloadlyService = new ReloadlyService({
+    clientId: credentials.clientId,
+    clientSecret: credentials.clientSecret,
+    environment: environment as 'sandbox' | 'production',
   });
 
-  if (!tokenResponse.ok) {
-    throw new Error('Failed to authenticate with Reloadly');
-  }
-
-  const tokenData = await tokenResponse.json();
-
-  // Test with account balance endpoint
-  const balanceResponse = await fetch(`${baseUrl}/accounts/balance`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${tokenData.access_token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!balanceResponse.ok) {
-    throw new Error(`Reloadly API error: ${balanceResponse.statusText}`);
-  }
-
-  const balanceData = await balanceResponse.json();
+  const balanceData = await reloadlyService.getBalance();
 
   return {
-    balance: balanceData.balance,
-    currency: balanceData.currencyCode,
+    balance: balanceData.AccountBalance,
+    currency: balanceData.CurrencyCode,
   };
 }
 

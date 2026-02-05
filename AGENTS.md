@@ -89,7 +89,7 @@ This document defines the pricing tiers for PG Prepaid Minutes platform. AI agen
 
 **Limits & Restrictions:**
 
-- ⚠️ 1,000 – 3,000 transactions / month
+- ✅ Unlimited transactions / month
 - ⚠️ Limited API rate
 - ⚠️ Partial branding only (no custom domain)
 
@@ -277,7 +277,7 @@ const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
   [SubscriptionTier.GROWTH]: {
     maxOrganizations: 3,
     maxTeamMembers: 5,
-    maxTransactionsPerMonth: 3000,
+    maxTransactionsPerMonth: "unlimited",
     transactionFeePercentage: 2.0,
     whiteLabel: "partial",
     customDomain: false,

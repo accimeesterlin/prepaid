@@ -70,7 +70,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
   [SubscriptionTier.GROWTH]: {
     maxOrganizations: 3,
     maxTeamMembers: 5,
-    maxTransactionsPerMonth: 3000,
+    maxTransactionsPerMonth: "unlimited",
     transactionFeePercentage: 2.0,
     monthlyFee: 149,
     whiteLabel: "partial",
@@ -168,9 +168,9 @@ export const TIER_INFO: Record<SubscriptionTier, Omit<TierInfo, "features">> = {
     highlights: [
       "Up to 3 Organizations",
       "Up to 5 Team Members",
+      "Unlimited Transactions",
       "Partial White Label",
       "Customer API Access",
-      "Full Analytics & Webhooks",
     ],
     cta: "Start Growth Plan",
   },
@@ -185,7 +185,7 @@ export const TIER_INFO: Record<SubscriptionTier, Omit<TierInfo, "features">> = {
       "Custom Domain",
       "Priority Processing",
     ],
-    cta: "Start Scale Plan",
+    cta: "Contact Sales",
   },
   [SubscriptionTier.ENTERPRISE]: {
     tier: SubscriptionTier.ENTERPRISE,

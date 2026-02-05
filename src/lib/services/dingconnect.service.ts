@@ -69,6 +69,19 @@ export interface DingConnectProvider {
   CurrencyCode: string;
 }
 
+/**
+ * Raw envelope returned by DingConnect's GET /api/V1/GetBalance.
+ * Actual field names are Balance and CurrencyIso (not AccountBalance / CurrencyCode).
+ * ResultCode 1 = success; any other value indicates an error.
+ */
+interface DingConnectBalanceEnvelope {
+  Balance: number;
+  CurrencyIso: string;
+  ResultCode: number;
+  ErrorCodes: Array<{ Code: string }>;
+}
+
+/** Normalised balance object consumed by the rest of the app. */
 export interface DingConnectBalance {
   AccountBalance: number;
   CurrencyCode: string;
@@ -130,8 +143,11 @@ export class DingConnectService {
 
   /**
    * Make authenticated request to DingConnect API
+   * @param raw - When true, returns the full response envelope without extracting Items.
+   *              Use this for endpoints like GetBalance where important fields (e.g.
+   *              AccountBalance) live at the root alongside Items.
    */
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}, raw = false): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
     const requestBody = options.body;
@@ -171,6 +187,11 @@ export class DingConnectService {
 
     const data = await response.json();
 
+    // When raw is requested, return the full envelope (e.g. for GetBalance)
+    if (raw) {
+      return data as T;
+    }
+
     // DingConnect wraps responses in { ResultCode, ErrorCodes, Items } structure
     // Extract the Items array if it exists
     if (data && typeof data === 'object' && 'Items' in data) {
@@ -183,19 +204,24 @@ export class DingConnectService {
   /**
    * Get account balance
    * GET /api/V1/GetBalance
+   *
+   * The response envelope uses Balance / CurrencyIso (not AccountBalance /
+   * CurrencyCode) and has no Items array, so we request the raw envelope and
+   * map it to the normalised DingConnectBalance shape.
    */
   async getBalance(): Promise<DingConnectBalance> {
-    const response: any = await this.request('/api/V1/GetBalance');
-    // GetBalance returns the balance directly, not wrapped in Items
-    // But it might have AccountBalance at root level
-    if (response && 'AccountBalance' in response) {
-      return response as DingConnectBalance;
+    const envelope = await this.request<DingConnectBalanceEnvelope>('/api/V1/GetBalance', {}, true);
+
+    // ResultCode !== 1 means the API reported an error
+    if (envelope.ResultCode !== 1) {
+      const codes = envelope.ErrorCodes?.map(e => e.Code).join(', ') || 'Unknown';
+      throw new Error(`DingConnect GetBalance failed (ResultCode ${envelope.ResultCode}): ${codes}`);
     }
-    // If wrapped, extract first item
-    if (Array.isArray(response) && response.length > 0) {
-      return response[0];
-    }
-    return response;
+
+    return {
+      AccountBalance: Number(envelope.Balance) || 0,
+      CurrencyCode: envelope.CurrencyIso || 'USD',
+    };
   }
 
   /**

@@ -153,6 +153,7 @@ export default function PricingPage() {
             const Icon = TIER_ICONS[tier];
             const isPopular = tier === SubscriptionTier.GROWTH;
             const isEnterprise = tier === SubscriptionTier.ENTERPRISE;
+            const isScale = tier === SubscriptionTier.SCALE;
 
             const tierName = t(`pricing.tiers.${tier}.name`);
             const tierDesc = t(`pricing.tiers.${tier}.description`);
@@ -230,7 +231,7 @@ export default function PricingPage() {
                     className="w-full"
                     variant={isPopular ? "default" : "outline"}
                   >
-                    <Link href={isEnterprise ? "/contact-sales" : "/signup"}>
+                    <Link href={isEnterprise || isScale ? "/contact-sales" : "/signup"}>
                       {tierCta}
                     </Link>
                   </Button>

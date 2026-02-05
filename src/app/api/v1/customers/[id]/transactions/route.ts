@@ -15,7 +15,8 @@ export async function GET(
     // Ensure customer can only access their own transactions
     if (session.customerId !== id) {
       return createErrorResponse(
-        ApiErrors.Forbidden("You can only access your own transactions"),
+        "You can only access your own transactions",
+        403,
       );
     }
 
@@ -65,7 +66,8 @@ export async function GET(
     });
   } catch (error: any) {
     return createErrorResponse(
-      ApiErrors.Internal(error.message || "Failed to fetch transactions"),
+      error.message || "Failed to fetch transactions",
+      500,
     );
   }
 }

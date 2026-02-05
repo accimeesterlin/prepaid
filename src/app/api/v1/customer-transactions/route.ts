@@ -7,7 +7,12 @@
 
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { dbConnection, Transaction, Customer, Integration } from "@pg-prepaid/db";
+import {
+  dbConnection,
+  Transaction,
+  Customer,
+  Integration,
+} from "@pg-prepaid/db";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { createSuccessResponse } from "@/lib/api-response";
 import { requireVerifiedCustomer } from "@/lib/auth-middleware";
@@ -63,15 +68,13 @@ export async function POST(request: NextRequest) {
 
     let productDetails;
     try {
-      const products = await dingConnect.getProducts({
-        skuCodes: [data.skuCode],
-      });
+      // Get all products and find the matching one
+      const products = await dingConnect.getProducts();
+      productDetails = products.find((p) => p.SkuCode === data.skuCode);
 
-      if (!products || products.length === 0) {
+      if (!productDetails) {
         throw ApiErrors.NotFound("Product not found");
       }
-
-      productDetails = products[0];
     } catch (error) {
       logger.error("Failed to fetch product from DingConnect", {
         error: error instanceof Error ? error.message : "Unknown error",
@@ -85,11 +88,15 @@ export async function POST(request: NextRequest) {
     let sendValue: number;
 
     // Check if this is a variable-value product
-    const isVariableValue = !!(productDetails.Minimum && productDetails.Maximum);
+    const isVariableValue = !!(
+      productDetails.Minimum && productDetails.Maximum
+    );
 
     if (isVariableValue) {
       if (!data.amount || !data.sendValue) {
-        throw ApiErrors.BadRequest("Amount and sendValue required for variable-value products");
+        throw ApiErrors.BadRequest(
+          "Amount and sendValue required for variable-value products",
+        );
       }
 
       cost = data.amount;
@@ -101,12 +108,12 @@ export async function POST(request: NextRequest) {
 
       if (sendValue < minAmount || sendValue > maxAmount) {
         throw ApiErrors.BadRequest(
-          `Amount must be between ${minAmount} and ${maxAmount}`
+          `Amount must be between ${minAmount} and ${maxAmount}`,
         );
       }
     } else {
       // Fixed-value product - use the price from DingConnect
-      cost = productDetails.Price?.SendValue || 0;
+      cost = productDetails.Price?.Amount || 0;
       sendValue = cost;
 
       if (cost <= 0) {
@@ -117,7 +124,7 @@ export async function POST(request: NextRequest) {
     // Check customer balance
     if (customer.currentBalance < cost) {
       throw ApiErrors.BadRequest(
-        `Insufficient balance. Required: ${customer.balanceCurrency} ${cost.toFixed(2)}, Available: ${customer.balanceCurrency} ${customer.currentBalance.toFixed(2)}`
+        `Insufficient balance. Required: ${customer.balanceCurrency} ${cost.toFixed(2)}, Available: ${customer.balanceCurrency} ${customer.currentBalance.toFixed(2)}`,
       );
     }
 
@@ -138,17 +145,20 @@ export async function POST(request: NextRequest) {
       },
       operator: {
         id: productDetails.ProviderCode || "unknown",
-        name: productDetails.Provider?.Name || "unknown",
+        name: productDetails.ProviderCode || "unknown",
         country: productDetails.CountryIso || "unknown",
       },
       metadata: {
         productSkuCode: data.skuCode,
-        productName: productDetails.ProductName || "Top-up",
+        productName: productDetails.DefaultDisplayText || "Top-up",
         isVariableValue,
         sendValue,
         benefitAmount: productDetails.BenefitTypes?.Airtime?.Amount || 0,
         benefitUnit: productDetails.BenefitTypes?.Airtime?.Unit || "",
-        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        ipAddress:
+          request.headers.get("x-forwarded-for") ||
+          request.headers.get("x-real-ip") ||
+          "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
       },
       timeline: {
@@ -187,9 +197,9 @@ export async function POST(request: NextRequest) {
       });
 
       const transferResult = await dingConnect.sendTransfer({
-        skuCode: data.skuCode,
-        accountNumber: data.phoneNumber,
-        sendValue: isVariableValue ? sendValue : undefined,
+        SkuCode: data.skuCode,
+        AccountNumber: data.phoneNumber,
+        SendValue: isVariableValue ? sendValue : undefined,
       });
 
       logger.info("DingConnect transfer successful", {
@@ -202,8 +212,8 @@ export async function POST(request: NextRequest) {
       transaction.status = "completed";
       transaction.providerTransactionId = String(transferResult.TransferId);
       transaction.timeline.completedAt = new Date();
-      transaction.metadata.dingTransferId = transferResult.TransferId;
-      transaction.metadata.dingStatus = transferResult.Status;
+      (transaction.metadata as any).dingTransferId = transferResult.TransferId;
+      (transaction.metadata as any).dingStatus = transferResult.Status;
 
       await transaction.save();
 
@@ -244,8 +254,8 @@ export async function POST(request: NextRequest) {
         error instanceof Error ? error.message : "Unknown error";
       await transaction.save();
 
-      throw ApiErrors.Internal(
-        `Failed to send top-up: ${error instanceof Error ? error.message : "Unknown error"}`
+      throw ApiErrors.InternalServerError(
+        `Failed to send top-up: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   } catch (error) {

@@ -572,7 +572,7 @@
     "getStarted": "Get Started"
   },
   "homepage": {
-    "badge": "Powered by DingConnect & Reloadly · 150+ Countries",
+    "badge": "Global Mobile Top-Ups · 150+ Countries",
     "heroTitle1": "Sell prepaid top-ups.",
     "heroTitle2": "Scale without limits.",
     "heroSubtitle": "A white-label platform for reselling mobile airtime and data worldwide. Set your own pricing, manage your team, and process top-ups — all from one powerful dashboard.",
@@ -591,7 +591,7 @@
       "step1Title": "Create Your Organization",
       "step1Desc": "Sign up in seconds. Set up your organization, invite your team, and configure roles — all from a single dashboard.",
       "step2Title": "Connect & Sync Products",
-      "step2Desc": "Link your DingConnect or Reloadly account with one API key. Products from 150+ countries sync automatically into your catalog.",
+      "step2Desc": "Connect your top-up provider account with one API key. Products from 150+ countries sync automatically into your catalog.",
       "step3Title": "Start Earning",
       "step3Desc": "Set your pricing, launch your branded storefront, and start processing top-ups. Revenue lands in your wallet instantly."
     },
@@ -600,7 +600,7 @@
       "title": "Everything you need to resell",
       "subtitle": "Built for speed, scale, and the flexibility modern businesses demand.",
       "globalTitle": "Global Top-Up Network",
-      "globalDesc": "Reach customers in 150+ countries through DingConnect and Reloadly. Airtime, data, SMS, voice, and bundle products — all in one place.",
+      "globalDesc": "Reach customers in 150+ countries with our integrated top-up network. Airtime, data, SMS, voice, and bundle products — all in one place.",
       "pricingTitle": "Intelligent Pricing Engine",
       "pricingDesc": "Region-based pricing rules, per-product markups, country-specific custom pricing, and automatic discount pipelines. Full control.",
       "walletTitle": "Wallet & Balance System",
@@ -665,7 +665,7 @@
       "badge": "FAQ",
       "title": "Common questions",
       "q1": "How quickly can I start selling top-ups?",
-      "a1": "You can be live in under 10 minutes. Create an account, connect your DingConnect or Reloadly API key, configure your storefront branding, and you're ready. No code required.",
+      "a1": "You can be live in under 10 minutes. Create an account, connect your top-up provider API key, configure your storefront branding, and you're ready. No code required.",
       "q2": "What payment methods does the platform support?",
       "a2": "PGPay is fully integrated with webhook-verified payment confirmation. Stripe and PayPal integrations are also available. You choose which payment methods to enable per organization.",
       "q3": "How does the wallet system work?",
@@ -799,9 +799,9 @@
         "description": "For real businesses selling daily",
         "highlight1": "Up to 3 Organizations",
         "highlight2": "Up to 5 Team Members",
-        "highlight3": "Partial White Label",
-        "highlight4": "Customer API Access",
-        "highlight5": "Full Analytics & Webhooks",
+        "highlight3": "Unlimited Transactions",
+        "highlight4": "Partial White Label",
+        "highlight5": "Customer API Access",
         "cta": "Start Growth Plan"
       },
       "scale": {
@@ -812,7 +812,7 @@
         "highlight3": "Full White Label",
         "highlight4": "Custom Domain",
         "highlight5": "Priority Processing",
-        "cta": "Start Scale Plan"
+        "cta": "Contact Sales"
       },
       "enterprise": {
         "name": "Infrastructure Partner",

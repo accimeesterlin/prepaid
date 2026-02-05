@@ -26,10 +26,12 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowUpRight,
+  ArrowDown,
 } from "lucide-react";
 import Link from "next/link";
 import { getTierInfo, getNextTier, SubscriptionTier } from "@/lib/pricing";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { toast } from "@pg-prepaid/ui";
 
 interface SubscriptionData {
   tier: SubscriptionTier;
@@ -104,10 +106,15 @@ export default function BillingPage() {
 
       // Redirect to PGPay checkout
       window.location.href = data.redirectUrl;
+      // Don't reset upgrading state here — the page is navigating away.
+      // The button stays in loading state until the redirect completes.
     } catch (err) {
       console.error("Upgrade error:", err);
-      alert(err instanceof Error ? err.message : "Failed to upgrade");
-    } finally {
+      toast({
+        title: "Upgrade Failed",
+        description: err instanceof Error ? err.message : "Failed to upgrade. Please try again.",
+        variant: "error",
+      });
       setUpgrading(false);
     }
   };
@@ -212,9 +219,14 @@ export default function BillingPage() {
                 </div>
               </div>
 
-              {nextTier && (
-                <div className="space-y-4 pt-2">
-                  <div className="flex flex-col gap-3">
+              {nextTier && (() => {
+                const nextInfo = getTierInfo(nextTier);
+                const totalAmount = calculateDiscountedPrice(nextInfo.features.monthlyFee, selectedMonths);
+                const formatLimit = (val: number | "unlimited") => val === "unlimited" ? "Unlimited" : String(val);
+
+                return (
+                  <div className="space-y-4 pt-2">
+                    {/* Month selector */}
                     <div>
                       <label className="text-sm font-medium">Prepay for:</label>
                       <Select
@@ -228,84 +240,117 @@ export default function BillingPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">
-                            1 Month - $
-                            {getTierInfo(nextTier).features.monthlyFee}
+                            1 Month - ${nextInfo.features.monthlyFee}
                           </SelectItem>
                           <SelectItem value="3">
-                            3 Months - $
-                            {calculateDiscountedPrice(
-                              getTierInfo(nextTier).features.monthlyFee,
-                              3,
-                            ).toFixed(2)}
-                            <Badge
-                              variant="secondary"
-                              className="ml-2 bg-green-50 text-green-700"
-                            >
-                              Save 5%
-                            </Badge>
+                            3 Months - ${calculateDiscountedPrice(nextInfo.features.monthlyFee, 3).toFixed(2)}
+                            <Badge variant="secondary" className="ml-2 bg-green-50 text-green-700">Save 5%</Badge>
                           </SelectItem>
                           <SelectItem value="6">
-                            6 Months - $
-                            {calculateDiscountedPrice(
-                              getTierInfo(nextTier).features.monthlyFee,
-                              6,
-                            ).toFixed(2)}
-                            <Badge
-                              variant="secondary"
-                              className="ml-2 bg-green-50 text-green-700"
-                            >
-                              Save 10%
-                            </Badge>
+                            6 Months - ${calculateDiscountedPrice(nextInfo.features.monthlyFee, 6).toFixed(2)}
+                            <Badge variant="secondary" className="ml-2 bg-green-50 text-green-700">Save 10%</Badge>
                           </SelectItem>
                           <SelectItem value="12">
-                            12 Months - $
-                            {calculateDiscountedPrice(
-                              getTierInfo(nextTier).features.monthlyFee,
-                              12,
-                            ).toFixed(2)}
-                            <Badge
-                              variant="secondary"
-                              className="ml-2 bg-green-50 text-green-700"
-                            >
-                              Save 15%
-                            </Badge>
+                            12 Months - ${calculateDiscountedPrice(nextInfo.features.monthlyFee, 12).toFixed(2)}
+                            <Badge variant="secondary" className="ml-2 bg-green-50 text-green-700">Save 15%</Badge>
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Total: $
-                        {calculateDiscountedPrice(
-                          getTierInfo(nextTier).features.monthlyFee,
-                          selectedMonths,
-                        ).toFixed(2)}
-                        {selectedMonths > 1 && (
-                          <span className="text-green-600 font-medium">
-                            {" "}
-                            • {getDiscountLabel(selectedMonths)}
-                          </span>
+                    </div>
+
+                    {/* Upgrade preview panel */}
+                    <div className="border rounded-lg bg-muted/30 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">What you get with {nextInfo.name}</p>
+                        <Badge variant="secondary" className="bg-primary/10 text-primary">Preview</Badge>
+                      </div>
+
+                      {/* Highlights checklist */}
+                      <div className="grid sm:grid-cols-2 gap-1.5">
+                        {nextInfo.highlights.map((feature, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            <span>{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Current vs Next comparison */}
+                      <div className="border-t pt-3 mt-1">
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-2">What changes</p>
+                        <div className="space-y-1.5">
+                          {[
+                            {
+                              label: "Monthly Transactions",
+                              current: formatLimit(subscription.usage.transactionLimit),
+                              next: formatLimit(nextInfo.features.maxTransactionsPerMonth),
+                            },
+                            {
+                              label: "Transaction Fee",
+                              current: `${subscription.transactionFeePercentage}%`,
+                              next: `${nextInfo.features.transactionFeePercentage}%`,
+                            },
+                            {
+                              label: "Team Members",
+                              current: formatLimit(subscription.usage.teamMemberLimit),
+                              next: formatLimit(nextInfo.features.maxTeamMembers),
+                            },
+                            {
+                              label: "Organizations",
+                              current: formatLimit(subscription.usage.organizationLimit),
+                              next: formatLimit(nextInfo.features.maxOrganizations),
+                            },
+                          ].map(({ label, current, next }) => (
+                            current !== next && (
+                              <div key={label} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">{label}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-muted-foreground line-through">{current}</span>
+                                  <ArrowDown className="h-3 w-3 text-green-600 rotate-90" />
+                                  <span className="font-semibold text-green-700">{next}</span>
+                                </div>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Pricing summary */}
+                      <div className="border-t pt-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            ${nextInfo.features.monthlyFee}/mo &times; {selectedMonths} month{selectedMonths > 1 ? "s" : ""}
+                            {selectedMonths > 1 && (
+                              <span className="text-green-600 font-medium ml-1">• {getDiscountLabel(selectedMonths)}</span>
+                            )}
+                          </p>
+                        </div>
+                        <p className="text-lg font-bold">${totalAmount.toFixed(2)}</p>
+                      </div>
+                    </div>
+
+                    {/* Upgrade button */}
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        onClick={() => handleUpgrade(nextTier)}
+                        disabled={upgrading}
+                        className="flex-1"
+                      >
+                        {upgrading ? (
+                          "Processing..."
+                        ) : (
+                          <>
+                            <ArrowUpRight className="h-4 w-4 mr-2" />
+                            Upgrade to {nextInfo.name} — ${totalAmount.toFixed(2)}
+                          </>
                         )}
-                      </p>
+                      </Button>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div className="flex gap-2 pt-2">
-                {nextTier && (
-                  <Button
-                    onClick={() => handleUpgrade(nextTier)}
-                    disabled={upgrading}
-                  >
-                    {upgrading ? (
-                      "Processing..."
-                    ) : (
-                      <>
-                        <ArrowUpRight className="h-4 w-4 mr-2" />
-                        Upgrade to {getTierInfo(nextTier).name}
-                      </>
-                    )}
-                  </Button>
-                )}
                 <Button variant="outline" asChild>
                   <Link href="/pricing">View All Plans</Link>
                 </Button>
@@ -373,7 +418,7 @@ export default function BillingPage() {
                 <div className="flex-1">
                   <p className="font-medium">PGPay</p>
                   <p className="text-sm text-muted-foreground">
-                    Card, Bank Transfer, Mobile Money
+                    Pay with your PGeCom account
                   </p>
                 </div>
                 <Badge
@@ -384,8 +429,8 @@ export default function BillingPage() {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                All payments are processed securely through PGPay. You can pay
-                using credit/debit cards, bank transfers, or mobile money.
+                All payments are processed securely through PGPay using your
+                PGeCom account balance. No card or bank transfer required.
               </p>
             </div>
           </CardContent>

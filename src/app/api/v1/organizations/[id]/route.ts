@@ -1,11 +1,11 @@
-import { NextRequest } from 'next/server';
-import { requireAuth } from '@/lib/auth-middleware';
-import { dbConnection } from '@pg-prepaid/db/connection';
-import { Org, Organization, UserOrganization } from '@pg-prepaid/db';
-import { UserRole } from '@pg-prepaid/types';
-import { createSuccessResponse } from '@/lib/api-response';
-import { handleApiError, ApiErrors } from '@/lib/api-error';
-import { logger } from '@/lib/logger';
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/auth-middleware";
+import { dbConnection } from "@pg-prepaid/db/connection";
+import { Org, Organization, UserOrganization } from "@pg-prepaid/db";
+import { UserRole } from "@pg-prepaid/types";
+import { createSuccessResponse } from "@/lib/api-response";
+import { handleApiError, ApiErrors } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 /**
  * PATCH /api/v1/organizations/[id]
@@ -13,23 +13,22 @@ import { logger } from '@/lib/logger';
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await requireAuth(request);
     await dbConnection.connect();
 
-    // Handle both async and sync params for Next.js 15
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id } = resolvedParams;
+    // Handle async params for Next.js 15
+    const { id } = await params;
 
-    logger.info('Update organization request received', {
+    logger.info("Update organization request received", {
       orgId: id,
       userId: session.userId,
     });
 
     if (!id) {
-      throw ApiErrors.BadRequest('Organization ID is required');
+      throw ApiErrors.BadRequest("Organization ID is required");
     }
 
     // Check if user has admin access to this organization
@@ -41,7 +40,9 @@ export async function PATCH(
     });
 
     if (!userOrg) {
-      throw ApiErrors.Forbidden('You do not have permission to update this organization');
+      throw ApiErrors.Forbidden(
+        "You do not have permission to update this organization",
+      );
     }
 
     // Parse request body
@@ -49,18 +50,18 @@ export async function PATCH(
     const { name, slug } = body;
 
     if (!name || !name.trim()) {
-      throw ApiErrors.UnprocessableEntity('Organization name is required');
+      throw ApiErrors.UnprocessableEntity("Organization name is required");
     }
 
     if (!slug || !slug.trim()) {
-      throw ApiErrors.UnprocessableEntity('Organization slug is required');
+      throw ApiErrors.UnprocessableEntity("Organization slug is required");
     }
 
     // Validate slug format
     const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
     if (!slugPattern.test(slug.trim())) {
       throw ApiErrors.UnprocessableEntity(
-        'Slug must contain only lowercase letters, numbers, and hyphens'
+        "Slug must contain only lowercase letters, numbers, and hyphens",
       );
     }
 
@@ -76,7 +77,9 @@ export async function PATCH(
     });
 
     if (existingOrgWithSlug || existingOrganizationWithSlug) {
-      throw ApiErrors.Conflict('This slug is already taken by another organization');
+      throw ApiErrors.Conflict(
+        "This slug is already taken by another organization",
+      );
     }
 
     // Update the organization
@@ -86,14 +89,14 @@ export async function PATCH(
         name: name.trim(),
         slug: slug.trim(),
       },
-      { new: true }
+      { new: true },
     );
 
     if (!org) {
-      throw ApiErrors.NotFound('Organization not found');
+      throw ApiErrors.NotFound("Organization not found");
     }
 
-    logger.info('Organization updated', {
+    logger.info("Organization updated", {
       orgId: id,
       name: org.name,
       slug: org.slug,
@@ -101,7 +104,7 @@ export async function PATCH(
     });
 
     return createSuccessResponse({
-      message: 'Organization updated successfully',
+      message: "Organization updated successfully",
       organization: {
         id: org._id.toString(),
         name: org.name,
@@ -109,7 +112,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    logger.error('Error updating organization', { error });
+    logger.error("Error updating organization", { error });
     return handleApiError(error);
   }
 }

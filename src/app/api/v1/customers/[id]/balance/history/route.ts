@@ -28,9 +28,8 @@ export async function GET(
     return createSuccessResponse({ history });
   } catch (error: any) {
     return createErrorResponse(
-      ApiErrors.InternalServerError(
-        error.message || "Failed to fetch balance history",
-      ),
+      error.message || "Failed to fetch balance history",
+      500,
     );
   }
 }

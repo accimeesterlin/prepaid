@@ -131,6 +131,26 @@ const OrganizationSchema = new Schema<IOrganization>(
       },
       currentPeriodStart: Date,
       currentPeriodEnd: Date,
+      prepaidMonths: {
+        type: Number,
+      },
+      pendingUpgrade: {
+        tier: { type: String },
+        months: { type: Number },
+        orderId: { type: String, index: true },
+        token: { type: String },
+        status: { type: String },
+        createdAt: { type: Date },
+        expiresAt: { type: Date },
+        lastChecked: { type: Date },
+      },
+      lastPayment: {
+        orderId: { type: String, index: true },
+        amount: { type: Number },
+        months: { type: Number },
+        status: { type: String },
+        paidAt: { type: Date },
+      },
     },
     // New pricing tier fields
     subscriptionTier: {

@@ -62,7 +62,9 @@
       "Bash(do)",
       "Bash(for f in es fr ht)",
       "Bash(echo:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(pkill:*)",
+      "WebFetch(domain:developers.reloadly.com)"
     ],
     "deny": [],
     "ask": []

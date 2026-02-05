@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import { apiResponse, apiError } from "@/lib/api-response";
-import dbConnect from "@pg-prepaid/db/connection";
+import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
+import { dbConnection } from "@pg-prepaid/db/connection";
 import { Organization } from "@pg-prepaid/db";
 
 // Mock audit logs for now - you can replace this with actual database queries
-const generateMockAuditLogs = (orgId: string) => {
+const generateMockAuditLogs = (_orgId: string) => {
   const actions = [
     "create",
     "update",
@@ -57,35 +57,22 @@ const generateMockAuditLogs = (orgId: string) => {
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireAuth(request);
-    if ("error" in authResult) {
-      return NextResponse.json(
-        apiError(authResult.error, authResult.statusCode),
-        { status: authResult.statusCode },
-      );
-    }
-
-    const { session } = authResult;
-    await dbConnect();
+    const user = await requireAuth(request);
+    await dbConnection.connect();
 
     // Get organization and check subscription tier
-    const organization = await Organization.findById(session.organizationId);
+    const organization = await Organization.findById(user.orgId);
     if (!organization) {
-      return NextResponse.json(apiError("Organization not found", 404), {
-        status: 404,
-      });
+      return createErrorResponse("Organization not found", 404);
     }
 
     const tier = organization.subscriptionTier || "starter";
 
     // Only Scale and Enterprise tiers have access to audit logs
     if (tier !== "scale" && tier !== "enterprise") {
-      return NextResponse.json(
-        apiError(
-          "Audit logs are only available on Scale and Enterprise plans",
-          403,
-        ),
-        { status: 403 },
+      return createErrorResponse(
+        "Audit logs are only available on Scale and Enterprise plans",
+        403,
       );
     }
 
@@ -99,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     // TODO: Replace with actual database query
     // For now, return mock data
-    let logs = generateMockAuditLogs(organization._id.toString());
+    let logs = generateMockAuditLogs(String(organization._id));
 
     // Apply filters
     if (action && action !== "all") {
@@ -120,17 +107,13 @@ export async function GET(request: NextRequest) {
     // Apply limit
     logs = logs.slice(0, limit);
 
-    return NextResponse.json(
-      apiResponse({
-        logs,
-        total: logs.length,
-        hasMore: false,
-      }),
-    );
+    return createSuccessResponse({
+      logs,
+      total: logs.length,
+      hasMore: false,
+    });
   } catch (error) {
     console.error("Audit logs fetch error:", error);
-    return NextResponse.json(apiError("Failed to fetch audit logs", 500), {
-      status: 500,
-    });
+    return createErrorResponse("Failed to fetch audit logs", 500);
   }
 }

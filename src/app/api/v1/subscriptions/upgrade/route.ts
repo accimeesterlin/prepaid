@@ -97,8 +97,8 @@ export async function POST(req: NextRequest) {
       customerFirstName: organization.name.split(" ")[0] || "Customer",
       customerLastName:
         organization.name.split(" ").slice(1).join(" ") || "User",
-      successUrl: `${baseUrl}/payment/success?type=subscription&orderId=${orderId}`,
-      errorUrl: `${baseUrl}/payment/cancel?type=subscription&orderId=${orderId}`,
+      successUrl: `${baseUrl}/payment/success`,
+      errorUrl: `${baseUrl}/payment/cancel`,
       description: `${tierInfo.name} Plan - ${months} Month${months > 1 ? "s" : ""} Prepaid${discount > 0 ? ` (${(discount * 100).toFixed(0)}% discount)` : ""}`,
       metadata: {
         organizationId: String(organization._id),
