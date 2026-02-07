@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
+import { saveEncrypted, loadEncrypted } from "@/lib/encryption";
 import {
   Card,
   CardContent,
@@ -15,11 +16,25 @@ import {
   Input,
   Label,
   toast,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@pg-prepaid/ui";
-import { Loader2, AlertCircle, CheckCircle2, Wallet, Search, Phone } from "lucide-react";
+import {
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Wallet,
+  Search,
+  Phone,
+  X,
+} from "lucide-react";
 
 interface CustomerData {
-  id: string;
+  _id: string;
   currentBalance: number;
   balanceCurrency: string;
   emailVerified: boolean;
@@ -34,8 +49,11 @@ interface Product {
   benefitAmount: number;
   benefitUnit: string;
   pricing: {
-    costPrice: number;
-    finalPrice: number;
+    costPrice: number; // DingConnect cost
+    markup: number; // Markup amount added
+    priceBeforeDiscount: number; // Price with markup before discount
+    discount: number; // Discount amount
+    finalPrice: number; // Final price customer pays
     discountApplied: boolean;
   };
   isVariableValue: boolean;
@@ -51,20 +69,47 @@ export default function SendMinutesPage({
   const [orgSlug, setOrgSlug] = useState<string>("");
   const [customer, setCustomer] = useState<CustomerData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [detectedOperatorCodes, setDetectedOperatorCodes] = useState<string[]>(
+    [],
+  );
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [recipientPhone, setRecipientPhone] = useState("");
+  const [recentPhones, setRecentPhones] = useState<string[]>([]);
   const [customAmount, setCustomAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
+  const [isTestMode, setIsTestMode] = useState<boolean>(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [filterByType, setFilterByType] = useState<"all" | "plan" | "prepaid">(
+    "all",
+  );
+  const [showProductModal, setShowProductModal] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
 
   useEffect(() => {
     params.then((p) => setOrgSlug(p.orgSlug));
   }, [params]);
+
+  // Load recent phone numbers from localStorage
+  useEffect(() => {
+    if (orgSlug && customer?._id) {
+      const storageKey = `recentPhones_${orgSlug}_${customer._id}`;
+
+      loadEncrypted<string[]>(storageKey, customer._id, orgSlug)
+        .then((phones) => {
+          if (phones && Array.isArray(phones)) {
+            console.log("Loaded recent phones:", phones.length);
+            setRecentPhones(phones);
+          }
+        })
+        .catch((e) => {
+          console.error("Error loading recent phones:", e);
+        });
+    }
+  }, [orgSlug, customer?._id]);
 
   useEffect(() => {
     if (orgSlug) {
@@ -90,10 +135,72 @@ export default function SendMinutesPage({
 
       const customerData = await customerRes.json();
       setCustomer(customerData.customer);
+
+      // Fetch test mode status
+      try {
+        const testModeRes = await fetch(
+          `/api/v1/customer-portal/${orgSlug}/test-mode`,
+        );
+        if (testModeRes.ok) {
+          const testModeData = await testModeRes.json();
+          setIsTestMode(testModeData.testMode || false);
+        }
+      } catch (testModeError) {
+        console.error("Failed to fetch test mode status:", testModeError);
+        // Don't fail the whole page load if test mode check fails
+      }
     } catch (err: any) {
       setError(err.message || t("customer.portal.sendMinutes.loadError"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Save a phone number to recent list
+  const saveRecentPhone = async (phone: string) => {
+    if (!customer?._id || !orgSlug) {
+      console.log("Cannot save recent phone - missing data:", {
+        hasCustomer: !!customer,
+        customerId: customer?._id,
+        orgSlug,
+      });
+      return;
+    }
+
+    const storageKey = `recentPhones_${orgSlug}_${customer._id}`;
+    const cleanPhone = phone.trim();
+
+    console.log("Saving recent phone:", cleanPhone, "to key:", storageKey);
+
+    // Add to beginning of array, remove duplicates, limit to 5
+    const updated = [
+      cleanPhone,
+      ...recentPhones.filter((p) => p !== cleanPhone),
+    ].slice(0, 5);
+
+    setRecentPhones(updated);
+
+    try {
+      await saveEncrypted(storageKey, updated, customer._id, orgSlug);
+      console.log("Saved encrypted phone list to localStorage");
+    } catch (error) {
+      console.error("Failed to save encrypted phones:", error);
+    }
+  };
+
+  // Remove a phone number from recent list
+  const removeRecentPhone = async (phone: string) => {
+    if (!customer?._id || !orgSlug) return;
+
+    const storageKey = `recentPhones_${orgSlug}_${customer._id}`;
+    const updated = recentPhones.filter((p) => p !== phone);
+
+    setRecentPhones(updated);
+
+    try {
+      await saveEncrypted(storageKey, updated, customer._id, orgSlug);
+    } catch (error) {
+      console.error("Failed to save encrypted phones:", error);
     }
   };
 
@@ -121,7 +228,11 @@ export default function SendMinutesPage({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.title || "Failed to lookup phone number");
+        throw new Error(
+          errorData.detail ||
+            errorData.title ||
+            "Failed to lookup phone number",
+        );
       }
 
       const data = await res.json();
@@ -131,12 +242,30 @@ export default function SendMinutesPage({
         return;
       }
 
-      setProducts(data.products);
-      toast({
-        title: "Products found",
-        description: `Found ${data.products.length} products for this number`,
-        variant: "success",
-      });
+      // Set test mode from API response
+      if (data.testMode !== undefined) {
+        setIsTestMode(data.testMode);
+      }
+
+      // Extract detected operator codes for filtering
+      const detectedCodes =
+        data.detectedOperators?.map((op: any) => op.code) || [];
+      setDetectedOperatorCodes(detectedCodes);
+
+      // Filter products to only show those from detected operators
+      const filteredProducts = data.products.filter((product: Product) =>
+        detectedCodes.includes(product.providerCode),
+      );
+
+      if (filteredProducts.length === 0) {
+        setError(`No products available for the detected operator`);
+        return;
+      }
+
+      setProducts(filteredProducts);
+
+      // Save phone number to recent list after successful lookup
+      saveRecentPhone(recipientPhone);
     } catch (err: any) {
       setError(err.message || "Failed to lookup phone number");
     } finally {
@@ -175,8 +304,14 @@ export default function SendMinutesPage({
     setSuccess(false);
 
     try {
+      // Ensure phone number is in correct format (with + sign if not present)
+      let formattedPhone = recipientPhone.trim();
+      if (!formattedPhone.startsWith("+")) {
+        formattedPhone = "+" + formattedPhone;
+      }
+
       const requestBody: any = {
-        phoneNumber: recipientPhone,
+        phoneNumber: formattedPhone,
         skuCode: selectedProduct.skuCode,
       };
 
@@ -196,12 +331,16 @@ export default function SendMinutesPage({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.title || "Transaction failed");
+        throw new Error(
+          errorData.detail || errorData.title || "Transaction failed",
+        );
       }
 
       const data = await res.json();
 
       setSuccess(true);
+      setShowProductModal(false);
+
       toast({
         title: "Success!",
         description: `Top-up sent successfully to ${recipientPhone}`,
@@ -240,6 +379,33 @@ export default function SendMinutesPage({
     );
   }
 
+  // Filter products by type
+  let filteredProducts = [...products];
+  if (filterByType !== "all") {
+    filteredProducts = filteredProducts.filter((product) => {
+      // Detect if product is a plan (has Data benefit or has validity period)
+      const hasDataBenefit = product.benefitType
+        ?.toLowerCase()
+        .includes("data");
+      const isPlan = hasDataBenefit;
+      const isPrepaid = !isPlan;
+
+      if (filterByType === "plan") return isPlan;
+      if (filterByType === "prepaid") return isPrepaid;
+      return true;
+    });
+  }
+
+  // Count products by type for tab badges
+  const prepaidCount = products.filter((p) => {
+    const hasDataBenefit = p.benefitType?.toLowerCase().includes("data");
+    return !hasDataBenefit;
+  }).length;
+  const planCount = products.filter((p) => {
+    const hasDataBenefit = p.benefitType?.toLowerCase().includes("data");
+    return hasDataBenefit;
+  }).length;
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <Card>
@@ -249,6 +415,19 @@ export default function SendMinutesPage({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Test Mode Warning */}
+          {isTestMode && (
+            <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-500 dark:border-yellow-700">
+              <AlertCircle className="h-4 w-4 text-yellow-700 dark:text-yellow-500" />
+              <AlertDescription className="text-yellow-800 dark:text-yellow-400">
+                <strong>⚠️ Test Mode Active:</strong> This organization is in
+                test mode. Transactions will be validated but{" "}
+                <strong>NOT actually sent</strong>. No real money will be spent
+                or received.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Balance Display */}
           <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0">
             <CardContent className="pt-6">
@@ -323,7 +502,12 @@ export default function SendMinutesPage({
                 <Button
                   type="button"
                   onClick={handlePhoneLookup}
-                  disabled={!recipientPhone || recipientPhone.length < 10 || lookingUp || sending}
+                  disabled={
+                    !recipientPhone ||
+                    recipientPhone.length < 10 ||
+                    lookingUp ||
+                    sending
+                  }
                   variant="outline"
                 >
                   {lookingUp ? (
@@ -331,174 +515,479 @@ export default function SendMinutesPage({
                   ) : (
                     <Search className="h-4 w-4" />
                   )}
-                  <span className="ml-2">{lookingUp ? "Looking up..." : "Search"}</span>
+                  <span className="ml-2">
+                    {lookingUp ? "Looking up..." : "Search"}
+                  </span>
                 </Button>
               </div>
+
+              {/* Recent Phone Numbers */}
+              {recentPhones.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    Recent numbers:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {recentPhones.map((phone) => (
+                      <button
+                        key={phone}
+                        type="button"
+                        onClick={async () => {
+                          setRecipientPhone(phone);
+                          setProducts([]);
+                          setSelectedProduct(null);
+
+                          // Automatically search for products
+                          setLookingUp(true);
+                          setError("");
+
+                          try {
+                            const res = await fetch("/api/v1/lookup/phone", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              credentials: "include",
+                              body: JSON.stringify({
+                                phoneNumber: phone,
+                                orgSlug,
+                              }),
+                            });
+
+                            if (!res.ok) {
+                              const errorData = await res
+                                .json()
+                                .catch(() => ({}));
+                              throw new Error(
+                                errorData.detail ||
+                                  errorData.title ||
+                                  "Failed to lookup phone number",
+                              );
+                            }
+
+                            const data = await res.json();
+
+                            if (!data.products || data.products.length === 0) {
+                              setError(`No products found for ${phone}`);
+                              return;
+                            }
+
+                            const detectedCodes =
+                              data.detectedOperators?.map(
+                                (op: any) => op.code,
+                              ) || [];
+                            setDetectedOperatorCodes(detectedCodes);
+
+                            const filteredProducts = data.products.filter(
+                              (product: Product) =>
+                                detectedCodes.includes(product.providerCode),
+                            );
+
+                            if (filteredProducts.length === 0) {
+                              setError(
+                                `No products available for the detected operator`,
+                              );
+                              return;
+                            }
+
+                            setProducts(filteredProducts);
+                            await saveRecentPhone(phone);
+                          } catch (err: any) {
+                            setError(
+                              err.message || "Failed to lookup phone number",
+                            );
+                          } finally {
+                            setLookingUp(false);
+                          }
+                        }}
+                        disabled={lookingUp || sending}
+                        className="group relative inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <span>{phone}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeRecentPhone(phone);
+                          }}
+                          className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Remove"
+                        >
+                          <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                        </button>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <p className="text-xs text-muted-foreground">
-                Enter the phone number and click Search to find available products
+                Enter the phone number and click Search to find available
+                products
               </p>
             </div>
           </div>
 
           {/* Product Selection - Only show if products found */}
           {products.length > 0 && (
-            <form onSubmit={handleSubmit} className="space-y-6">
-
-              {/* Product Selection */}
-              <div className="space-y-2">
+            <div className="space-y-6">
+              {/* Product Type Filters */}
+              <div className="flex items-center justify-between">
                 <Label>{t("customer.portal.sendMinutes.selectProduct")}</Label>
-                <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-                  {products.map((product) => (
-                    <Card
-                      key={product.skuCode}
-                      onClick={() => {
-                        setSelectedProduct(product);
-                        setCustomAmount("");
-                      }}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedProduct?.skuCode === product.skuCode
-                          ? "border-primary bg-primary/5 ring-2 ring-primary"
-                          : "hover:border-primary/50"
-                      }`}
-                    >
-                      <CardContent className="pt-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-sm">{product.name}</h3>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {product.providerName}
-                            </p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded">
-                                {product.benefitType}
+                <div className="inline-flex items-center gap-1 p-1 bg-muted rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setFilterByType("all")}
+                    className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded transition-colors ${
+                      filterByType === "all"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    All ({products.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterByType("prepaid")}
+                    className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded transition-colors ${
+                      filterByType === "prepaid"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Top-up ({prepaidCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterByType("plan")}
+                    className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded transition-colors ${
+                      filterByType === "plan"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Plans ({planCount})
+                  </button>
+                </div>
+              </div>
+
+              {/* Product Grid */}
+              <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
+                {filteredProducts.map((product) => (
+                  <Card
+                    key={product.skuCode}
+                    onClick={() => {
+                      console.log("Selected product:", product);
+                      console.log("Product pricing:", product.pricing);
+                      setSelectedProduct(product);
+                      setCustomAmount("");
+                      setShowProductModal(true);
+                    }}
+                    className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50"
+                  >
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-sm">
+                            {product.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {product.providerName}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded">
+                              {product.benefitType}
+                            </span>
+                            {product.benefitAmount && (
+                              <span className="text-xs text-muted-foreground">
+                                {product.benefitAmount} {product.benefitUnit}
                               </span>
-                              {product.benefitAmount && (
-                                <span className="text-xs text-muted-foreground">
-                                  {product.benefitAmount} {product.benefitUnit}
-                                </span>
-                              )}
-                            </div>
+                            )}
                           </div>
-                          <div className="text-right">
-                            {product.isVariableValue ? (
-                              <div>
-                                <p className="text-xs text-muted-foreground">Custom amount</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  ${product.minAmount} - ${product.maxAmount}
+                        </div>
+                        <div className="text-right">
+                          {product.isVariableValue ? (
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                Custom amount
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                ${product.minAmount} - ${product.maxAmount}
+                              </p>
+                            </div>
+                          ) : (
+                            <div>
+                              {product.pricing.discountApplied && (
+                                <p className="text-xs line-through text-muted-foreground">
+                                  $
+                                  {product.pricing.priceBeforeDiscount.toFixed(
+                                    2,
+                                  )}
                                 </p>
-                              </div>
-                            ) : (
-                              <div>
-                                {product.pricing.discountApplied && (
-                                  <p className="text-xs line-through text-muted-foreground">
-                                    ${product.pricing.costPrice.toFixed(2)}
+                              )}
+                              <p className="text-lg font-bold text-primary">
+                                ${product.pricing.finalPrice.toFixed(2)}
+                              </p>
+                              {product.pricing.markup > 0 &&
+                                !product.pricing.discountApplied && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Cost: $
+                                    {product.pricing.costPrice.toFixed(2)}
                                   </p>
                                 )}
-                                <p className="text-lg font-bold text-primary">
-                                  ${product.pricing.finalPrice.toFixed(2)}
-                                </p>
-                              </div>
-                            )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Product Detail Modal */}
+      <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
+        <DialogContent className="sm:max-w-lg">
+          {selectedProduct && (
+            <form onSubmit={handleSubmit}>
+              <DialogHeader>
+                <DialogTitle>{selectedProduct.name}</DialogTitle>
+                <DialogDescription>
+                  {selectedProduct.providerName} • {selectedProduct.benefitType}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 my-6">
+                {/* Product Details */}
+                <div className="space-y-2 pb-4 border-b">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Provider</span>
+                    <span className="font-medium">
+                      {selectedProduct.providerName}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Benefit</span>
+                    <span className="font-medium">
+                      {selectedProduct.benefitAmount ? (
+                        <>
+                          {selectedProduct.benefitAmount}{" "}
+                          {selectedProduct.benefitUnit}
+                        </>
+                      ) : (
+                        selectedProduct.benefitType
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Recipient</span>
+                    <span className="font-medium">{recipientPhone}</span>
+                  </div>
+                </div>
+
+                {/* Custom Amount for Variable Value Products */}
+                {selectedProduct.isVariableValue && (
+                  <div className="space-y-2">
+                    <Label htmlFor="modalCustomAmount">
+                      Amount (${selectedProduct.minAmount} - $
+                      {selectedProduct.maxAmount})
+                    </Label>
+                    <Input
+                      id="modalCustomAmount"
+                      type="number"
+                      step="0.01"
+                      min={selectedProduct.minAmount}
+                      max={selectedProduct.maxAmount}
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      placeholder={`Enter amount between $${selectedProduct.minAmount} and $${selectedProduct.maxAmount}`}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                )}
+
+                {/* Pricing Display for Variable Value Products */}
+                {selectedProduct.isVariableValue &&
+                  selectedProduct.pricing &&
+                  customer &&
+                  customAmount &&
+                  parseFloat(customAmount) > 0 && (
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-300 dark:border-blue-800">
+                      <CardContent className="pt-4 pb-4">
+                        <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                          <span className="text-lg">💳</span> Pricing Breakdown
+                        </h4>
+                        <div className="space-y-2 text-sm text-blue-900 dark:text-blue-100">
+                          <div className="flex justify-between items-center">
+                            <span>Top-Up Amount</span>
+                            <span className="font-medium">
+                              {customer?.balanceCurrency || "USD"}{" "}
+                              {parseFloat(customAmount).toFixed(2)}
+                            </span>
+                          </div>
+                          {selectedProduct.pricing.markup > 0 && (
+                            <div className="flex justify-between items-center">
+                              <span>Service Fee</span>
+                              <span className="font-medium">
+                                +{customer?.balanceCurrency || "USD"}{" "}
+                                {(
+                                  (parseFloat(customAmount) *
+                                    selectedProduct.pricing.markup) /
+                                  selectedProduct.pricing.costPrice
+                                ).toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center pt-2 border-t border-blue-300 dark:border-blue-700 font-bold text-base">
+                            <span>You Pay</span>
+                            <span className="text-blue-700 dark:text-blue-300">
+                              {customer?.balanceCurrency || "USD"}{" "}
+                              {(
+                                parseFloat(customAmount) *
+                                (1 +
+                                  selectedProduct.pricing.markup /
+                                    selectedProduct.pricing.costPrice)
+                              ).toFixed(2)}
+                            </span>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
-              </div>
+                  )}
 
-              {/* Custom Amount for Variable Value Products */}
-              {selectedProduct?.isVariableValue && (
-                <div className="space-y-2">
-                  <Label htmlFor="customAmount">
-                    Amount (${selectedProduct.minAmount} - ${selectedProduct.maxAmount})
-                  </Label>
-                  <Input
-                    id="customAmount"
-                    type="number"
-                    step="0.01"
-                    min={selectedProduct.minAmount}
-                    max={selectedProduct.maxAmount}
-                    value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                    placeholder={`Enter amount between $${selectedProduct.minAmount} and $${selectedProduct.maxAmount}`}
-                    required
-                  />
-                </div>
-              )}
+                {/* Pricing Display for Fixed Products */}
+                {!selectedProduct.isVariableValue &&
+                  selectedProduct.pricing &&
+                  customer && (
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-300 dark:border-blue-800">
+                      <CardContent className="pt-4 pb-4">
+                        <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                          <span className="text-lg">💳</span> Pricing Breakdown
+                        </h4>
+                        <div className="space-y-2 text-sm text-blue-900 dark:text-blue-100">
+                          <div className="flex justify-between items-center">
+                            <span>Base Price</span>
+                            <span className="font-medium">
+                              {customer?.balanceCurrency || "USD"}{" "}
+                              {selectedProduct.pricing.costPrice.toFixed(2)}
+                            </span>
+                          </div>
+                          {selectedProduct.pricing.markup > 0 && (
+                            <div className="flex justify-between items-center">
+                              <span>Service Fee</span>
+                              <span className="font-medium">
+                                +{customer?.balanceCurrency || "USD"}{" "}
+                                {selectedProduct.pricing.markup.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          {selectedProduct.pricing.discountApplied &&
+                            selectedProduct.pricing.discount > 0 && (
+                              <div className="flex justify-between items-center text-green-700 dark:text-green-300">
+                                <span>💰 Discount</span>
+                                <span className="font-medium">
+                                  -{customer?.balanceCurrency || "USD"}{" "}
+                                  {selectedProduct.pricing.discount.toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+                          <div className="flex justify-between items-center pt-2 border-t border-blue-300 dark:border-blue-700 font-bold text-base">
+                            <span>You Pay</span>
+                            <span className="text-blue-700 dark:text-blue-300">
+                              {customer?.balanceCurrency || "USD"}{" "}
+                              {selectedProduct.pricing.finalPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-              {/* Cost Summary */}
-              {selectedProduct && (
-                <Card className="bg-muted/50">
+                {/* Balance Summary */}
+                <Card className="bg-muted/50 border-0">
                   <CardContent className="pt-6 space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Cost</span>
-                      <span className="font-semibold">
-                        {customer.balanceCurrency}{" "}
-                        {selectedProduct.isVariableValue
-                          ? parseFloat(customAmount || "0").toFixed(2)
-                          : selectedProduct.pricing.finalPrice.toFixed(2)}
+                    <div className="flex justify-between border-b pb-3">
+                      <span className="text-muted-foreground">
+                        Current Balance
                       </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Current Balance</span>
                       <span className="font-semibold">
                         {customer.balanceCurrency}{" "}
                         {customer.currentBalance.toFixed(2)}
                       </span>
                     </div>
-                    <div className="border-t pt-3">
-                      <div className="flex justify-between">
-                        <span className="font-semibold">Remaining Balance</span>
-                        <span
-                          className={`font-bold ${
-                            customer.currentBalance -
-                              (selectedProduct.isVariableValue
-                                ? parseFloat(customAmount || "0")
-                                : selectedProduct.pricing.finalPrice) >=
-                            0
-                              ? "text-primary"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {customer.balanceCurrency}{" "}
-                          {(
-                            customer.currentBalance -
-                            (selectedProduct.isVariableValue
-                              ? parseFloat(customAmount || "0")
-                              : selectedProduct.pricing.finalPrice)
-                          ).toFixed(2)}
-                        </span>
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="font-semibold">After This Purchase</span>
+                      <span
+                        className={`font-bold text-lg ${
+                          customer.currentBalance -
+                            (selectedProduct.isVariableValue && customAmount
+                              ? parseFloat(customAmount) *
+                                (1 +
+                                  selectedProduct.pricing.markup /
+                                    selectedProduct.pricing.costPrice)
+                              : selectedProduct.pricing.finalPrice) >=
+                          0
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {customer.balanceCurrency}{" "}
+                        {(
+                          customer.currentBalance -
+                          (selectedProduct.isVariableValue && customAmount
+                            ? parseFloat(customAmount) *
+                              (1 +
+                                selectedProduct.pricing.markup /
+                                  selectedProduct.pricing.costPrice)
+                            : selectedProduct.pricing.finalPrice)
+                        ).toFixed(2)}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              </div>
 
-              <Button
-                type="submit"
-                disabled={
-                  sending ||
-                  !selectedProduct ||
-                  !customer.emailVerified ||
-                  (selectedProduct.isVariableValue && !customAmount) ||
-                  customer.currentBalance <
-                    (selectedProduct.isVariableValue
-                      ? parseFloat(customAmount || "0")
-                      : selectedProduct.pricing.finalPrice)
-                }
-                className="w-full"
-                size="lg"
-              >
-                {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {sending
-                  ? t("customer.portal.sendMinutes.sending")
-                  : t("customer.portal.sendMinutes.sendButton")}
-              </Button>
+              <DialogFooter className="gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowProductModal(false);
+                    setCustomAmount("");
+                  }}
+                  disabled={sending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    sending ||
+                    !customer.emailVerified ||
+                    (selectedProduct.isVariableValue && !customAmount) ||
+                    customer.currentBalance <
+                      (selectedProduct.isVariableValue && customAmount
+                        ? parseFloat(customAmount) *
+                          (1 +
+                            selectedProduct.pricing.markup /
+                              selectedProduct.pricing.costPrice)
+                        : selectedProduct.pricing.finalPrice)
+                  }
+                >
+                  {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {sending
+                    ? t("customer.portal.sendMinutes.sending")
+                    : t("customer.portal.sendMinutes.sendButton")}
+                </Button>
+              </DialogFooter>
             </form>
           )}
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

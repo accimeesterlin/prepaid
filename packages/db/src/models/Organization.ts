@@ -36,6 +36,14 @@ export interface IOrganization extends Document {
       status: string;
       paidAt: Date;
     };
+    paymentHistory?: Array<{
+      orderId: string;
+      tier: string;
+      amount: number;
+      months: number;
+      status: "completed" | "failed" | "pending";
+      paidAt: Date;
+    }>;
   };
   // New pricing tier fields
   subscriptionTier: "starter" | "growth" | "scale" | "enterprise";
@@ -151,6 +159,16 @@ const OrganizationSchema = new Schema<IOrganization>(
         status: { type: String },
         paidAt: { type: Date },
       },
+      paymentHistory: [
+        {
+          orderId: { type: String },
+          tier: { type: String },
+          amount: { type: Number },
+          months: { type: Number },
+          status: { type: String, enum: ["completed", "failed", "pending"] },
+          paidAt: { type: Date },
+        },
+      ],
     },
     // New pricing tier fields
     subscriptionTier: {

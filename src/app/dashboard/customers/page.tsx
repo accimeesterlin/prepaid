@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, User, Phone, MapPin } from 'lucide-react';
+import { Plus, Search, User, Phone, MapPin, Edit2 } from 'lucide-react';
 
 import {
   Button,
@@ -36,6 +36,8 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [search, setSearch] = useState('');
   const [formData, setFormData] = useState({
     phoneNumber: '',
@@ -43,8 +45,15 @@ export default function CustomersPage() {
     name: '',
     country: '',
   });
+  const [editFormData, setEditFormData] = useState({
+    phoneNumber: '',
+    email: '',
+    name: '',
+    country: '',
+  });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [editMessage, setEditMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     fetchCustomers();
@@ -92,6 +101,51 @@ export default function CustomersPage() {
       }
     } catch (_error) {
       setMessage({ type: 'error', text: 'Failed to create customer' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEdit = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setEditFormData({
+      phoneNumber: customer.phoneNumber,
+      email: customer.email || '',
+      name: customer.name || '',
+      country: customer.country || '',
+    });
+    setEditMessage(null);
+    setShowEditModal(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingCustomer) return;
+
+    setSaving(true);
+    setEditMessage(null);
+
+    try {
+      const response = await fetch(`/api/v1/customers/${editingCustomer._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData),
+      });
+
+      if (response.ok) {
+        setEditMessage({ type: 'success', text: 'Customer updated successfully!' });
+        await fetchCustomers();
+        setTimeout(() => {
+          setShowEditModal(false);
+          setEditingCustomer(null);
+          setEditFormData({ phoneNumber: '', email: '', name: '', country: '' });
+          setEditMessage(null);
+        }, 1500);
+      } else {
+        const error = await response.json();
+        setEditMessage({ type: 'error', text: error.error || 'Failed to update customer' });
+      }
+    } catch (_error) {
+      setEditMessage({ type: 'error', text: 'Failed to update customer' });
     } finally {
       setSaving(false);
     }
@@ -158,7 +212,20 @@ export default function CustomersPage() {
                       <User className="h-5 w-5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm truncate">{customer.name || 'Unnamed Customer'}</h3>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold text-sm truncate flex-1">{customer.name || 'Unnamed Customer'}</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-primary/10 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(customer);
+                          }}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                       <div className="space-y-0.5 mt-1">
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Phone className="h-3 w-3 flex-shrink-0" />
@@ -273,6 +340,82 @@ export default function CustomersPage() {
               </Button>
               <Button onClick={handleCreate} disabled={saving || !formData.phoneNumber}>
                 {saving ? 'Creating...' : 'Create Customer'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Customer Modal */}
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Customer</DialogTitle>
+              <DialogDescription>Update customer information</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  placeholder="+1 (555) 123-4567"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={editFormData.phoneNumber}
+                  onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Name</label>
+                <input
+                  type="text"
+                  placeholder="John Doe"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  placeholder="john.doe@example.com"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Country</label>
+                <input
+                  type="text"
+                  placeholder="e.g., United States"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={editFormData.country}
+                  onChange={(e) => setEditFormData({ ...editFormData, country: e.target.value })}
+                />
+              </div>
+
+              {editMessage && (
+                <div
+                  className={`p-3 rounded-lg text-sm ${
+                    editMessage.type === 'success'
+                      ? 'bg-green-50 text-green-800 border border-green-200'
+                      : 'bg-red-50 text-red-800 border border-red-200'
+                  }`}
+                >
+                  {editMessage.text}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdate} disabled={saving || !editFormData.phoneNumber}>
+                {saving ? 'Updating...' : 'Update Customer'}
               </Button>
             </DialogFooter>
           </DialogContent>

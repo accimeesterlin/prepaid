@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   ArrowUpRight,
   ArrowDown,
+  Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import { getTierInfo, getNextTier, SubscriptionTier } from "@/lib/pricing";
@@ -49,6 +50,17 @@ interface SubscriptionData {
   transactionFeePercentage: number;
 }
 
+interface BillingHistoryEntry {
+  orderId: string;
+  tier: string;
+  tierName: string;
+  amount: number;
+  months: number;
+  status: "completed" | "failed" | "pending";
+  paidAt: string;
+  description: string;
+}
+
 export default function BillingPage() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(
     null,
@@ -57,9 +69,12 @@ export default function BillingPage() {
   const [error, setError] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState(1);
+  const [billingHistory, setBillingHistory] = useState<BillingHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   useEffect(() => {
     fetchSubscription();
+    fetchBillingHistory();
   }, []);
 
   const fetchSubscription = async () => {
@@ -85,6 +100,20 @@ export default function BillingPage() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBillingHistory = async () => {
+    try {
+      const response = await fetch("/api/v1/subscriptions/billing-history");
+      if (response.ok) {
+        const data = await response.json();
+        setBillingHistory(data.history || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch billing history:", err);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -443,23 +472,43 @@ export default function BillingPage() {
             <CardDescription>Your past invoices and payments</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <BillingHistoryRow
-                date="Jan 1, 2026"
-                amount={subscription.monthlyFee}
-                status="paid"
-              />
-              <BillingHistoryRow
-                date="Dec 1, 2025"
-                amount={subscription.monthlyFee}
-                status="paid"
-              />
-              <BillingHistoryRow
-                date="Nov 1, 2025"
-                amount={subscription.monthlyFee}
-                status="paid"
-              />
-            </div>
+            {historyLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : billingHistory.length === 0 ? (
+              <div className="text-center py-10">
+                <Receipt className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <p className="text-muted-foreground font-medium">No billing history yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your payment records will appear here after your first upgrade.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {billingHistory.map((entry) => (
+                  <BillingHistoryRow
+                    key={entry.orderId}
+                    date={new Date(entry.paidAt).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                    description={entry.description}
+                    amount={entry.amount}
+                    status={
+                      entry.status === "completed"
+                        ? "paid"
+                        : entry.status === "pending"
+                          ? "pending"
+                          : "failed"
+                    }
+                  />
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -517,10 +566,12 @@ function UsageCard({
 
 function BillingHistoryRow({
   date,
+  description,
   amount,
   status,
 }: {
   date: string;
+  description: string;
   amount: number;
   status: "paid" | "pending" | "failed";
 }) {
@@ -528,7 +579,7 @@ function BillingHistoryRow({
     <div className="flex items-center justify-between py-2 border-b last:border-0">
       <div>
         <p className="font-medium">{date}</p>
-        <p className="text-sm text-muted-foreground">Monthly subscription</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       <div className="flex items-center gap-4">
         <span className="font-semibold">${amount}</span>

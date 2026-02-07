@@ -61,22 +61,28 @@ export async function POST(req: NextRequest) {
       const daysToAdd = months * 30;
 
       // Update organization subscription
+      const paymentRecord = {
+        orderId,
+        tier: newTier,
+        amount: verification.amount,
+        months,
+        status: "completed" as const,
+        paidAt: new Date(),
+      };
+
       await Organization.findByIdAndUpdate(organization._id, {
-        subscriptionTier: newTier,
-        "subscription.status": "active",
-        "subscription.currentPeriodStart": new Date(),
-        "subscription.currentPeriodEnd": new Date(
-          Date.now() + daysToAdd * 24 * 60 * 60 * 1000,
-        ),
-        "subscription.prepaidMonths": months,
-        "subscription.lastPayment": {
-          orderId,
-          amount: verification.amount,
-          months,
-          status: "completed",
-          paidAt: new Date(),
+        $set: {
+          subscriptionTier: newTier,
+          "subscription.status": "active",
+          "subscription.currentPeriodStart": new Date(),
+          "subscription.currentPeriodEnd": new Date(
+            Date.now() + daysToAdd * 24 * 60 * 60 * 1000,
+          ),
+          "subscription.prepaidMonths": months,
+          "subscription.lastPayment": paymentRecord,
         },
         $unset: { "subscription.pendingUpgrade": "" },
+        $push: { "subscription.paymentHistory": paymentRecord },
       });
 
       console.log("Subscription upgraded successfully:", {

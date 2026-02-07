@@ -9,18 +9,19 @@ import { Button, Input, Alert, AlertDescription } from "@pg-prepaid/ui";
 interface Transaction {
   _id: string;
   amount: number;
-  recipientPhone: string;
+  recipient: {
+    phoneNumber: string;
+    email?: string;
+    name?: string;
+  };
+  operator: {
+    id: string;
+    name: string;
+    country: string;
+  };
   status: string;
   createdAt: string;
-  product?: {
-    name: string;
-    country: string;
-  };
-  productId?: {
-    _id: string;
-    name: string;
-    country: string;
-  };
+  isTestMode?: boolean;
   paymentType: string;
   orderId?: string;
   paymentMethod?: string;
@@ -45,8 +46,10 @@ export default function TransactionsPage({
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [testModeFilter, setTestModeFilter] = useState<string>(""); // "", "true", or "false"
   const [currency, setCurrency] = useState("USD");
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -58,7 +61,7 @@ export default function TransactionsPage({
     if (orgSlug) {
       loadTransactions();
     }
-  }, [orgSlug, page, limit, search]);
+  }, [orgSlug, page, limit, search, testModeFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,8 +104,12 @@ export default function TransactionsPage({
         queryParams.append("search", search);
       }
 
+      if (testModeFilter) {
+        queryParams.append("testMode", testModeFilter);
+      }
+
       const res = await fetch(
-        `/api/v1/customers/${customerData.customer.id}/transactions?${queryParams}`,
+        `/api/v1/customers/${customerData.customer._id}/transactions?${queryParams}`,
         {
           credentials: "include",
         },
@@ -110,7 +117,9 @@ export default function TransactionsPage({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.title || "Failed to load transactions");
+        throw new Error(
+          errorData.detail || errorData.title || "Failed to load transactions",
+        );
       }
 
       const data = await res.json();
@@ -170,32 +179,52 @@ export default function TransactionsPage({
           </Alert>
         )}
 
-        {/* Results count and page size selector */}
+        {/* Results count and filters */}
         {!loading && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
             <div className="text-sm text-gray-600">
               Showing {transactions.length} of {total} transactions
               {search && ` matching "${search}"`}
+              {testModeFilter && ` (${testModeFilter === "true" ? "Test Mode Only" : "Live Mode Only"})`}
             </div>
-            <div className="flex items-center gap-2">
-              <label htmlFor="pageSize" className="text-sm text-gray-600">
-                Per page:
-              </label>
-              <select
-                id="pageSize"
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="border border-input rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label htmlFor="testMode" className="text-sm text-gray-600">
+                  Mode:
+                </label>
+                <select
+                  id="testMode"
+                  value={testModeFilter}
+                  onChange={(e) => {
+                    setTestModeFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="border border-input rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">All Transactions</option>
+                  <option value="false">Live Mode Only</option>
+                  <option value="true">Test Mode Only</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="pageSize" className="text-sm text-gray-600">
+                  Per page:
+                </label>
+                <select
+                  id="pageSize"
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="border border-input rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
             </div>
           </div>
         )}
@@ -246,14 +275,14 @@ export default function TransactionsPage({
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {tx.recipientPhone}
+                        {tx.recipient?.phoneNumber || "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {tx.product ? (
+                        {tx.metadata?.productName ? (
                           <>
-                            <div>{tx.product.name}</div>
+                            <div>{tx.metadata.productName}</div>
                             <div className="text-xs text-gray-400">
-                              {tx.product.country}
+                              {tx.operator?.country || "-"}
                             </div>
                           </>
                         ) : (
@@ -275,17 +304,24 @@ export default function TransactionsPage({
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            tx.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : tx.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {tx.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              tx.status === "completed"
+                                ? "bg-green-100 text-green-800"
+                                : tx.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {tx.status}
+                          </span>
+                          {tx.isTestMode && (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                              TEST
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -368,53 +404,76 @@ export default function TransactionsPage({
             <div className="p-6 space-y-6">
               {/* Status Badge */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-500">Status</span>
-                <span
-                  className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
-                    selectedTransaction.status === "completed"
-                      ? "bg-green-100 text-green-800"
-                      : selectedTransaction.status === "pending"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                  }`}
-                >
-                  {selectedTransaction.status}
+                <span className="text-sm font-medium text-gray-500">
+                  Status
                 </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
+                      selectedTransaction.status === "completed"
+                        ? "bg-green-100 text-green-800"
+                        : selectedTransaction.status === "pending"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {selectedTransaction.status}
+                  </span>
+                  {selectedTransaction.isTestMode && (
+                    <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                      TEST MODE
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Transaction Information */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Order ID</p>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Order ID
+                  </p>
                   <p className="text-sm text-gray-900 font-mono">
                     {selectedTransaction.orderId || selectedTransaction._id}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Date & Time</p>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Date & Time
+                  </p>
                   <p className="text-sm text-gray-900">
-                    {new Date(selectedTransaction.createdAt).toLocaleDateString()}{" "}
-                    {new Date(selectedTransaction.createdAt).toLocaleTimeString()}
+                    {new Date(
+                      selectedTransaction.createdAt,
+                    ).toLocaleDateString()}{" "}
+                    {new Date(
+                      selectedTransaction.createdAt,
+                    ).toLocaleTimeString()}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Recipient Phone</p>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Recipient Phone
+                  </p>
                   <p className="text-sm text-gray-900 font-semibold">
-                    {selectedTransaction.recipientPhone}
+                    {selectedTransaction.recipient?.phoneNumber || "-"}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Amount</p>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Amount
+                  </p>
                   <p className="text-lg font-bold text-gray-900">
                     {currency} {selectedTransaction.amount.toFixed(2)}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Payment Type</p>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Payment Type
+                  </p>
                   <span
                     className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       selectedTransaction.paymentType === "balance"
@@ -422,13 +481,17 @@ export default function TransactionsPage({
                         : "bg-blue-100 text-blue-800"
                     }`}
                   >
-                    {selectedTransaction.paymentType === "balance" ? "Balance" : "Gateway"}
+                    {selectedTransaction.paymentType === "balance"
+                      ? "Balance"
+                      : "Gateway"}
                   </span>
                 </div>
 
                 {selectedTransaction.paymentMethod && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Payment Method</p>
+                    <p className="text-sm font-medium text-gray-500 mb-1">
+                      Payment Method
+                    </p>
                     <p className="text-sm text-gray-900 capitalize">
                       {selectedTransaction.paymentMethod}
                     </p>
@@ -437,39 +500,66 @@ export default function TransactionsPage({
               </div>
 
               {/* Product Information */}
-              {(selectedTransaction.product || selectedTransaction.productId) && (
+              {selectedTransaction.metadata?.productName && (
                 <div className="border-t pt-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">
                     Product Details
                   </h3>
                   <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Product Name</span>
+                      <span className="text-sm font-medium text-gray-500">
+                        Product Name
+                      </span>
                       <span className="text-sm text-gray-900">
-                        {selectedTransaction.product?.name || selectedTransaction.productId?.name}
+                        {selectedTransaction.metadata.productName}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Country</span>
+                      <span className="text-sm font-medium text-gray-500">
+                        Country
+                      </span>
                       <span className="text-sm text-gray-900">
-                        {selectedTransaction.product?.country || selectedTransaction.productId?.country}
+                        {selectedTransaction.operator?.country || "-"}
                       </span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-500">
+                        Operator
+                      </span>
+                      <span className="text-sm text-gray-900">
+                        {selectedTransaction.operator?.name || "-"}
+                      </span>
+                    </div>
+                    {selectedTransaction.metadata.benefitAmount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-gray-500">
+                          Benefit
+                        </span>
+                        <span className="text-sm text-gray-900">
+                          {selectedTransaction.metadata.benefitAmount}{" "}
+                          {selectedTransaction.metadata.benefitUnit || "units"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* DingConnect Transfer ID */}
-              {selectedTransaction.dingTransferId && (
+              {(selectedTransaction.metadata?.dingTransferId ||
+                selectedTransaction.dingTransferId) && (
                 <div className="border-t pt-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">
                     Provider Details
                   </h3>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Transfer ID</span>
+                      <span className="text-sm font-medium text-gray-500">
+                        Transfer ID
+                      </span>
                       <span className="text-sm text-gray-900 font-mono">
-                        {selectedTransaction.dingTransferId}
+                        {selectedTransaction.metadata?.dingTransferId ||
+                          selectedTransaction.dingTransferId}
                       </span>
                     </div>
                   </div>
@@ -479,39 +569,46 @@ export default function TransactionsPage({
               {/* Error Message */}
               {selectedTransaction.errorMessage && (
                 <div className="border-t pt-4">
-                  <h3 className="text-lg font-semibold text-red-600 mb-3">Error Details</h3>
+                  <h3 className="text-lg font-semibold text-red-600 mb-3">
+                    Error Details
+                  </h3>
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-sm text-red-800">{selectedTransaction.errorMessage}</p>
+                    <p className="text-sm text-red-800">
+                      {selectedTransaction.errorMessage}
+                    </p>
                   </div>
                 </div>
               )}
 
               {/* Additional Metadata */}
-              {selectedTransaction.metadata && Object.keys(selectedTransaction.metadata).length > 0 && (
-                <div className="border-t pt-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                    Additional Information
-                  </h3>
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    {Object.entries(selectedTransaction.metadata).map(([key, value]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-500 capitalize">
-                          {key.replace(/([A-Z])/g, " $1").trim()}
-                        </span>
-                        <span className="text-sm text-gray-900">
-                          {typeof value === "object" ? JSON.stringify(value) : String(value)}
-                        </span>
-                      </div>
-                    ))}
+              {selectedTransaction.metadata &&
+                Object.keys(selectedTransaction.metadata).length > 0 && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      Additional Information
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      {Object.entries(selectedTransaction.metadata).map(
+                        ([key, value]) => (
+                          <div key={key} className="flex justify-between">
+                            <span className="text-sm font-medium text-gray-500 capitalize">
+                              {key.replace(/([A-Z])/g, " $1").trim()}
+                            </span>
+                            <span className="text-sm text-gray-900">
+                              {typeof value === "object"
+                                ? JSON.stringify(value)
+                                : String(value)}
+                            </span>
+                          </div>
+                        ),
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
 
             <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t flex justify-end">
-              <Button
-                onClick={() => setSelectedTransaction(null)}
-              >
+              <Button onClick={() => setSelectedTransaction(null)}>
                 Close
               </Button>
             </div>

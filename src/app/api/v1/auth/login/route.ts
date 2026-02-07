@@ -49,6 +49,20 @@ export async function POST(request: NextRequest) {
       throw ApiErrors.Unauthorized("Invalid email or password");
     }
 
+    // Check if 2FA is enabled for this user
+    if (user.twoFactorEnabled) {
+      logger.info("2FA required for user", {
+        userId: user._id.toString(),
+        email: user.email,
+      });
+
+      return createSuccessResponse({
+        requires2FA: true,
+        email: user.email,
+        message: "Two-factor authentication required. Please check your email for the verification code.",
+      });
+    }
+
     logger.info("User logged in", {
       userId: user._id.toString(),
       email: user.email,

@@ -29,14 +29,20 @@ export async function GET(
     );
     const skip = (page - 1) * limit;
     const search = searchParams.get("search") || "";
+    const testModeFilter = searchParams.get("testMode"); // "true", "false", or null (all)
 
     // Build query filter
     const query: any = { customerId: session.customerId };
 
+    // Add test mode filter if provided
+    if (testModeFilter !== null && testModeFilter !== "") {
+      query.isTestMode = testModeFilter === "true";
+    }
+
     // Add search filter if provided
     if (search) {
       query.$or = [
-        { recipientPhone: { $regex: search, $options: "i" } },
+        { "recipient.phoneNumber": { $regex: search, $options: "i" } },
         { orderId: { $regex: search, $options: "i" } },
         { status: { $regex: search, $options: "i" } },
       ];
@@ -45,7 +51,6 @@ export async function GET(
     // Get transactions for this customer
     const [transactions, total] = await Promise.all([
       Transaction.find(query)
-        .populate("productId", "name country")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

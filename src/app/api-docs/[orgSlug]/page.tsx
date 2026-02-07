@@ -519,14 +519,86 @@ print(data)`}
                 <li>
                   <code>limit</code> - Results per page (default: 20, max: 100)
                 </li>
+                <li>
+                  <code>testMode</code> - Filter by test mode: "true" (test only), "false" (live only), or omit for all
+                </li>
               </ul>
 
               <CodeBlock
                 id="transactions-list-curl"
                 language="bash"
-                code={`curl -X GET "https://api.example.com/api/v1/customers/123/transactions?page=1&limit=20" \\
+                code={`curl -X GET "https://api.example.com/api/v1/customers/123/transactions?page=1&limit=20&testMode=false" \\
   -H "Authorization: Bearer sk_live_your_api_key_here"`}
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Test Mode Endpoint */}
+        <div className="bg-white rounded-lg shadow-sm border p-8 mb-6">
+          <h3 className="text-2xl font-semibold mb-4">Test Mode</h3>
+
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="px-3 py-1 bg-green-100 text-green-800 rounded font-mono text-sm font-semibold">
+                  GET
+                </span>
+                <code className="text-lg">
+                  /api/v1/customer-portal/:orgSlug/test-mode
+                </code>
+              </div>
+              <p className="text-gray-600 mb-3">
+                Check if an organization is in test mode (public endpoint, no authentication required)
+              </p>
+              <p className="text-sm text-gray-500 mb-3">
+                <strong>Required scope:</strong> None (public endpoint)
+              </p>
+
+              <h4 className="font-semibold mb-2">Path Parameters</h4>
+              <ul className="list-disc list-inside space-y-1 text-gray-600 mb-3">
+                <li>
+                  <code>orgSlug</code> - Organization slug
+                </li>
+              </ul>
+
+              <h4 className="font-semibold mb-2">Example Request (cURL)</h4>
+              <CodeBlock
+                id="test-mode-curl"
+                language="bash"
+                code={`curl -X GET https://api.example.com/api/v1/customer-portal/your-org-slug/test-mode`}
+              />
+
+              <h4 className="font-semibold mt-4 mb-2">
+                Example Request (JavaScript)
+              </h4>
+              <CodeBlock
+                id="test-mode-js"
+                language="javascript"
+                code={`const response = await fetch('https://api.example.com/api/v1/customer-portal/your-org-slug/test-mode');
+const data = await response.json();
+console.log('Test mode:', data.testMode);`}
+              />
+
+              <h4 className="font-semibold mt-4 mb-2">Response</h4>
+              <CodeBlock
+                id="test-mode-response"
+                language="json"
+                code={`{
+  "success": true,
+  "data": {
+    "testMode": true,
+    "orgSlug": "your-org-slug",
+    "orgName": "Your Organization Name"
+  }
+}`}
+              />
+
+              <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-sm text-orange-800">
+                  <strong>Note:</strong> When test mode is enabled, all transactions are validated but not actually processed by the provider. This is useful for testing your integration without incurring real charges or sending real top-ups.
+                </p>
+              </div>
             </div>
           </div>
         </div>

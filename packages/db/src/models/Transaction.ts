@@ -19,6 +19,7 @@ export interface ITransaction extends Document {
   paymentType: "gateway" | "balance" | "admin_assigned";
   provider: "dingconnect" | "reloadly";
   providerTransactionId?: string;
+  isTestMode?: boolean; // Whether this transaction was sent in test/validation mode
   createdBy?: string; // User ID who created this transaction (staff or customer)
   processedBy?: string; // User ID who processed/completed this transaction
   recipient: {
@@ -116,6 +117,11 @@ const TransactionSchema = new Schema<ITransaction>(
     },
     providerTransactionId: {
       type: String,
+      index: true,
+    },
+    isTestMode: {
+      type: Boolean,
+      default: false,
       index: true,
     },
     createdBy: {

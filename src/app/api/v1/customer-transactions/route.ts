@@ -12,12 +12,15 @@ import {
   Transaction,
   Customer,
   Integration,
+  PricingRule,
+  StorefrontSettings,
 } from "@pg-prepaid/db";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { createSuccessResponse } from "@/lib/api-response";
 import { requireVerifiedCustomer } from "@/lib/auth-middleware";
 import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { logger } from "@/lib/logger";
+import { parsePhoneNumber } from "awesome-phonenumber";
 
 const sendTopupSchema = z.object({
   phoneNumber: z.string().min(10, "Phone number is required"),
@@ -83,9 +86,45 @@ export async function POST(request: NextRequest) {
       throw ApiErrors.BadRequest("Failed to fetch product details");
     }
 
-    // Determine the cost
-    let cost: number;
+    // Detect country from phone number for pricing rules
+    const parsedPhone = parsePhoneNumber(data.phoneNumber);
+    const detectedCountry = parsedPhone.regionCode || "";
+
+    if (!detectedCountry) {
+      throw ApiErrors.BadRequest("Unable to detect country from phone number");
+    }
+
+    // Get organization's storefront settings for discount
+    const storefrontSettings = await StorefrontSettings.findOne({
+      orgId: session.orgId,
+    });
+
+    // Fetch active pricing rules for this organization
+    const pricingRules = await PricingRule.find({
+      orgId: session.orgId,
+      isActive: true,
+    }).sort({ priority: -1 }); // Sort by priority descending (highest first)
+
+    // Find the best applicable pricing rule for this country
+    let applicablePricingRule = null;
+    for (const rule of pricingRules) {
+      if (rule.isApplicableToCountry(detectedCountry)) {
+        applicablePricingRule = rule;
+        break; // Already sorted by priority, so first match is best
+      }
+    }
+
+    logger.info("Applicable pricing rule for transaction", {
+      ruleName: applicablePricingRule?.name || "None (0% markup)",
+      ruleType: applicablePricingRule?.type,
+      ruleValue: applicablePricingRule?.value,
+      country: detectedCountry,
+    });
+
+    // Determine the cost from DingConnect and calculate final price
+    let dingConnectCost: number;
     let sendValue: number;
+    let customerPrice: number; // What customer pays (with markup & discount)
 
     // Check if this is a variable-value product
     const isVariableValue = !!(
@@ -99,7 +138,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      cost = data.amount;
+      dingConnectCost = data.amount; // DingConnect cost
       sendValue = data.sendValue;
 
       // Validate amount is within range
@@ -111,20 +150,89 @@ export async function POST(request: NextRequest) {
           `Amount must be between ${minAmount} and ${maxAmount}`,
         );
       }
+
+      // Calculate customer price with markup
+      if (applicablePricingRule) {
+        const markup = applicablePricingRule.calculateMarkup(dingConnectCost);
+        customerPrice = dingConnectCost + markup;
+      } else {
+        // No pricing rule - use cost price as final price (0% markup)
+        customerPrice = dingConnectCost;
+      }
     } else {
       // Fixed-value product - use the price from DingConnect
-      cost = productDetails.Price?.Amount || 0;
-      sendValue = cost;
+      dingConnectCost = productDetails.Price?.Amount || 0;
+      sendValue = dingConnectCost;
 
-      if (cost <= 0) {
+      if (dingConnectCost <= 0) {
         throw ApiErrors.BadRequest("Invalid product pricing");
+      }
+
+      // Calculate customer price with markup
+      if (applicablePricingRule) {
+        const markup = applicablePricingRule.calculateMarkup(dingConnectCost);
+        customerPrice = dingConnectCost + markup;
+      } else {
+        // No pricing rule - use cost price as final price (0% markup)
+        customerPrice = dingConnectCost;
       }
     }
 
-    // Check customer balance
-    if (customer.currentBalance < cost) {
+    // Apply discount if configured in storefront settings
+    let discountAmount = 0;
+    let finalPrice = customerPrice;
+
+    if (storefrontSettings?.discount?.enabled) {
+      const now = new Date();
+      const isDateValid =
+        (!storefrontSettings.discount.startDate ||
+          storefrontSettings.discount.startDate <= now) &&
+        (!storefrontSettings.discount.endDate ||
+          storefrontSettings.discount.endDate >= now);
+
+      const isCountryValid =
+        !storefrontSettings.discount.applicableCountries ||
+        storefrontSettings.discount.applicableCountries.length === 0 ||
+        storefrontSettings.discount.applicableCountries.includes(
+          detectedCountry,
+        );
+
+      const isAmountValid =
+        !storefrontSettings.discount.minPurchaseAmount ||
+        customerPrice >= storefrontSettings.discount.minPurchaseAmount;
+
+      if (isDateValid && isCountryValid && isAmountValid) {
+        if (storefrontSettings.discount.type === "percentage") {
+          discountAmount =
+            customerPrice * (storefrontSettings.discount.value / 100);
+        } else {
+          discountAmount = storefrontSettings.discount.value;
+        }
+        finalPrice = Math.max(0, customerPrice - discountAmount);
+        logger.info("Discount applied to customer transaction", {
+          originalPrice: customerPrice,
+          discountAmount,
+          finalPrice,
+          discountType: storefrontSettings.discount.type,
+        });
+      }
+    }
+
+    logger.info("Transaction pricing calculated", {
+      dingConnectCost,
+      customerPrice,
+      discountAmount,
+      finalPrice,
+      markup: customerPrice - dingConnectCost,
+      markupPercentage: applicablePricingRule
+        ? `${(((customerPrice - dingConnectCost) / dingConnectCost) * 100).toFixed(2)}%`
+        : "0%",
+    });
+
+    // Check customer balance (against final price after markup & discount)
+    if (customer.currentBalance < finalPrice) {
       throw ApiErrors.BadRequest(
-        `Insufficient balance. Required: ${customer.balanceCurrency} ${cost.toFixed(2)}, Available: ${customer.balanceCurrency} ${customer.currentBalance.toFixed(2)}`,
+        `Insufficient balance. Required: ${customer.balanceCurrency} ${finalPrice.toFixed(2)}, Available: ${customer.balanceCurrency} ${customer.currentBalance.toFixed(2)}`,
       );
     }
 
@@ -133,12 +241,13 @@ export async function POST(request: NextRequest) {
       orgId: session.orgId,
       customerId: session.customerId,
       productId: `ding-${data.skuCode}`,
-      amount: cost,
+      amount: finalPrice, // Customer pays the final price (with markup & discount)
       currency: customer.balanceCurrency || "USD",
       status: "pending",
       paymentGateway: "balance",
       paymentType: "balance",
       provider: "dingconnect",
+      isTestMode: storefrontSettings?.topupSettings?.validateOnly ?? true, // Store test mode flag
       recipient: {
         phoneNumber: data.phoneNumber,
         email: session.email,
@@ -155,6 +264,13 @@ export async function POST(request: NextRequest) {
         sendValue,
         benefitAmount: productDetails.BenefitTypes?.Airtime?.Amount || 0,
         benefitUnit: productDetails.BenefitTypes?.Airtime?.Unit || "",
+        // Pricing breakdown
+        dingConnectCost, // What we pay to DingConnect
+        customerPrice, // Price with markup
+        discountAmount, // Discount applied
+        finalPrice, // What customer actually pays
+        markup: customerPrice - dingConnectCost,
+        pricingRuleName: applicablePricingRule?.name || "None",
         ipAddress:
           request.headers.get("x-forwarded-for") ||
           request.headers.get("x-real-ip") ||
@@ -171,35 +287,57 @@ export async function POST(request: NextRequest) {
     logger.info("Customer transaction created", {
       orderId: transaction.orderId,
       customerId: session.customerId,
-      amount: cost,
+      amount: finalPrice,
+      dingConnectCost,
+      markup: customerPrice - dingConnectCost,
+      discountAmount,
       phoneNumber: data.phoneNumber.substring(0, 5) + "***",
     });
 
-    // Deduct from customer balance immediately (optimistic)
-    customer.currentBalance -= cost;
-    customer.totalUsed += cost;
+    // Deduct from customer balance immediately (optimistic) - using final price
+    customer.currentBalance -= finalPrice;
+    customer.totalUsed += finalPrice;
     await customer.save();
 
     logger.info("Customer balance deducted", {
       customerId: session.customerId,
-      deducted: cost,
+      deducted: finalPrice,
       newBalance: customer.currentBalance,
     });
 
     // Send top-up via DingConnect
     try {
+      // Clean phone number - remove spaces, dashes, parentheses, but keep the + sign for parsing
+      const cleanPhoneForParsing = data.phoneNumber.replace(/[\s\-\(\)]/g, "");
+
+      // Parse to get E.164 format
+      const parsedPhoneForTransfer = parsePhoneNumber(cleanPhoneForParsing);
+
+      // DingConnect expects phone WITHOUT the + sign
+      const accountNumber =
+        parsedPhoneForTransfer.number?.e164?.replace(/^\+/, "") ||
+        cleanPhoneForParsing.replace(/^\+/, "");
+
+      // Get test mode setting from storefront settings
+      const validateOnly =
+        storefrontSettings?.topupSettings?.validateOnly ?? true; // Default to test mode for safety
+
       logger.info("Sending top-up via DingConnect", {
         orderId: transaction.orderId,
         skuCode: data.skuCode,
-        phoneNumber: data.phoneNumber.substring(0, 5) + "***",
+        phoneNumber: accountNumber.substring(0, 5) + "***",
         isVariableValue,
         sendValue: isVariableValue ? sendValue : undefined,
+        validateOnly,
+        testMode: validateOnly ? "ON" : "OFF",
       });
 
       const transferResult = await dingConnect.sendTransfer({
         SkuCode: data.skuCode,
-        AccountNumber: data.phoneNumber,
+        AccountNumber: accountNumber,
         SendValue: isVariableValue ? sendValue : undefined,
+        DistributorRef: transaction.orderId, // Use our order ID as the unique reference
+        ValidateOnly: validateOnly, // Use organization's test mode setting
       });
 
       logger.info("DingConnect transfer successful", {
@@ -223,7 +361,7 @@ export async function POST(request: NextRequest) {
         transaction: {
           id: String(transaction._id),
           orderId: transaction.orderId,
-          amount: cost,
+          amount: finalPrice, // Customer paid amount
           status: transaction.status,
           recipientPhone: data.phoneNumber,
           transferId: transferResult.TransferId,
@@ -239,12 +377,12 @@ export async function POST(request: NextRequest) {
         error: error instanceof Error ? error.message : "Unknown error",
         orderId: transaction.orderId,
         customerId: session.customerId,
-        refundAmount: cost,
+        refundAmount: finalPrice,
       });
 
-      // Refund balance
-      customer.currentBalance += cost;
-      customer.totalUsed -= cost;
+      // Refund balance (refund what customer was charged)
+      customer.currentBalance += finalPrice;
+      customer.totalUsed -= finalPrice;
       await customer.save();
 
       // Update transaction status
