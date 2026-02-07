@@ -253,9 +253,9 @@ export async function POST(request: NextRequest) {
         email: session.email,
       },
       operator: {
-        id: productDetails.ProviderCode || "unknown",
-        name: productDetails.ProviderCode || "unknown",
-        country: productDetails.CountryIso || "unknown",
+        id: productDetails.ProviderCode || "UNKNOWN",
+        name: productDetails.ProviderCode || "Unknown Operator",
+        country: productDetails.CountryIso || detectedCountry,
       },
       metadata: {
         productSkuCode: data.skuCode,

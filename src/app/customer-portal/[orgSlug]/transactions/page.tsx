@@ -284,18 +284,23 @@ export default function TransactionsPage({
                             <div className="font-medium text-gray-900">
                               {tx.metadata.productName}
                             </div>
-                            <div className="text-xs text-gray-400">
-                              {tx.operator?.name || tx.operator?.country || ""}
-                            </div>
+                            {tx.operator?.name && tx.operator.name !== "unknown" && (
+                              <div className="text-xs text-gray-400">
+                                {tx.operator.name}
+                                {tx.operator.country && tx.operator.country !== "unknown" && ` - ${tx.operator.country}`}
+                              </div>
+                            )}
                           </>
-                        ) : tx.operator?.name ? (
+                        ) : tx.operator?.name && tx.operator.name !== "unknown" ? (
                           <>
                             <div className="font-medium text-gray-900">
                               {tx.operator.name}
                             </div>
-                            <div className="text-xs text-gray-400">
-                              {tx.operator.country || ""}
-                            </div>
+                            {tx.operator.country && tx.operator.country !== "unknown" && (
+                              <div className="text-xs text-gray-400">
+                                {tx.operator.country}
+                              </div>
+                            )}
                           </>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -524,22 +529,28 @@ export default function TransactionsPage({
                         {selectedTransaction.metadata.productName}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">
-                        Country
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {selectedTransaction.operator?.country || "-"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">
-                        Operator
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {selectedTransaction.operator?.name || "-"}
-                      </span>
-                    </div>
+                    {selectedTransaction.operator?.country &&
+                     selectedTransaction.operator.country !== "unknown" && (
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-gray-500">
+                          Country
+                        </span>
+                        <span className="text-sm text-gray-900">
+                          {selectedTransaction.operator.country}
+                        </span>
+                      </div>
+                    )}
+                    {selectedTransaction.operator?.name &&
+                     selectedTransaction.operator.name !== "unknown" && (
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-gray-500">
+                          Operator
+                        </span>
+                        <span className="text-sm text-gray-900">
+                          {selectedTransaction.operator.name}
+                        </span>
+                      </div>
+                    )}
                     {selectedTransaction.metadata.benefitAmount > 0 && (
                       <div className="flex justify-between">
                         <span className="text-sm font-medium text-gray-500">
