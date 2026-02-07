@@ -23,14 +23,33 @@ export async function GET(request: NextRequest) {
       throw ApiErrors.NotFound("Customer not found");
     }
 
+    const fullName = (customer.name || "").trim();
+    const nameParts = fullName ? fullName.split(/\s+/) : [];
+    const firstName = customer.firstName || nameParts[0] || "";
+    const lastName =
+      customer.lastName ||
+      (nameParts.length > 1 ? nameParts.slice(1).join(" ") : "");
+
+    console.log("[Customer Auth /me] Returning customer data:", {
+      customerId: customer._id,
+      email: customer.email,
+      name: fullName,
+      firstName,
+      lastName,
+      twoFactorEnabled: customer.twoFactorEnabled,
+    });
+
     return createSuccessResponse({
       customer: {
+        id: String(customer._id),
         _id: String(customer._id),
+        name: fullName,
         email: customer.email,
-        firstName: customer.name || "", // Use name field as firstName for now
-        lastName: "", // No lastName in schema
+        firstName,
+        lastName,
         phoneNumber: customer.phoneNumber,
         emailVerified: customer.emailVerified,
+        twoFactorEnabled: customer.twoFactorEnabled,
         currentBalance: customer.currentBalance,
         totalAssigned: customer.totalAssigned,
         totalUsed: customer.totalUsed,

@@ -25,6 +25,10 @@ export async function PUT(
 
     // Ensure customer can only update their own password
     if (String(customer._id) !== id) {
+      console.warn("[Customer Password] Forbidden password update attempt", {
+        pathId: id,
+        sessionCustomerId: String(customer._id),
+      });
       return createErrorResponse("You can only update your own password", 403);
     }
 

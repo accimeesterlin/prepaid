@@ -16,6 +16,12 @@ export interface ICustomer extends Document {
   resetPasswordToken?: string;
   resetPasswordTokenExpiry?: Date;
 
+  // Two-Factor Authentication
+  twoFactorEnabled: boolean;
+  twoFactorCode?: string;
+  twoFactorCodeExpiry?: Date;
+  twoFactorVerified?: boolean;
+
   // Balance fields
   currentBalance: number;
   totalAssigned: number;
@@ -110,6 +116,25 @@ const CustomerSchema = new Schema<ICustomer>(
     },
     resetPasswordTokenExpiry: {
       type: Date,
+      select: false,
+    },
+
+    // Two-Factor Authentication
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    twoFactorCode: {
+      type: String,
+      select: false,
+    },
+    twoFactorCodeExpiry: {
+      type: Date,
+      select: false,
+    },
+    twoFactorVerified: {
+      type: Boolean,
+      default: false,
       select: false,
     },
 

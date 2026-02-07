@@ -45,32 +45,62 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    // Try customer auth first
-    let isCustomer = false;
-    let customerAuthId = null;
-
-    try {
-      const customerAuth = await import("@/lib/auth-middleware").then(
-        (m) => m.requireCustomerAuth,
-      );
-      const customerSession = await customerAuth(request);
-      isCustomer = true;
-      customerAuthId = customerSession.customerId;
-    } catch (_e) {
-      // Not a customer, try staff auth
-    }
-
     const { id } = await params;
 
-    // If customer, ensure they can only update themselves
-    if (isCustomer && customerAuthId?.toString() !== id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    console.log('[Customer Update] Starting update for customer:', id);
+    console.log('[Customer Update] Cookies:', {
+      hasSessionCookie: !!request.cookies.get('session'),
+      hasCustomerSessionCookie: !!request.cookies.get('customer-session'),
+    });
+
+    let isCustomer = false;
+    let customerAuthId = null;
+    let staffSession = null;
+
+    // Try STAFF auth first (dashboard users)
+    try {
+      staffSession = await getSession();
+      if (staffSession) {
+        console.log('[Customer Update] Staff auth successful:', {
+          staffUserId: staffSession.userId,
+          orgId: staffSession.orgId
+        });
+      }
+    } catch (error) {
+      console.log('[Customer Update] Staff auth failed:', error);
     }
 
-    // If not customer, require staff session
-    if (!isCustomer) {
-      const session = await getSession();
-      if (!session) {
+    // If no staff session, try customer auth (customer portal users)
+    if (!staffSession) {
+      const customerSessionCookie = request.cookies.get('customer-session');
+
+      if (customerSessionCookie) {
+        try {
+          const { getCustomerSession } = await import("@/lib/customer-auth");
+          const customerSession = await getCustomerSession();
+
+          if (customerSession) {
+            isCustomer = true;
+            customerAuthId = customerSession.customerId;
+            console.log('[Customer Update] Customer auth detected:', {
+              customerId: customerAuthId,
+              targetId: id
+            });
+
+            // If customer, ensure they can only update themselves
+            if (customerAuthId?.toString() !== id) {
+              console.log('[Customer Update] Forbidden: Customer trying to update different account');
+              return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
+          }
+        } catch (error) {
+          console.log('[Customer Update] Customer auth failed:', error);
+        }
+      }
+
+      // No valid auth found
+      if (!isCustomer) {
+        console.log('[Customer Update] No valid authentication found');
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
@@ -92,10 +122,19 @@ export async function PUT(
     const customer = await Customer.findById(id);
 
     if (!customer) {
+      console.log('[Customer Update] Customer not found:', id);
       return NextResponse.json(
         { error: "Customer not found" },
         { status: 404 },
       );
+    }
+
+    // If staff, ensure customer belongs to their org
+    if (!isCustomer && staffSession) {
+      if (customer.orgId?.toString() !== staffSession.orgId) {
+        console.log('[Customer Update] Forbidden: Customer belongs to different org');
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     // Allow customer to update limited fields
@@ -122,6 +161,8 @@ export async function PUT(
       }
     } else {
       // Staff can update all fields
+      console.log('[Customer Update] Staff updating customer:', { password: !!password });
+
       if (phoneNumber) customer.phoneNumber = phoneNumber;
       if (email !== undefined) customer.email = email;
       if (name !== undefined) customer.name = name;
@@ -130,7 +171,11 @@ export async function PUT(
         customer.name = `${firstName} ${lastName}`.trim();
       }
       if (phone !== undefined) customer.phoneNumber = phone;
-      if (password) customer.passwordHash = password; // Will be hashed by pre-save hook
+
+      if (password) {
+        console.log('[Customer Update] Setting new password');
+        customer.passwordHash = password; // Will be hashed by pre-save hook
+      }
     }
 
     console.log('[Customer Update] After updates:', {

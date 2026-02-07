@@ -11,10 +11,13 @@ import { Alert, AlertDescription } from "@pg-prepaid/ui";
 interface CustomerData {
   _id?: string;
   id?: string;
+  firstName?: string;
+  lastName?: string;
   name?: string;
   email?: string;
   phoneNumber?: string;
   emailVerified?: boolean;
+  twoFactorEnabled?: boolean;
   currentBalance?: number;
   balanceCurrency?: string;
   createdAt?: string;
@@ -30,6 +33,7 @@ export default function SettingsPage({
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [toggling2FA, setToggling2FA] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
@@ -73,9 +77,13 @@ export default function SettingsPage({
       const customerData = data.customer;
       setCustomer(customerData);
       setFormData({
-        firstName: customerData.name?.split(' ')[0] || '',
-        lastName: customerData.name?.split(' ').slice(1).join(' ') || '',
-        phone: customerData.phoneNumber || '',
+        firstName:
+          customerData.firstName || customerData.name?.split(" ")[0] || "",
+        lastName:
+          customerData.lastName ||
+          customerData.name?.split(" ").slice(1).join(" ") ||
+          "",
+        phone: customerData.phoneNumber || "",
       });
     } catch (err: any) {
       setError(err.message || t("portal.settings.loadError"));
@@ -92,8 +100,8 @@ export default function SettingsPage({
 
     try {
       const customerId = customer?.id || customer?._id;
-      console.log('Updating customer:', customerId);
-      console.log('Form data:', formData);
+      console.log("Updating customer:", customerId);
+      console.log("Form data:", formData);
 
       const res = await fetch(`/api/v1/customers/${customerId}`, {
         method: "PUT",
@@ -106,19 +114,24 @@ export default function SettingsPage({
         }),
       });
 
-      console.log('Response status:', res.status);
+      console.log("Response status:", res.status);
       const responseData = await res.json();
-      console.log('Response data:', responseData);
+      console.log("Response data:", responseData);
 
       if (!res.ok) {
-        throw new Error(responseData.error || responseData.detail || responseData.title || "Update failed");
+        throw new Error(
+          responseData.error ||
+            responseData.detail ||
+            responseData.title ||
+            "Update failed",
+        );
       }
 
       setSuccess(t("portal.settings.updateSuccess"));
       // Reload customer data to show updated info
       await loadCustomerData();
     } catch (err: any) {
-      console.error('Update error:', err);
+      console.error("Update error:", err);
       setError(err.message || t("portal.settings.updateError"));
     } finally {
       setSavingProfile(false);
@@ -151,7 +164,12 @@ export default function SettingsPage({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.detail || errorData.title || "Password update failed");
+        throw new Error(
+          errorData.error ||
+            errorData.detail ||
+            errorData.title ||
+            "Password update failed",
+        );
       }
 
       setSuccess(t("portal.settings.passwordUpdateSuccess"));
@@ -164,6 +182,55 @@ export default function SettingsPage({
       setError(err.message || t("portal.settings.passwordUpdateError"));
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleToggle2FA = async () => {
+    setToggling2FA(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const newState = !customer?.twoFactorEnabled;
+
+      console.log("Toggling 2FA:", {
+        currentState: customer?.twoFactorEnabled,
+        newState,
+      });
+
+      const res = await fetch("/api/v1/customer-auth/2fa/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ enabled: newState }),
+      });
+
+      const data = await res.json();
+      console.log("2FA Toggle Response:", { status: res.status, data });
+
+      if (!res.ok) {
+        throw new Error(
+          data.error?.message || data.detail || "Failed to update 2FA settings",
+        );
+      }
+
+      // Update customer state immediately with the new value
+      setCustomer((prev) =>
+        prev ? { ...prev, twoFactorEnabled: newState } : null,
+      );
+
+      setSuccess(
+        newState
+          ? "Two-factor authentication enabled successfully"
+          : "Two-factor authentication disabled successfully",
+      );
+
+      console.log("2FA toggled successfully, new state:", newState);
+    } catch (err: any) {
+      console.error("2FA toggle error:", err);
+      setError(err.message || "Failed to update 2FA settings");
+    } finally {
+      setToggling2FA(false);
     }
   };
 
@@ -206,7 +273,7 @@ export default function SettingsPage({
           <div>
             <p className="text-sm text-gray-500">Full Name</p>
             <p className="text-base font-semibold text-gray-900">
-              {customer.name || 'Not provided'}
+              {customer.name || "Not provided"}
             </p>
           </div>
           <div>
@@ -229,24 +296,27 @@ export default function SettingsPage({
           <div>
             <p className="text-sm text-gray-500">Phone Number</p>
             <p className="text-base font-semibold text-gray-900">
-              {customer.phoneNumber || 'Not provided'}
+              {customer.phoneNumber || "Not provided"}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Account Balance</p>
             <p className="text-base font-semibold text-gray-900">
-              {customer.balanceCurrency} {customer.currentBalance?.toFixed(2) || '0.00'}
+              {customer.balanceCurrency}{" "}
+              {customer.currentBalance?.toFixed(2) || "0.00"}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Member Since</p>
             <p className="text-base font-semibold text-gray-900">
-              {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : 'N/A'}
+              {customer.createdAt
+                ? new Date(customer.createdAt).toLocaleDateString()
+                : "N/A"}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Account ID</p>
-            <p className="text-base font-mono text-sm text-gray-900">
+            <p className="text-sm font-mono text-gray-900">
               {customer.id || customer._id}
             </p>
           </div>
@@ -277,9 +347,7 @@ export default function SettingsPage({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lastName">
-                {t("portal.settings.lastName")}
-              </Label>
+              <Label htmlFor="lastName">{t("portal.settings.lastName")}</Label>
               <Input
                 id="lastName"
                 type="text"
@@ -293,9 +361,7 @@ export default function SettingsPage({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">
-              {t("portal.settings.email")}
-            </Label>
+            <Label htmlFor="email">{t("portal.settings.email")}</Label>
             <Input
               id="email"
               type="email"
@@ -309,9 +375,7 @@ export default function SettingsPage({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">
-              {t("portal.settings.phone")}
-            </Label>
+            <Label htmlFor="phone">{t("portal.settings.phone")}</Label>
             <Input
               id="phone"
               type="tel"
@@ -323,12 +387,51 @@ export default function SettingsPage({
             />
           </div>
 
-          <Button type="submit" disabled={savingProfile} className="w-full md:w-auto">
+          <Button
+            type="submit"
+            disabled={savingProfile}
+            className="w-full md:w-auto"
+          >
             {savingProfile
               ? t("portal.settings.saving")
               : t("portal.settings.saveChanges")}
           </Button>
         </form>
+      </div>
+
+      {/* Two-Factor Authentication */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Two-Factor Authentication
+        </h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Add an extra layer of security to your account. When enabled, you'll
+          need to enter a verification code sent to your email each time you log
+          in.
+        </p>
+
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+          <div className="flex-1">
+            <p className="font-medium text-gray-900">Email Verification Code</p>
+            <p className="text-sm text-muted-foreground">
+              {customer?.twoFactorEnabled
+                ? "2FA is currently enabled. You'll receive a verification code via email when you log in."
+                : "Enable 2FA to receive a verification code via email when you log in."}
+            </p>
+          </div>
+          <Button
+            onClick={handleToggle2FA}
+            disabled={toggling2FA}
+            variant={customer?.twoFactorEnabled ? "destructive" : "default"}
+            className="ml-4"
+          >
+            {toggling2FA
+              ? "Updating..."
+              : customer?.twoFactorEnabled
+                ? "Disable 2FA"
+                : "Enable 2FA"}
+          </Button>
+        </div>
       </div>
 
       {/* Change Password */}
@@ -394,7 +497,11 @@ export default function SettingsPage({
             />
           </div>
 
-          <Button type="submit" disabled={savingPassword} className="w-full md:w-auto">
+          <Button
+            type="submit"
+            disabled={savingPassword}
+            className="w-full md:w-auto"
+          >
             {savingPassword
               ? t("portal.settings.updating")
               : t("portal.settings.updatePassword")}

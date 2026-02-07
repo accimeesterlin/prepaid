@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
 import { Button, Input, Label, Alert, AlertDescription } from "@pg-prepaid/ui";
+import { TwoFactorModal } from "@/components/customer/TwoFactorModal";
 
 export default function CustomerLoginPage({
   params,
@@ -16,6 +17,7 @@ export default function CustomerLoginPage({
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [show2FAModal, setShow2FAModal] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -41,13 +43,24 @@ export default function CustomerLoginPage({
         throw new Error(data.error?.message || "Login failed");
       }
 
-      // Redirect to dashboard
+      // Check if 2FA is required
+      if (data.requires2FA) {
+        setShow2FAModal(true);
+        return;
+      }
+
+      // Redirect to dashboard (no 2FA required)
       router.push(`/customer-portal/${orgSlug}/dashboard`);
     } catch (err: any) {
       setError(err.message || t("customer.login.error"));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handle2FASuccess = () => {
+    setShow2FAModal(false);
+    router.push(`/customer-portal/${orgSlug}/dashboard`);
   };
 
   return (
@@ -127,6 +140,15 @@ export default function CustomerLoginPage({
           </p>
         </div>
       </div>
+
+      {/* 2FA Modal */}
+      <TwoFactorModal
+        open={show2FAModal}
+        onClose={() => setShow2FAModal(false)}
+        email={email}
+        orgSlug={orgSlug}
+        onSuccess={handle2FASuccess}
+      />
     </div>
   );
 }
