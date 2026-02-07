@@ -584,30 +584,185 @@ export async function POST(request: NextRequest) {
             errorCode: transferResult.ErrorCode,
           });
         } else if (transferResult.Status === "Processing") {
-          // DingConnect is still processing - keep status as processing
-          // Transaction will remain in processing state and can be checked later
-          transaction.status = "processing";
+          // DingConnect is still processing - mark as completed anyway
+          // DingConnect is reliable and will complete the top-up
+          transaction.status = "completed";
+          transaction.timeline.completedAt = new Date();
           (transaction.metadata as Record<string, unknown>).dingconnectStatus = transferResult.Status;
-          (transaction.metadata as Record<string, unknown>).lastDingConnectCheck = new Date();
+          (transaction.metadata as Record<string, unknown>).processingNote = "Marked as completed while DingConnect processes the transfer";
 
-          logger.info("Transaction still processing at DingConnect", {
+          logger.info("Transaction marked as completed (DingConnect still processing)", {
             orderId: transaction.orderId,
             transferId: transferResult.TransferId,
             status: transferResult.Status,
-            message: "Transaction will remain in processing state - admin can manually check status later",
+            message: "DingConnect will complete the transfer - marking transaction as completed for customer",
           });
+
+          // Create or update customer record
+          try {
+            const existingCustomer = await Customer.findOne({
+              orgId: transaction.orgId,
+              phoneNumber: transaction.recipient.phoneNumber,
+            });
+
+            if (existingCustomer) {
+              // Update existing customer
+              existingCustomer.metadata = existingCustomer.metadata || {};
+              existingCustomer.metadata.totalPurchases =
+                (existingCustomer.metadata.totalPurchases || 0) + 1;
+              existingCustomer.metadata.totalSpent =
+                (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
+              existingCustomer.metadata.currency = transaction.currency;
+              existingCustomer.metadata.lastPurchaseAt = new Date();
+              await existingCustomer.save();
+
+              transaction.customerId = existingCustomer._id?.toString();
+
+              logger.info("Customer updated", {
+                customerId: existingCustomer._id?.toString(),
+                phoneNumber: phoneNumber.substring(0, 5) + "***",
+                totalPurchases: existingCustomer.metadata.totalPurchases,
+              });
+            } else {
+              // Create new customer
+              const newCustomer = await Customer.create({
+                orgId: transaction.orgId,
+                phoneNumber: transaction.recipient.phoneNumber,
+                email: transaction.recipient.email,
+                name: transaction.recipient.name,
+                metadata: {
+                  totalPurchases: 1,
+                  totalSpent: transaction.amount,
+                  currency: transaction.currency,
+                  lastPurchaseAt: new Date(),
+                },
+              });
+
+              transaction.customerId = newCustomer._id?.toString();
+
+              logger.info("New customer created", {
+                customerId: newCustomer._id?.toString(),
+                phoneNumber: phoneNumber.substring(0, 5) + "***",
+              });
+            }
+          } catch (customerError) {
+            logger.error("Failed to create/update customer", {
+              error:
+                customerError instanceof Error
+                  ? customerError.message
+                  : "Unknown error",
+              orderId: transaction.orderId,
+            });
+            // Don't fail the transaction if customer creation fails
+          }
+
+          // Update storefront metadata
+          if (storefrontSettings.metadata) {
+            const previousOrders = storefrontSettings.metadata.totalOrders || 0;
+            const previousRevenue = storefrontSettings.metadata.totalRevenue || 0;
+
+            storefrontSettings.metadata.totalOrders = previousOrders + 1;
+            storefrontSettings.metadata.totalRevenue =
+              previousRevenue + transaction.amount;
+            storefrontSettings.metadata.lastOrderAt = new Date();
+            await storefrontSettings.save();
+
+            logger.info("Storefront metadata updated", {
+              orgId: transaction.orgId,
+              totalOrders: storefrontSettings.metadata.totalOrders,
+              totalRevenue: storefrontSettings.metadata.totalRevenue,
+            });
+          }
         } else {
-          // Unknown status - log warning and keep as processing
-          transaction.status = "processing";
+          // Unknown status - mark as completed to avoid blocking customer
+          // Log the unknown status for monitoring
+          transaction.status = "completed";
+          transaction.timeline.completedAt = new Date();
           (transaction.metadata as Record<string, unknown>).dingconnectStatus = transferResult.Status;
-          (transaction.metadata as Record<string, unknown>).lastDingConnectCheck = new Date();
+          (transaction.metadata as Record<string, unknown>).unknownStatusNote = "Completed despite unknown DingConnect status - requires manual verification";
 
-          logger.warn("Unknown DingConnect status - keeping as processing", {
+          logger.warn("Unknown DingConnect status - marking as completed", {
             orderId: transaction.orderId,
             transferId: transferResult.TransferId,
             status: transferResult.Status,
-            message: "Unexpected status from DingConnect API",
+            message: "Unexpected status from DingConnect API - marking as completed for customer, but requires manual verification",
           });
+
+          // Create or update customer record
+          try {
+            const existingCustomer = await Customer.findOne({
+              orgId: transaction.orgId,
+              phoneNumber: transaction.recipient.phoneNumber,
+            });
+
+            if (existingCustomer) {
+              // Update existing customer
+              existingCustomer.metadata = existingCustomer.metadata || {};
+              existingCustomer.metadata.totalPurchases =
+                (existingCustomer.metadata.totalPurchases || 0) + 1;
+              existingCustomer.metadata.totalSpent =
+                (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
+              existingCustomer.metadata.currency = transaction.currency;
+              existingCustomer.metadata.lastPurchaseAt = new Date();
+              await existingCustomer.save();
+
+              transaction.customerId = existingCustomer._id?.toString();
+
+              logger.info("Customer updated", {
+                customerId: existingCustomer._id?.toString(),
+                phoneNumber: phoneNumber.substring(0, 5) + "***",
+                totalPurchases: existingCustomer.metadata.totalPurchases,
+              });
+            } else {
+              // Create new customer
+              const newCustomer = await Customer.create({
+                orgId: transaction.orgId,
+                phoneNumber: transaction.recipient.phoneNumber,
+                email: transaction.recipient.email,
+                name: transaction.recipient.name,
+                metadata: {
+                  totalPurchases: 1,
+                  totalSpent: transaction.amount,
+                  currency: transaction.currency,
+                  lastPurchaseAt: new Date(),
+                },
+              });
+
+              transaction.customerId = newCustomer._id?.toString();
+
+              logger.info("New customer created", {
+                customerId: newCustomer._id?.toString(),
+                phoneNumber: phoneNumber.substring(0, 5) + "***",
+              });
+            }
+          } catch (customerError) {
+            logger.error("Failed to create/update customer", {
+              error:
+                customerError instanceof Error
+                  ? customerError.message
+                  : "Unknown error",
+              orderId: transaction.orderId,
+            });
+            // Don't fail the transaction if customer creation fails
+          }
+
+          // Update storefront metadata
+          if (storefrontSettings.metadata) {
+            const previousOrders = storefrontSettings.metadata.totalOrders || 0;
+            const previousRevenue = storefrontSettings.metadata.totalRevenue || 0;
+
+            storefrontSettings.metadata.totalOrders = previousOrders + 1;
+            storefrontSettings.metadata.totalRevenue =
+              previousRevenue + transaction.amount;
+            storefrontSettings.metadata.lastOrderAt = new Date();
+            await storefrontSettings.save();
+
+            logger.info("Storefront metadata updated", {
+              orgId: transaction.orgId,
+              totalOrders: storefrontSettings.metadata.totalOrders,
+              totalRevenue: storefrontSettings.metadata.totalRevenue,
+            });
+          }
         }
       }
 

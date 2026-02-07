@@ -231,10 +231,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Right side - Notifications, Organization Switcher, Profile */}
           <div className="flex items-center gap-2">
-            {/* Notifications */}
+            {/* Notifications (red dot temporarily disabled) */}
             <Button variant="ghost" size="sm" className="relative">
               <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
             </Button>
 
             {/* Organization Switcher */}
