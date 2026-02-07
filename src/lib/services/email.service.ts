@@ -284,7 +284,7 @@ export class EmailService {
     }
 
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"}/login"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://prepaid.pgecom.com"}/login"
          style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">
         Log In Now
       </a>
@@ -315,7 +315,7 @@ ${inviterName} has invited you to join ${orgName} on our prepaid minutes platfor
 
 ${tempPassword ? `Your temporary password: ${tempPassword}\n\nPlease change this password after your first login for security.\n` : ""}
 
-Log in at: ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"}/login
+Log in at: ${process.env.NEXT_PUBLIC_APP_URL || "https://prepaid.pgecom.com"}/login
 
 If you have any questions, please reach out to your team administrator.
 
@@ -340,7 +340,7 @@ The ${orgName} Team
     resetToken: string,
     orgName: string,
   ): Promise<void> {
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://prepaid.pgecom.com"}/reset-password?token=${resetToken}`;
     const subject = "Reset Your Password";
 
     const html = `

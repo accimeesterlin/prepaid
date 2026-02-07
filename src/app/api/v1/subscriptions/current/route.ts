@@ -30,10 +30,43 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get tier info
-    const tier =
+    // Determine effective tier
+    const validTiers = Object.values(SubscriptionTier);
+
+    let tier =
       (organization.subscriptionTier as SubscriptionTier) ||
       SubscriptionTier.STARTER;
+
+    // If there's completed payment history with a valid tier, prefer the
+    // most recent completed tier. This helps auto-heal cases where
+    // subscriptionTier wasn't updated correctly but paymentHistory was.
+    const history = organization.subscription?.paymentHistory || [];
+    const lastCompleted = [...history]
+      .reverse()
+      .find(
+        (entry) =>
+          entry.status === "completed" &&
+          validTiers.includes(entry.tier as SubscriptionTier),
+      );
+
+    if (lastCompleted) {
+      const historyTier = lastCompleted.tier as SubscriptionTier;
+      if (tier !== historyTier) {
+        tier = historyTier;
+        // Best-effort sync back to the database; ignore errors so
+        // they don't break the response.
+        try {
+          await Organization.findByIdAndUpdate(organization._id, {
+            subscriptionTier: historyTier,
+          });
+        } catch (syncError) {
+          console.error(
+            "Failed to sync subscriptionTier from payment history",
+            syncError,
+          );
+        }
+      }
+    }
     const tierInfo = getTierInfo(tier);
 
     // Calculate usage limits
@@ -81,6 +114,13 @@ export async function GET(req: NextRequest) {
         organizationRemaining: organizationLimit.remaining,
       },
       features: tierInfo.features,
+      // Debug fields to help diagnose tier mismatches
+      debug: {
+        rawSubscriptionTier: organization.subscriptionTier,
+        lastCompletedPaymentTier:
+          (lastCompleted?.tier as SubscriptionTier) || null,
+        paymentHistoryCount: history.length,
+      },
     };
 
     return createSuccessResponse(subscriptionData);

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Organization } from "@pg-prepaid/db";
+import { dbConnection, Organization } from "@pg-prepaid/db";
 import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
 import { PGPayService } from "@/lib/services/pgpay.service";
 import { SubscriptionTier } from "@/lib/pricing";
@@ -10,6 +10,9 @@ import { SubscriptionTier } from "@/lib/pricing";
  */
 export async function POST(req: NextRequest) {
   try {
+    // Ensure database connection is established for webhook processing
+    await dbConnection.connect();
+
     const body = await req.json();
     const { pgPayToken, status, orderId } = body;
 
@@ -52,8 +55,25 @@ export async function POST(req: NextRequest) {
       return createErrorResponse("No pending upgrade found", 404);
     }
 
-    // Check if payment is successful
-    if (verification.status === "completed" && status === "completed") {
+    // Check if payment is successful (be flexible with status values)
+    const statusValue = String(verification.status || "").toLowerCase();
+    const paymentStatusValue = String(
+      verification.paymentStatus || "",
+    ).toLowerCase();
+
+    const isStatusCompleted =
+      statusValue === "completed" ||
+      statusValue === "success" ||
+      statusValue === "succeeded" ||
+      statusValue === "paid";
+
+    const isPaymentPaid =
+      paymentStatusValue === "paid" ||
+      paymentStatusValue === "success" ||
+      paymentStatusValue === "succeeded" ||
+      paymentStatusValue === "completed";
+
+    if (isStatusCompleted || isPaymentPaid || status === "completed") {
       const newTier = pendingUpgrade.tier as SubscriptionTier;
       const months = pendingUpgrade.months || 1;
 

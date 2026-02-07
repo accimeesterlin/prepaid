@@ -1,7 +1,9 @@
 export * from "./connection";
 export * from "./models/user.model";
-export * from "./models/org.model";
+// IMPORTANT: load the extended Organization schema BEFORE the legacy Org model
+// so that both Organization and Org share the same enriched schema
 export { Organization, type IOrganization } from "./models/Organization";
+export * from "./models/org.model";
 export { Integration, type IIntegration } from "./models/Integration";
 export { Product, type IProduct } from "./models/Product";
 export { Transaction, type ITransaction } from "./models/Transaction";

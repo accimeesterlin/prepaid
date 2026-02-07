@@ -31,6 +31,7 @@ export interface IOrganization extends Document {
     };
     lastPayment?: {
       orderId: string;
+      tier: string;
       amount: number;
       months: number;
       status: string;
@@ -154,6 +155,7 @@ const OrganizationSchema = new Schema<IOrganization>(
       },
       lastPayment: {
         orderId: { type: String, index: true },
+        tier: { type: String },
         amount: { type: Number },
         months: { type: Number },
         status: { type: String },

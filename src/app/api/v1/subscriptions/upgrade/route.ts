@@ -86,7 +86,8 @@ export async function POST(req: NextRequest) {
     });
 
     // Create payment request
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://prepaid.pgecom.com";
     const orderId = `sub-${organization._id}-${tier}-${months}m-${Date.now()}`;
 
     const paymentRequest = {
