@@ -32,8 +32,12 @@ import {
   CardContent,
   Dialog,
   DialogContent,
+  toast,
 } from "@pg-prepaid/ui";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { getNextTier } from "@/lib/pricing";
+import type { SubscriptionData } from "@/types/subscription";
+import { SubscriptionUpgradePreview } from "@/components/SubscriptionUpgradePreview";
 
 interface Metrics {
   revenue: {
@@ -104,6 +108,12 @@ export default function DashboardPage() {
   const [providerBalance, setProviderBalance] =
     useState<ProviderBalance | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(
+    null,
+  );
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedMonths, setSelectedMonths] = useState(1);
+  const [upgrading, setUpgrading] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -145,7 +155,10 @@ export default function DashboardPage() {
       const response = await fetch("/api/v1/subscriptions/current");
       if (response.ok) {
         const data = await response.json();
-        setSubscriptionTier(data.organization?.subscriptionTier || "starter");
+        setSubscription(data);
+        setSubscriptionTier(
+          data.tier || data.organization?.subscriptionTier || "starter",
+        );
       }
 
       // Fetch usage
@@ -243,6 +256,37 @@ export default function DashboardPage() {
       style: "currency",
       currency: "USD",
     }).format(amount);
+  };
+
+  const handleUpgrade = async (tier: any) => {
+    if (!tier) return;
+    try {
+      setUpgrading(true);
+      const response = await fetch("/api/v1/subscriptions/upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier, months: selectedMonths }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to create upgrade payment");
+      }
+
+      const data = await response.json();
+      window.location.href = data.redirectUrl;
+    } catch (err) {
+      console.error("Upgrade error:", err);
+      toast({
+        title: "Upgrade Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to upgrade. Please try again.",
+        variant: "error",
+      });
+      setUpgrading(false);
+    }
   };
 
   return (
@@ -395,7 +439,7 @@ export default function DashboardPage() {
                     {showUpgrade && (
                       <Button
                         size="sm"
-                        onClick={() => router.push("/pricing")}
+                        onClick={() => setShowUpgradeModal(true)}
                         className={
                           subscriptionTier === "starter"
                             ? "bg-gradient-to-r from-blue-600 to-purple-600"
@@ -904,6 +948,56 @@ export default function DashboardPage() {
               />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade Modal */}
+      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <DialogContent className="w-full max-w-2xl sm:max-w-3xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold">Upgrade your plan</h2>
+              <p className="text-sm text-muted-foreground">
+                Choose a prepaid period and see what you unlock.
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowUpgradeModal(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {subscription ? (
+            (() => {
+              const nextTier = getNextTier(subscription.tier);
+              if (!nextTier) {
+                return (
+                  <p className="text-sm text-muted-foreground">
+                    You are already on the highest available plan.
+                  </p>
+                );
+              }
+
+              return (
+                <SubscriptionUpgradePreview
+                  subscription={subscription}
+                  nextTier={nextTier}
+                  selectedMonths={selectedMonths}
+                  onSelectedMonthsChange={setSelectedMonths}
+                  upgrading={upgrading}
+                  onUpgrade={handleUpgrade}
+                />
+              );
+            })()
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Loading subscription details...
+            </p>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>

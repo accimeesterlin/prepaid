@@ -846,8 +846,11 @@ export default function SendMinutesPage({
 
                 {/* Custom Amount for Variable Value Products */}
                 {selectedProduct.isVariableValue && (
-                  <div className="space-y-2">
-                    <Label htmlFor="modalCustomAmount">
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="modalCustomAmount"
+                      className="text-sm font-medium"
+                    >
                       Amount (${selectedProduct.minAmount} - $
                       {selectedProduct.maxAmount})
                     </Label>
@@ -857,6 +860,7 @@ export default function SendMinutesPage({
                       step="0.01"
                       min={selectedProduct.minAmount}
                       max={selectedProduct.maxAmount}
+                      className="mt-0.5"
                       value={customAmount}
                       onChange={(e) => setCustomAmount(e.target.value)}
                       placeholder={`Enter amount between $${selectedProduct.minAmount} and $${selectedProduct.maxAmount}`}
