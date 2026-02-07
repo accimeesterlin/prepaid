@@ -364,11 +364,18 @@ export default function SendMinutesPage({
         skuCode: selectedProduct.skuCode,
       };
 
-      // For variable-value products, only send the sendValue (amount in local currency)
-      // Backend will calculate the USD cost based on exchange rate
+      // For variable-value products, send the sendValue and pre-calculated USD cost
       if (selectedProduct.isVariableValue && customAmount) {
         const amount = parseFloat(customAmount);
         requestBody.sendValue = amount;
+
+        // Calculate USD cost using the exchange rate from product data
+        const minSendValue = selectedProduct.minAmount || 1;
+        const minUsdCost = selectedProduct.pricing.costPrice;
+        const exchangeRate = minUsdCost / minSendValue;
+        const usdCost = amount * exchangeRate;
+
+        requestBody.estimatedUsdCost = usdCost;
       }
 
       const res = await fetch("/api/v1/customer-transactions", {

@@ -3,9 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { Search, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import {
-  Button,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
+import {
   Input,
   Alert,
   AlertDescription,
@@ -194,7 +200,8 @@ export default function TransactionsPage({
             <div className="text-sm text-gray-600">
               Showing {transactions.length} of {total} transactions
               {search && ` matching "${search}"`}
-              {testModeFilter && ` (${testModeFilter === "true" ? "Test Mode Only" : "Live Mode Only"})`}
+              {testModeFilter &&
+                ` (${testModeFilter === "true" ? "Test Mode Only" : "Live Mode Only"})`}
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -293,23 +300,28 @@ export default function TransactionsPage({
                             <div className="font-medium text-gray-900">
                               {tx.metadata.productName}
                             </div>
-                            {tx.operator?.name && tx.operator.name !== "unknown" && (
-                              <div className="text-xs text-gray-400">
-                                {tx.operator.name}
-                                {tx.operator.country && tx.operator.country !== "unknown" && ` - ${tx.operator.country}`}
-                              </div>
-                            )}
+                            {tx.operator?.name &&
+                              tx.operator.name !== "unknown" && (
+                                <div className="text-xs text-gray-400">
+                                  {tx.operator.name}
+                                  {tx.operator.country &&
+                                    tx.operator.country !== "unknown" &&
+                                    ` - ${tx.operator.country}`}
+                                </div>
+                              )}
                           </>
-                        ) : tx.operator?.name && tx.operator.name !== "unknown" ? (
+                        ) : tx.operator?.name &&
+                          tx.operator.name !== "unknown" ? (
                           <>
                             <div className="font-medium text-gray-900">
                               {tx.operator.name}
                             </div>
-                            {tx.operator.country && tx.operator.country !== "unknown" && (
-                              <div className="text-xs text-gray-400">
-                                {tx.operator.country}
-                              </div>
-                            )}
+                            {tx.operator.country &&
+                              tx.operator.country !== "unknown" && (
+                                <div className="text-xs text-gray-400">
+                                  {tx.operator.country}
+                                </div>
+                              )}
                           </>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -340,7 +352,8 @@ export default function TransactionsPage({
                                   : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}
+                            {tx.status.charAt(0).toUpperCase() +
+                              tx.status.slice(1)}
                           </span>
                           {tx.isTestMode && (
                             <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
@@ -404,7 +417,10 @@ export default function TransactionsPage({
       </div>
 
       {/* Transaction Detail Modal */}
-      <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
+      <Dialog
+        open={!!selectedTransaction}
+        onOpenChange={() => setSelectedTransaction(null)}
+      >
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedTransaction && (
             <>
@@ -413,216 +429,217 @@ export default function TransactionsPage({
               </DialogHeader>
 
               <div className="space-y-6 mt-4">
-              {/* Status Badge */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Status
-                </span>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
-                      selectedTransaction.status === "completed"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                        : selectedTransaction.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
-                    }`}
-                  >
-                    {selectedTransaction.status}
+                {/* Status Badge */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Status
                   </span>
-                  {selectedTransaction.isTestMode && (
-                    <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
-                      TEST MODE
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
+                        selectedTransaction.status === "completed"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                          : selectedTransaction.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                      }`}
+                    >
+                      {selectedTransaction.status}
                     </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Transaction Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Order ID
-                  </p>
-                  <p className="text-sm text-foreground font-mono">
-                    {selectedTransaction.orderId || selectedTransaction._id}
-                  </p>
+                    {selectedTransaction.isTestMode && (
+                      <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
+                        TEST MODE
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Date & Time
-                  </p>
-                  <p className="text-sm text-foreground">
-                    {new Date(
-                      selectedTransaction.createdAt,
-                    ).toLocaleDateString()}{" "}
-                    {new Date(
-                      selectedTransaction.createdAt,
-                    ).toLocaleTimeString()}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Recipient Phone
-                  </p>
-                  <p className="text-sm text-foreground font-semibold">
-                    {selectedTransaction.recipient?.phoneNumber || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Amount
-                  </p>
-                  <p className="text-lg font-bold text-foreground">
-                    {currency} {selectedTransaction.amount.toFixed(2)}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Payment Type
-                  </p>
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      selectedTransaction.paymentType === "balance"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-                    }`}
-                  >
-                    {selectedTransaction.paymentType === "balance"
-                      ? "Balance"
-                      : "Gateway"}
-                  </span>
-                </div>
-
-                {selectedTransaction.paymentMethod && (
+                {/* Transaction Information */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">
-                      Payment Method
+                      Order ID
                     </p>
-                    <p className="text-sm text-foreground capitalize">
-                      {selectedTransaction.paymentMethod}
+                    <p className="text-sm text-foreground font-mono">
+                      {selectedTransaction.orderId || selectedTransaction._id}
                     </p>
                   </div>
-                )}
-              </div>
 
-              {/* Product Information */}
-              {selectedTransaction.metadata?.productName && (
-                <div className="border-t pt-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-3">
-                    Product Details
-                  </h3>
-                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        Product Name
-                      </span>
-                      <span className="text-sm text-foreground">
-                        {selectedTransaction.metadata.productName}
-                      </span>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Date & Time
+                    </p>
+                    <p className="text-sm text-foreground">
+                      {new Date(
+                        selectedTransaction.createdAt,
+                      ).toLocaleDateString()}{" "}
+                      {new Date(
+                        selectedTransaction.createdAt,
+                      ).toLocaleTimeString()}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Recipient Phone
+                    </p>
+                    <p className="text-sm text-foreground font-semibold">
+                      {selectedTransaction.recipient?.phoneNumber || "-"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Amount
+                    </p>
+                    <p className="text-lg font-bold text-foreground">
+                      {currency} {selectedTransaction.amount.toFixed(2)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Payment Type
+                    </p>
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        selectedTransaction.paymentType === "balance"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                      }`}
+                    >
+                      {selectedTransaction.paymentType === "balance"
+                        ? "Balance"
+                        : "Gateway"}
+                    </span>
+                  </div>
+
+                  {selectedTransaction.paymentMethod && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">
+                        Payment Method
+                      </p>
+                      <p className="text-sm text-foreground capitalize">
+                        {selectedTransaction.paymentMethod}
+                      </p>
                     </div>
-                    {selectedTransaction.operator?.country &&
-                     selectedTransaction.operator.country !== "unknown" && (
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          Country
-                        </span>
-                        <span className="text-sm text-foreground">
-                          {selectedTransaction.operator.country}
-                        </span>
-                      </div>
-                    )}
-                    {selectedTransaction.operator?.name &&
-                     selectedTransaction.operator.name !== "unknown" && (
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          Operator
-                        </span>
-                        <span className="text-sm text-foreground">
-                          {selectedTransaction.operator.name}
-                        </span>
-                      </div>
-                    )}
-                    {selectedTransaction.metadata.benefitAmount > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          Benefit
-                        </span>
-                        <span className="text-sm text-foreground">
-                          {selectedTransaction.metadata.benefitAmount}{" "}
-                          {selectedTransaction.metadata.benefitUnit || "units"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
-              )}
 
-              {/* DingConnect Transfer ID */}
-              {(selectedTransaction.metadata?.dingTransferId ||
-                selectedTransaction.dingTransferId) && (
-                <div className="border-t pt-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-3">
-                    Provider Details
-                  </h3>
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        Transfer ID
-                      </span>
-                      <span className="text-sm text-foreground font-mono">
-                        {selectedTransaction.metadata?.dingTransferId ||
-                          selectedTransaction.dingTransferId}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Error Message */}
-              {selectedTransaction.errorMessage && (
-                <div className="border-t pt-4">
-                  <h3 className="text-lg font-semibold text-destructive mb-3">
-                    Error Details
-                  </h3>
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-                    <p className="text-sm text-destructive">
-                      {selectedTransaction.errorMessage}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Additional Metadata */}
-              {selectedTransaction.metadata &&
-                Object.keys(selectedTransaction.metadata).length > 0 && (
+                {/* Product Information */}
+                {selectedTransaction.metadata?.productName && (
                   <div className="border-t pt-4">
                     <h3 className="text-lg font-semibold text-foreground mb-3">
-                      Additional Information
+                      Product Details
                     </h3>
                     <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                      {Object.entries(selectedTransaction.metadata).map(
-                        ([key, value]) => (
-                          <div key={key} className="flex justify-between">
-                            <span className="text-sm font-medium text-muted-foreground capitalize">
-                              {key.replace(/([A-Z])/g, " $1").trim()}
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Product Name
+                        </span>
+                        <span className="text-sm text-foreground">
+                          {selectedTransaction.metadata.productName}
+                        </span>
+                      </div>
+                      {selectedTransaction.operator?.country &&
+                        selectedTransaction.operator.country !== "unknown" && (
+                          <div className="flex justify-between">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              Country
                             </span>
                             <span className="text-sm text-foreground">
-                              {typeof value === "object"
-                                ? JSON.stringify(value)
-                                : String(value)}
+                              {selectedTransaction.operator.country}
                             </span>
                           </div>
-                        ),
+                        )}
+                      {selectedTransaction.operator?.name &&
+                        selectedTransaction.operator.name !== "unknown" && (
+                          <div className="flex justify-between">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              Operator
+                            </span>
+                            <span className="text-sm text-foreground">
+                              {selectedTransaction.operator.name}
+                            </span>
+                          </div>
+                        )}
+                      {selectedTransaction.metadata.benefitAmount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            Benefit
+                          </span>
+                          <span className="text-sm text-foreground">
+                            {selectedTransaction.metadata.benefitAmount}{" "}
+                            {selectedTransaction.metadata.benefitUnit ||
+                              "units"}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
                 )}
-            </div>
+
+                {/* DingConnect Transfer ID */}
+                {(selectedTransaction.metadata?.dingTransferId ||
+                  selectedTransaction.dingTransferId) && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-semibold text-foreground mb-3">
+                      Provider Details
+                    </h3>
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Transfer ID
+                        </span>
+                        <span className="text-sm text-foreground font-mono">
+                          {selectedTransaction.metadata?.dingTransferId ||
+                            selectedTransaction.dingTransferId}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {selectedTransaction.errorMessage && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-semibold text-destructive mb-3">
+                      Error Details
+                    </h3>
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                      <p className="text-sm text-destructive">
+                        {selectedTransaction.errorMessage}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Metadata */}
+                {selectedTransaction.metadata &&
+                  Object.keys(selectedTransaction.metadata).length > 0 && (
+                    <div className="border-t pt-4">
+                      <h3 className="text-lg font-semibold text-foreground mb-3">
+                        Additional Information
+                      </h3>
+                      <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                        {Object.entries(selectedTransaction.metadata).map(
+                          ([key, value]) => (
+                            <div key={key} className="flex justify-between">
+                              <span className="text-sm font-medium text-muted-foreground capitalize">
+                                {key.replace(/([A-Z])/g, " $1").trim()}
+                              </span>
+                              <span className="text-sm text-foreground">
+                                {typeof value === "object"
+                                  ? JSON.stringify(value)
+                                  : String(value)}
+                              </span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
+              </div>
             </>
           )}
         </DialogContent>

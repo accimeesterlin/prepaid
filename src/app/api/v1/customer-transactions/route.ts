@@ -27,6 +27,7 @@ const sendTopupSchema = z.object({
   skuCode: z.string().min(1, "Product SKU is required"),
   amount: z.number().optional(), // For variable-value products
   sendValue: z.number().optional(), // For variable-value products
+  estimatedUsdCost: z.number().optional(), // Pre-calculated USD cost from frontend
 });
 
 export async function POST(request: NextRequest) {
@@ -150,25 +151,71 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Calculate USD cost based on the product's exchange rate
-      // For variable-value products, Minimum contains both SendValue (in local currency) and ReceiveValue (in USD cost)
-      const minSendValue = productDetails.Minimum?.SendValue || 1;
-      const minReceiveValue =
-        productDetails.Minimum?.ReceiveValue || minSendValue;
+      // If frontend provided pre-calculated USD cost (from EstimatePrices during lookup), use it
+      if (data.estimatedUsdCost && data.estimatedUsdCost > 0) {
+        dingConnectCost = data.estimatedUsdCost;
 
-      // Calculate the exchange rate from minimum values
-      const exchangeRate = minReceiveValue / minSendValue;
+        logger.info("Using pre-calculated USD cost from frontend", {
+          sendValue,
+          estimatedUsdCost: dingConnectCost,
+        });
+      } else {
+        // Otherwise, try to estimate via API
+        try {
+          const estimate = await dingConnect.estimatePrices([
+            {
+              SkuCode: data.skuCode,
+              SendValue: sendValue,
+              SendCurrencyIso: productDetails.Minimum?.SendCurrencyIso || "USD",
+            },
+          ]);
 
-      // Calculate USD cost for the custom sendValue
-      dingConnectCost = sendValue * exchangeRate;
+          if (!estimate || estimate.length === 0) {
+            throw new Error("Empty response from EstimatePrices API");
+          }
 
-      logger.info("Variable-value product cost calculation", {
-        sendValue,
-        minSendValue,
-        minReceiveValue,
-        exchangeRate,
-        calculatedUsdCost: dingConnectCost,
-      });
+          // The estimate response contains the actual USD cost (DistributorFee)
+          dingConnectCost = estimate[0].Price?.DistributorFee || 0;
+
+          if (dingConnectCost <= 0) {
+            throw new Error(
+              "Invalid pricing returned from service provider (zero or negative)",
+            );
+          }
+
+          logger.info("Variable-value product cost from EstimatePrices", {
+            sendValue,
+            sendCurrency: productDetails.Minimum?.SendCurrencyIso,
+            estimatedUsdCost: dingConnectCost,
+            distributorFee: estimate[0].Price?.DistributorFee,
+            customerFee: estimate[0].Price?.CustomerFee,
+            fullEstimate: JSON.stringify(estimate[0]),
+          });
+        } catch (error) {
+          logger.error("Failed to estimate prices from DingConnect", {
+            error: error instanceof Error ? error.message : "Unknown error",
+            errorStack: error instanceof Error ? error.stack : undefined,
+            skuCode: data.skuCode,
+            sendValue,
+            sendCurrency: productDetails.Minimum?.SendCurrencyIso,
+          });
+
+          // Fallback: Calculate based on exchange rate from minimum values
+          // This assumes ReceiveValue is in USD (may not be accurate)
+          const minSendValue = productDetails.Minimum?.SendValue || 1;
+          const minReceiveValue =
+            productDetails.Minimum?.ReceiveValue || minSendValue;
+          const exchangeRate = minReceiveValue / minSendValue;
+          dingConnectCost = sendValue * exchangeRate;
+
+          logger.warn("Using fallback exchange rate calculation", {
+            minSendValue,
+            minReceiveValue,
+            exchangeRate,
+            calculatedCost: dingConnectCost,
+          });
+        }
+      }
 
       // Calculate customer price with markup
       if (applicablePricingRule) {
