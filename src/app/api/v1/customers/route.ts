@@ -15,9 +15,22 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
+    const favoritesOnly = searchParams.get('favorites') === 'true';
+    const groupId = searchParams.get('groupId');
 
     const query: any = { orgId: session.orgId };
 
+    // Filter by favorites
+    if (favoritesOnly) {
+      query.isFavorite = true;
+    }
+
+    // Filter by group
+    if (groupId) {
+      query.groups = groupId;
+    }
+
+    // Search filter
     if (search) {
       query.$or = [
         { phoneNumber: { $regex: search, $options: 'i' } },

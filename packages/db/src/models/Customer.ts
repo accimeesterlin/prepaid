@@ -8,6 +8,10 @@ export interface ICustomer extends Document {
   name?: string;
   country?: string;
 
+  // Organization features
+  isFavorite: boolean;
+  groups: string[]; // Array of group IDs
+
   // Authentication fields
   passwordHash?: string;
   emailVerified: boolean;
@@ -91,6 +95,18 @@ const CustomerSchema = new Schema<ICustomer>(
     country: {
       type: String,
       trim: true,
+    },
+
+    // Organization features
+    isFavorite: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    groups: {
+      type: [String],
+      default: [],
+      index: true,
     },
 
     // Authentication fields

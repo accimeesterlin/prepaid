@@ -9,6 +9,10 @@ export { Product, type IProduct } from "./models/Product";
 export { Transaction, type ITransaction } from "./models/Transaction";
 export { Customer, type ICustomer } from "./models/Customer";
 export {
+  CustomerGroup,
+  type ICustomerGroup,
+} from "./models/CustomerGroup";
+export {
   UserOrganization,
   type IUserOrganization,
 } from "./models/UserOrganization";
