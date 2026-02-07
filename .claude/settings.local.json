@@ -70,7 +70,8 @@
       "Bash(timeout 5 curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3002/api/v1/customer-auth/me)",
       "Bash(timeout:*)",
       "Bash(find:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []

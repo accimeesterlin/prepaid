@@ -13,20 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   CreditCard,
   TrendingUp,
   Clock,
   AlertCircle,
   CheckCircle2,
-  ArrowUpRight,
-  ArrowDown,
   Receipt,
 } from "lucide-react";
 import Link from "next/link";

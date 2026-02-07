@@ -25,10 +25,8 @@ export async function GET(request: NextRequest) {
 
     const fullName = (customer.name || "").trim();
     const nameParts = fullName ? fullName.split(/\s+/) : [];
-    const firstName = customer.firstName || nameParts[0] || "";
-    const lastName =
-      customer.lastName ||
-      (nameParts.length > 1 ? nameParts.slice(1).join(" ") : "");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
 
     console.log("[Customer Auth /me] Returning customer data:", {
       customerId: customer._id,
