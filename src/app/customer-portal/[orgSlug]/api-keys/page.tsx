@@ -3,7 +3,27 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { Button, Input, Label, Alert, AlertDescription, toast, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@pg-prepaid/ui";
+import {
+  Button,
+  Input,
+  Label,
+  Alert,
+  AlertDescription,
+  toast,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@pg-prepaid/ui";
 
 interface ApiKey {
   id: string;
@@ -96,7 +116,9 @@ export default function ApiKeysPage({
       console.log("API Response:", data);
 
       if (!res.ok) {
-        throw new Error(data.error?.message || data.detail || "Failed to create API key");
+        throw new Error(
+          data.error?.message || data.detail || "Failed to create API key",
+        );
       }
 
       // The API returns the key directly in the response
@@ -123,10 +145,13 @@ export default function ApiKeysPage({
     if (!keyToRevoke) return;
 
     try {
-      const res = await fetch(`/api/v1/api-keys/${keyToRevoke.id}?customer=true`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `/api/v1/api-keys/${keyToRevoke.id}?customer=true`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
 
       if (!res.ok) {
         throw new Error("Failed to revoke API key");
@@ -136,7 +161,8 @@ export default function ApiKeysPage({
       setKeyToRevoke(null);
       toast({
         title: "Success",
-        description: t("api.keys.revokeSuccess") || "API key revoked successfully",
+        description:
+          t("api.keys.revokedSuccess") || "API key revoked successfully",
         variant: "success",
       });
     } catch (err: any) {
@@ -334,9 +360,7 @@ export default function ApiKeysPage({
               </DialogHeader>
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
-                  <Label className="mb-1">
-                    {t("api.keys.modal.keyName")}
-                  </Label>
+                  <Label className="mb-1">{t("api.keys.modal.keyName")}</Label>
                   <Input
                     type="text"
                     required
@@ -350,9 +374,7 @@ export default function ApiKeysPage({
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <Label>
-                      {t("api.keys.modal.selectScopes")}
-                    </Label>
+                    <Label>{t("api.keys.modal.selectScopes")}</Label>
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -373,7 +395,10 @@ export default function ApiKeysPage({
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
                     {availableScopes.map((scope) => (
-                      <label key={scope.value} className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
+                      <label
+                        key={scope.value}
+                        className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
+                      >
                         <input
                           type="checkbox"
                           checked={newKeyData.scopes.includes(scope.value)}
@@ -420,12 +445,16 @@ export default function ApiKeysPage({
       </Dialog>
 
       {/* Revoke Confirmation Dialog */}
-      <AlertDialog open={!!keyToRevoke} onOpenChange={(open: boolean) => !open && setKeyToRevoke(null)}>
+      <AlertDialog
+        open={!!keyToRevoke}
+        onOpenChange={(open: boolean) => !open && setKeyToRevoke(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("api.keys.revokeConfirm") || "Are you sure you want to revoke this API key? This action cannot be undone and the key will immediately stop working."}
+              {t("api.keys.revokeConfirm") ||
+                "Are you sure you want to revoke this API key? This action cannot be undone and the key will immediately stop working."}
               {keyToRevoke && (
                 <div className="mt-2 p-2 bg-muted rounded text-sm font-mono">
                   {keyToRevoke.name}

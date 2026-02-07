@@ -2,8 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge } from "@pg-prepaid/ui";
-import { Code, BookOpen, Key, Zap, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Badge,
+} from "@pg-prepaid/ui";
+import {
+  Code,
+  BookOpen,
+  Key,
+  Zap,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 
 export default function ApiDocsPage({
   params,
@@ -11,8 +25,10 @@ export default function ApiDocsPage({
   params: Promise<{ orgSlug: string }>;
 }) {
   const [orgSlug, setOrgSlug] = useState<string>("");
-  const [expandedEndpoints, setExpandedEndpoints] = useState<Set<number>>(new Set());
-  const { } = useTranslation();
+  const [expandedEndpoints, setExpandedEndpoints] = useState<Set<number>>(
+    new Set(),
+  );
+  const {} = useTranslation();
 
   useEffect(() => {
     params.then((p) => setOrgSlug(p.orgSlug));
@@ -51,13 +67,13 @@ export default function ApiDocsPage({
             email: "customer@example.com",
             name: "John Doe",
             phoneNumber: "+50912345678",
-            currentBalance: 100.00,
+            currentBalance: 100.0,
             balanceCurrency: "USD",
             emailVerified: true,
-            createdAt: "2024-01-15T10:30:00Z"
-          }
-        }
-      }
+            createdAt: "2024-01-15T10:30:00Z",
+          },
+        },
+      },
     },
     {
       method: "PUT",
@@ -67,7 +83,7 @@ export default function ApiDocsPage({
       body: {
         firstName: "John",
         lastName: "Doe",
-        phone: "+50912345678"
+        phone: "+50912345678",
       },
       example: {
         response: {
@@ -75,10 +91,10 @@ export default function ApiDocsPage({
             id: "cust_123",
             name: "John Doe",
             phoneNumber: "+50912345678",
-            email: "customer@example.com"
-          }
-        }
-      }
+            email: "customer@example.com",
+          },
+        },
+      },
     },
     {
       method: "GET",
@@ -86,31 +102,68 @@ export default function ApiDocsPage({
       description: "List customer transactions with pagination and filtering",
       scopes: ["transactions:read"],
       params: [
-        { name: "limit", type: "number", description: "Number of results per page (default: 10, max: 100)" },
-        { name: "offset", type: "number", description: "Number of results to skip (default: 0)" },
-        { name: "status", type: "string", description: "Filter by status: pending, completed, failed, refunded" }
+        {
+          name: "limit",
+          type: "number",
+          description: "Number of results per page (default: 10, max: 100)",
+        },
+        {
+          name: "offset",
+          type: "number",
+          description: "Number of results to skip (default: 0)",
+        },
+        {
+          name: "status",
+          type: "string",
+          description: "Filter by status: pending, completed, failed, refunded",
+        },
       ],
       example: {
         response: {
           data: [
             {
               id: "txn_123",
-              amount: 10.00,
+              amount: 10.0,
               recipientPhone: "+50987654321",
               status: "completed",
               product: {
-                name: "Digicel Haiti 10 USD"
+                name: "Digicel Haiti 10 USD",
               },
-              createdAt: "2024-01-15T10:30:00Z"
-            }
+              createdAt: "2024-01-15T10:30:00Z",
+            },
           ],
           pagination: {
             total: 50,
             limit: 10,
-            offset: 0
-          }
-        }
-      }
+            offset: 0,
+          },
+        },
+      },
+    },
+    {
+      method: "POST",
+      path: "/api/v1/customer-transactions",
+      description:
+        "Send a top-up using the authenticated customer's balance (wallet)",
+      scopes: ["topup:send", "balance:read"],
+      body: {
+        phoneNumber: "+50912345678",
+        skuCode: "PROD_123",
+        amount: 10.0,
+        sendValue: 10.0,
+        estimatedUsdCost: 10.0,
+      },
+      example: {
+        response: {
+          orderId: "ORD-1234567890",
+          status: "completed",
+          amount: 10.0,
+          currency: "USD",
+          paymentType: "balance",
+          recipientPhone: "+50912345678",
+          createdAt: "2024-01-15T10:30:00Z",
+        },
+      },
     },
     {
       method: "GET",
@@ -119,12 +172,12 @@ export default function ApiDocsPage({
       scopes: ["balance:read"],
       example: {
         response: {
-          currentBalance: 100.00,
-          totalAssigned: 500.00,
-          totalUsed: 400.00,
-          balanceCurrency: "USD"
-        }
-      }
+          currentBalance: 100.0,
+          totalAssigned: 500.0,
+          totalUsed: 400.0,
+          balanceCurrency: "USD",
+        },
+      },
     },
     {
       method: "GET",
@@ -132,8 +185,16 @@ export default function ApiDocsPage({
       description: "Get customer balance history with pagination",
       scopes: ["balance:read"],
       params: [
-        { name: "limit", type: "number", description: "Number of results per page (default: 20)" },
-        { name: "offset", type: "number", description: "Number of results to skip (default: 0)" }
+        {
+          name: "limit",
+          type: "number",
+          description: "Number of results per page (default: 20)",
+        },
+        {
+          name: "offset",
+          type: "number",
+          description: "Number of results to skip (default: 0)",
+        },
       ],
       example: {
         response: {
@@ -141,43 +202,44 @@ export default function ApiDocsPage({
             {
               id: "bal_123",
               type: "credit",
-              amount: 50.00,
-              balance: 150.00,
+              amount: 50.0,
+              balance: 150.0,
               description: "Balance added",
-              createdAt: "2024-01-15T10:30:00Z"
-            }
+              createdAt: "2024-01-15T10:30:00Z",
+            },
           ],
           pagination: {
             total: 25,
             limit: 20,
-            offset: 0
-          }
-        }
-      }
+            offset: 0,
+          },
+        },
+      },
     },
     {
       method: "POST",
       path: "/api/v1/lookup/phone",
-      description: "Lookup phone number to detect country, operator, and available products. Returns pricing and product details.",
+      description:
+        "Lookup phone number to detect country, operator, and available products. Returns pricing and product details.",
       scopes: [],
       note: "Public endpoint - no authentication required",
       body: {
         phoneNumber: "+50912345678",
-        orgSlug: "your-org-slug"
+        orgSlug: "your-org-slug",
       },
       example: {
         response: {
           phoneNumber: "50912345678",
           country: {
             code: "HT",
-            name: "Haiti"
+            name: "Haiti",
           },
           detectedOperators: [
             {
               code: "DIGICEL_HT",
               name: "Digicel Haiti",
-              logo: "https://example.com/logo.png"
-            }
+              logo: "https://example.com/logo.png",
+            },
           ],
           products: [
             {
@@ -186,26 +248,26 @@ export default function ApiDocsPage({
               providerCode: "DIGICEL_HT",
               providerName: "Digicel Haiti",
               benefitType: "airtime",
-              benefitAmount: 10.00,
+              benefitAmount: 10.0,
               benefitUnit: "USD",
               pricing: {
-                costPrice: 10.00,
-                markup: 1.00,
-                priceBeforeDiscount: 11.00,
-                discount: 0.50,
-                finalPrice: 10.50,
-                discountApplied: true
+                costPrice: 10.0,
+                markup: 1.0,
+                priceBeforeDiscount: 11.0,
+                discount: 0.5,
+                finalPrice: 10.5,
+                discountApplied: true,
               },
-              isVariableValue: false
-            }
+              isVariableValue: false,
+            },
           ],
           totalProducts: 25,
           branding: {
             businessName: "Your Business",
-            primaryColor: "#6366f1"
-          }
-        }
-      }
+            primaryColor: "#6366f1",
+          },
+        },
+      },
     },
     {
       method: "POST",
@@ -216,25 +278,25 @@ export default function ApiDocsPage({
       body: {
         orgSlug: "your-org-slug",
         skuCode: "PROD_123",
-        sendValue: 10.00,
-        sendCurrencyIso: "USD"
+        sendValue: 10.0,
+        sendCurrencyIso: "USD",
       },
       example: {
         response: {
           estimate: {
-            sendValue: 10.00,
+            sendValue: 10.0,
             sendCurrencyIso: "USD",
-            receiveValue: 10.00,
+            receiveValue: 10.0,
             receiveCurrencyIso: "USD",
-            fee: 0.50,
-            totalCost: 10.50
+            fee: 0.5,
+            totalCost: 10.5,
           },
           product: {
             skuCode: "PROD_123",
-            name: "Digicel Haiti 10 USD"
-          }
-        }
-      }
+            name: "Digicel Haiti 10 USD",
+          },
+        },
+      },
     },
     {
       method: "POST",
@@ -249,13 +311,13 @@ export default function ApiDocsPage({
           name: "Digicel Haiti 10 USD",
           providerCode: "DIGICEL_HT",
           pricing: {
-            finalPrice: 10.50
-          }
+            finalPrice: 10.5,
+          },
         },
         customerEmail: "customer@example.com",
         paymentMethod: "pgpay",
-        amount: 10.50,
-        sendValue: 10.00
+        amount: 10.5,
+        sendValue: 10.0,
       },
       example: {
         response: {
@@ -263,9 +325,9 @@ export default function ApiDocsPage({
           status: "pending",
           paymentUrl: "https://payment-provider.com/pay/abc123",
           pgPayToken: "token_abc123",
-          expiresAt: "2024-01-15T10:45:00Z"
-        }
-      }
+          expiresAt: "2024-01-15T10:45:00Z",
+        },
+      },
     },
     {
       method: "POST",
@@ -274,7 +336,7 @@ export default function ApiDocsPage({
       scopes: ["transactions:read"],
       body: {
         orderId: "ORD-1234567890",
-        pgPayToken: "token_abc123"
+        pgPayToken: "token_abc123",
       },
       example: {
         response: {
@@ -282,14 +344,14 @@ export default function ApiDocsPage({
           transaction: {
             id: "txn_123",
             orderId: "ORD-1234567890",
-            amount: 10.50,
+            amount: 10.5,
             recipientPhone: "+50912345678",
             status: "completed",
             dingTransferId: "12345",
-            createdAt: "2024-01-15T10:30:00Z"
-          }
-        }
-      }
+            createdAt: "2024-01-15T10:30:00Z",
+          },
+        },
+      },
     },
     {
       method: "GET",
@@ -298,7 +360,11 @@ export default function ApiDocsPage({
       scopes: [],
       note: "Requires customer authentication. Add ?customer=true query parameter.",
       params: [
-        { name: "customer", type: "boolean", description: "Set to 'true' for customer API keys" }
+        {
+          name: "customer",
+          type: "boolean",
+          description: "Set to 'true' for customer API keys",
+        },
       ],
       example: {
         response: {
@@ -310,11 +376,11 @@ export default function ApiDocsPage({
               scopes: ["balance:read", "transactions:read"],
               createdAt: "2024-01-15T10:30:00Z",
               lastUsedAt: "2024-01-20T15:45:00Z",
-              usageCount: 150
-            }
-          ]
-        }
-      }
+              usageCount: 150,
+            },
+          ],
+        },
+      },
     },
     {
       method: "POST",
@@ -323,25 +389,30 @@ export default function ApiDocsPage({
       scopes: [],
       note: "Requires customer authentication. Add ?customer=true query parameter. The full key is only shown once.",
       params: [
-        { name: "customer", type: "boolean", description: "Set to 'true' for customer API keys" }
+        {
+          name: "customer",
+          type: "boolean",
+          description: "Set to 'true' for customer API keys",
+        },
       ],
       body: {
         name: "Production Key",
-        scopes: ["balance:read", "transactions:read", "topup:send"]
+        scopes: ["balance:read", "transactions:read", "topup:send"],
       },
       example: {
         response: {
-          message: "API key created successfully. Store this key securely - you won't be able to see it again.",
+          message:
+            "API key created successfully. Store this key securely - you won't be able to see it again.",
           key: "pk_live_abc123def456ghi789jkl012mno345",
           apiKey: {
             id: "key_123",
             name: "Production Key",
             keyPrefix: "pk_live_abc",
             scopes: ["balance:read", "transactions:read", "topup:send"],
-            createdAt: "2024-01-15T10:30:00Z"
-          }
-        }
-      }
+            createdAt: "2024-01-15T10:30:00Z",
+          },
+        },
+      },
     },
     {
       method: "DELETE",
@@ -350,14 +421,18 @@ export default function ApiDocsPage({
       scopes: [],
       note: "Requires customer authentication. The key will be immediately deactivated.",
       params: [
-        { name: "customer", type: "boolean", description: "Set to 'true' for customer API keys" }
+        {
+          name: "customer",
+          type: "boolean",
+          description: "Set to 'true' for customer API keys",
+        },
       ],
       example: {
         response: {
-          message: "API key revoked successfully"
-        }
-      }
-    }
+          message: "API key revoked successfully",
+        },
+      },
+    },
   ];
 
   return (
@@ -371,7 +446,8 @@ export default function ApiDocsPage({
           </h1>
         </div>
         <p className="text-gray-600 text-lg">
-          Learn how to integrate with our API to automate mobile top-ups and manage your account programmatically.
+          Learn how to integrate with our API to automate mobile top-ups and
+          manage your account programmatically.
         </p>
       </div>
 
@@ -382,20 +458,30 @@ export default function ApiDocsPage({
             <Zap className="h-5 w-5 text-primary" />
             <CardTitle>Getting Started</CardTitle>
           </div>
-          <CardDescription>
-            Quick guide to start using the API
-          </CardDescription>
+          <CardDescription>Quick guide to start using the API</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">1. Create an API Key</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">
+              1. Create an API Key
+            </h3>
             <p className="text-gray-600 text-sm">
-              Navigate to the <a href={`/customer-portal/${orgSlug}/api-keys`} className="text-primary hover:underline">API Keys</a> page and create a new key with the required scopes for your use case.
+              Navigate to the{" "}
+              <a
+                href={`/customer-portal/${orgSlug}/api-keys`}
+                className="text-primary hover:underline"
+              >
+                API Keys
+              </a>{" "}
+              page and create a new key with the required scopes for your use
+              case.
             </p>
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">2. Authenticate Your Requests</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">
+              2. Authenticate Your Requests
+            </h3>
             <p className="text-gray-600 text-sm mb-2">
               Include your API key in the Authorization header:
             </p>
@@ -405,12 +491,19 @@ export default function ApiDocsPage({
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">3. Make API Requests</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">
+              3. Make API Requests
+            </h3>
             <p className="text-gray-600 text-sm mb-2">
               All API requests should be made to:
             </p>
             <div className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto">
-              <code>{typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/v1/...</code>
+              <code>
+                {typeof window !== "undefined"
+                  ? window.location.origin
+                  : "https://your-domain.com"}
+                /api/v1/...
+              </code>
             </div>
           </div>
         </CardContent>
@@ -426,7 +519,10 @@ export default function ApiDocsPage({
         </CardHeader>
         <CardContent>
           <div className="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
-            {typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/v1
+            {typeof window !== "undefined"
+              ? window.location.origin
+              : "https://your-domain.com"}
+            /api/v1
           </div>
         </CardContent>
       </Card>
@@ -441,14 +537,17 @@ export default function ApiDocsPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-gray-600">
-            The API uses Bearer token authentication. Include your API key in the Authorization header of every request.
+            The API uses Bearer token authentication. Include your API key in
+            the Authorization header of every request.
           </p>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Example Request:</h4>
+            <h4 className="font-semibold text-gray-900 mb-2">
+              Example Request:
+            </h4>
             <div className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto">
               <pre>{`curl -X GET \\
-  ${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/v1/customer-auth/me \\
+  ${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/api/v1/customer-auth/me \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json"`}</pre>
             </div>
@@ -456,7 +555,9 @@ export default function ApiDocsPage({
 
           <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
             <p className="text-sm text-yellow-800">
-              <strong>Security Note:</strong> Keep your API keys secure and never share them publicly. Rotate keys regularly and revoke any compromised keys immediately.
+              <strong>Security Note:</strong> Keep your API keys secure and
+              never share them publicly. Rotate keys regularly and revoke any
+              compromised keys immediately.
             </p>
           </div>
         </CardContent>
@@ -500,7 +601,9 @@ export default function ApiDocsPage({
                         <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0" />
                       )}
                       <Badge
-                        variant={endpoint.method === "GET" ? "default" : "secondary"}
+                        variant={
+                          endpoint.method === "GET" ? "default" : "secondary"
+                        }
                         className="font-mono"
                       >
                         {endpoint.method}
@@ -509,13 +612,17 @@ export default function ApiDocsPage({
                         {endpoint.path}
                       </code>
                     </div>
-                    <CardDescription className="ml-8">{endpoint.description}</CardDescription>
+                    <CardDescription className="ml-8">
+                      {endpoint.description}
+                    </CardDescription>
                   </div>
                 </div>
 
                 {endpoint.scopes && endpoint.scopes.length > 0 && (
                   <div className="flex items-center gap-2 mt-3 ml-8">
-                    <span className="text-xs font-semibold text-gray-500">Required Scopes:</span>
+                    <span className="text-xs font-semibold text-gray-500">
+                      Required Scopes:
+                    </span>
                     {endpoint.scopes.map((scope) => (
                       <Badge key={scope} variant="outline" className="text-xs">
                         {scope}
@@ -533,35 +640,49 @@ export default function ApiDocsPage({
 
               {isExpanded && (
                 <CardContent className="space-y-4 border-t">
-              {endpoint.params && (
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Query Parameters:</h4>
-                  <div className="space-y-2">
-                    {endpoint.params.map((param) => (
-                      <div key={param.name} className="flex gap-2 text-sm">
-                        <code className="text-primary font-mono">{param.name}</code>
-                        <span className="text-gray-400">({param.type})</span>
-                        <span className="text-gray-600">- {param.description}</span>
+                  {endpoint.params && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">
+                        Query Parameters:
+                      </h4>
+                      <div className="space-y-2">
+                        {endpoint.params.map((param) => (
+                          <div key={param.name} className="flex gap-2 text-sm">
+                            <code className="text-primary font-mono">
+                              {param.name}
+                            </code>
+                            <span className="text-gray-400">
+                              ({param.type})
+                            </span>
+                            <span className="text-gray-600">
+                              - {param.description}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  )}
 
-              {endpoint.body && (
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Request Body:</h4>
-                  <div className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto">
-                    <pre>{JSON.stringify(endpoint.body, null, 2)}</pre>
-                  </div>
-                </div>
-              )}
+                  {endpoint.body && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">
+                        Request Body:
+                      </h4>
+                      <div className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto">
+                        <pre>{JSON.stringify(endpoint.body, null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
 
                   {endpoint.example && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Example Response:</h4>
+                      <h4 className="font-semibold text-gray-900 mb-2">
+                        Example Response:
+                      </h4>
                       <div className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto">
-                        <pre>{JSON.stringify(endpoint.example.response, null, 2)}</pre>
+                        <pre>
+                          {JSON.stringify(endpoint.example.response, null, 2)}
+                        </pre>
                       </div>
                     </div>
                   )}
@@ -579,7 +700,8 @@ export default function ApiDocsPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-gray-600">
-            API requests are rate-limited to ensure fair usage and system stability.
+            API requests are rate-limited to ensure fair usage and system
+            stability.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -593,7 +715,9 @@ export default function ApiDocsPage({
             </div>
             <div className="border rounded-lg p-4">
               <div className="text-2xl font-bold text-primary">429</div>
-              <div className="text-sm text-gray-600">status on limit exceeded</div>
+              <div className="text-sm text-gray-600">
+                status on limit exceeded
+              </div>
             </div>
           </div>
 
@@ -615,49 +739,85 @@ X-RateLimit-Reset: 1640995200`}</pre>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-gray-600">
-            The API uses standard HTTP response codes and returns errors in RFC 7807 Problem Details format.
+            The API uses standard HTTP response codes and returns errors in RFC
+            7807 Problem Details format.
           </p>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Common Error Codes:</h4>
+            <h4 className="font-semibold text-gray-900 mb-2">
+              Common Error Codes:
+            </h4>
             <div className="space-y-2">
               <div className="flex gap-3 text-sm">
-                <code className="text-red-600 font-mono font-semibold">400</code>
-                <span className="text-gray-600">Bad Request - Invalid request parameters</span>
+                <code className="text-red-600 font-mono font-semibold">
+                  400
+                </code>
+                <span className="text-gray-600">
+                  Bad Request - Invalid request parameters
+                </span>
               </div>
               <div className="flex gap-3 text-sm">
-                <code className="text-red-600 font-mono font-semibold">401</code>
-                <span className="text-gray-600">Unauthorized - Invalid or missing API key</span>
+                <code className="text-red-600 font-mono font-semibold">
+                  401
+                </code>
+                <span className="text-gray-600">
+                  Unauthorized - Invalid or missing API key
+                </span>
               </div>
               <div className="flex gap-3 text-sm">
-                <code className="text-red-600 font-mono font-semibold">403</code>
-                <span className="text-gray-600">Forbidden - Insufficient permissions for the requested resource</span>
+                <code className="text-red-600 font-mono font-semibold">
+                  403
+                </code>
+                <span className="text-gray-600">
+                  Forbidden - Insufficient permissions for the requested
+                  resource
+                </span>
               </div>
               <div className="flex gap-3 text-sm">
-                <code className="text-red-600 font-mono font-semibold">404</code>
-                <span className="text-gray-600">Not Found - Resource does not exist</span>
+                <code className="text-red-600 font-mono font-semibold">
+                  404
+                </code>
+                <span className="text-gray-600">
+                  Not Found - Resource does not exist
+                </span>
               </div>
               <div className="flex gap-3 text-sm">
-                <code className="text-red-600 font-mono font-semibold">429</code>
-                <span className="text-gray-600">Too Many Requests - Rate limit exceeded</span>
+                <code className="text-red-600 font-mono font-semibold">
+                  429
+                </code>
+                <span className="text-gray-600">
+                  Too Many Requests - Rate limit exceeded
+                </span>
               </div>
               <div className="flex gap-3 text-sm">
-                <code className="text-red-600 font-mono font-semibold">500</code>
-                <span className="text-gray-600">Internal Server Error - Something went wrong on our end</span>
+                <code className="text-red-600 font-mono font-semibold">
+                  500
+                </code>
+                <span className="text-gray-600">
+                  Internal Server Error - Something went wrong on our end
+                </span>
               </div>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Error Response Format:</h4>
+            <h4 className="font-semibold text-gray-900 mb-2">
+              Error Response Format:
+            </h4>
             <div className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto">
-              <pre>{JSON.stringify({
-                type: "https://api.example.com/errors/invalid-request",
-                title: "Invalid Request",
-                status: 400,
-                detail: "The 'phoneNumber' field is required",
-                instance: "/api/v1/topup/send"
-              }, null, 2)}</pre>
+              <pre>
+                {JSON.stringify(
+                  {
+                    type: "https://api.example.com/errors/invalid-request",
+                    title: "Invalid Request",
+                    status: 400,
+                    detail: "The 'phoneNumber' field is required",
+                    instance: "/api/v1/topup/send",
+                  },
+                  null,
+                  2,
+                )}
+              </pre>
             </div>
           </div>
         </CardContent>
@@ -670,7 +830,8 @@ X-RateLimit-Reset: 1640995200`}</pre>
         </CardHeader>
         <CardContent>
           <p className="text-gray-600 mb-4">
-            If you have questions or need assistance with the API, please contact our support team.
+            If you have questions or need assistance with the API, please
+            contact our support team.
           </p>
           <div className="flex gap-4">
             <a

@@ -2,7 +2,12 @@ import { NextRequest } from "next/server";
 import { getSession, SessionPayload } from "./auth";
 import { ApiErrors } from "./api-error";
 import { UserRole } from "@pg-prepaid/types";
-import { ApiKey, type ApiKeyScope, type IApiKey } from "@pg-prepaid/db";
+import {
+  ApiKey,
+  Customer,
+  type ApiKeyScope,
+  type IApiKey,
+} from "@pg-prepaid/db";
 import { rateLimitService } from "./services/rate-limit.service";
 import { getCustomerSession } from "./customer-auth";
 import crypto from "crypto";
@@ -17,6 +22,14 @@ export interface ExtendedSessionPayload extends SessionPayload {
     ownerId: string;
     ownerType: "staff" | "customer";
   };
+}
+
+export interface CustomerAuthPayload {
+  customerId: string;
+  orgId: string;
+  email: string;
+  emailVerified: boolean;
+  name?: string;
 }
 
 /**
@@ -221,4 +234,41 @@ export async function requireVerifiedCustomer(_request: NextRequest): Promise<{
   }
 
   return customer;
+}
+
+/**
+ * Require customer via either session cookie or customer API key
+ *
+ * - First tries JWT customer session (customer-portal login)
+ * - If no session, falls back to API key with "customer:read" scope
+ */
+export async function requireCustomerAuthOrApiKey(
+  request: NextRequest,
+): Promise<CustomerAuthPayload & { apiKey?: IApiKey }> {
+  const session = await getCustomerSession();
+
+  if (session) {
+    return session;
+  }
+
+  const { apiKey } = await requireApiKeyWithScope(request, "customer:read");
+
+  if (apiKey.ownerType !== "customer") {
+    throw ApiErrors.Forbidden("API key must belong to a customer account");
+  }
+
+  const customer = await Customer.findById(apiKey.ownerId);
+
+  if (!customer) {
+    throw ApiErrors.Unauthorized("Customer not found for provided API key");
+  }
+
+  return {
+    customerId: String(customer._id),
+    orgId: customer.orgId,
+    email: customer.email!,
+    emailVerified: customer.emailVerified,
+    name: customer.name,
+    apiKey,
+  };
 }

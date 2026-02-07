@@ -8,13 +8,13 @@ import { Customer } from "@pg-prepaid/db";
 import { dbConnection } from "@pg-prepaid/db/connection";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { createSuccessResponse } from "@/lib/api-response";
-import { requireCustomerAuth } from "@/lib/auth-middleware";
+import { requireCustomerAuthOrApiKey } from "@/lib/auth-middleware";
 
 export async function GET(request: NextRequest) {
   try {
     await dbConnection.connect();
 
-    const session = await requireCustomerAuth(request);
+    const session = await requireCustomerAuthOrApiKey(request);
 
     // Get full customer details
     const customer = await Customer.findById(session.customerId);
@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
       customer: {
         _id: String(customer._id),
         email: customer.email,
-        firstName: customer.name || '', // Use name field as firstName for now
-        lastName: '', // No lastName in schema
+        firstName: customer.name || "", // Use name field as firstName for now
+        lastName: "", // No lastName in schema
         phoneNumber: customer.phoneNumber,
         emailVerified: customer.emailVerified,
         currentBalance: customer.currentBalance,

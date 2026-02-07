@@ -1,15 +1,19 @@
 import { NextRequest } from "next/server";
-import { requireCustomerAuth } from "@/lib/auth-middleware";
 import { Transaction } from "@pg-prepaid/db";
-import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
+import { dbConnection } from "@pg-prepaid/db/connection";
+import { createSuccessResponse } from "@/lib/api-response";
+import { handleApiError } from "@/lib/api-error";
+import { requireCustomerAuthOrApiKey } from "@/lib/auth-middleware";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    await dbConnection.connect();
+
     const { id } = await params;
-    const session = await requireCustomerAuth(request);
+    const session = await requireCustomerAuthOrApiKey(request);
 
     // Ensure customer can only access their own transactions
     if (session.customerId !== id) {
@@ -68,10 +72,7 @@ export async function GET(
         hasPrevPage: page > 1,
       },
     });
-  } catch (error: any) {
-    return createErrorResponse(
-      error.message || "Failed to fetch transactions",
-      500,
-    );
+  } catch (error: unknown) {
+    return handleApiError(error);
   }
 }
