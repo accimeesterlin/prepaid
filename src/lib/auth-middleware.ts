@@ -186,7 +186,7 @@ export async function requireApiKeyWithScope(
  * Require customer authentication (separate from staff auth)
  * This validates customer JWT tokens
  */
-export async function requireCustomerAuth(request: NextRequest): Promise<{
+export async function requireCustomerAuth(_request: NextRequest): Promise<{
   customerId: string;
   orgId: string;
   email: string;
@@ -205,14 +205,14 @@ export async function requireCustomerAuth(request: NextRequest): Promise<{
 /**
  * Require verified customer (email must be verified)
  */
-export async function requireVerifiedCustomer(request: NextRequest): Promise<{
+export async function requireVerifiedCustomer(_request: NextRequest): Promise<{
   customerId: string;
   orgId: string;
   email: string;
   emailVerified: boolean;
   name?: string;
 }> {
-  const customer = await requireCustomerAuth(request);
+  const customer = await requireCustomerAuth(_request);
 
   if (!customer.emailVerified) {
     throw ApiErrors.Forbidden(

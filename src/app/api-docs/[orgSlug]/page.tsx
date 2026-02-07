@@ -2,12 +2,9 @@
 
 import { useState, useEffect } from "react";
 import {
-  Code,
   Shield,
   Zap,
   Book,
-  Key,
-  Activity,
   Copy,
   Check,
 } from "lucide-react";
@@ -17,7 +14,7 @@ export default function ApiDocsPage({
 }: {
   params: Promise<{ orgSlug: string }>;
 }) {
-  const [orgSlug, setOrgSlug] = useState<string>("");
+  const [_orgSlug, setOrgSlug] = useState<string>("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -520,7 +517,8 @@ print(data)`}
                   <code>limit</code> - Results per page (default: 20, max: 100)
                 </li>
                 <li>
-                  <code>testMode</code> - Filter by test mode: "true" (test only), "false" (live only), or omit for all
+                  <code>testMode</code> - Filter by test mode: "true" (test
+                  only), "false" (live only), or omit for all
                 </li>
               </ul>
 
@@ -549,7 +547,8 @@ print(data)`}
                 </code>
               </div>
               <p className="text-gray-600 mb-3">
-                Check if an organization is in test mode (public endpoint, no authentication required)
+                Check if an organization is in test mode (public endpoint, no
+                authentication required)
               </p>
               <p className="text-sm text-gray-500 mb-3">
                 <strong>Required scope:</strong> None (public endpoint)
@@ -596,7 +595,10 @@ console.log('Test mode:', data.testMode);`}
 
               <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                 <p className="text-sm text-orange-800">
-                  <strong>Note:</strong> When test mode is enabled, all transactions are validated but not actually processed by the provider. This is useful for testing your integration without incurring real charges or sending real top-ups.
+                  <strong>Note:</strong> When test mode is enabled, all
+                  transactions are validated but not actually processed by the
+                  provider. This is useful for testing your integration without
+                  incurring real charges or sending real top-ups.
                 </p>
               </div>
             </div>

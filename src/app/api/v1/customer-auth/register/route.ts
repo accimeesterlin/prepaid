@@ -10,7 +10,6 @@ import { Org } from "@pg-prepaid/db";
 import { dbConnection } from "@pg-prepaid/db/connection";
 import { ApiErrors } from "@/lib/api-error";
 import {
-  createSuccessResponse,
   createCreatedResponse,
 } from "@/lib/api-response";
 import { createCustomerSession } from "@/lib/customer-auth";

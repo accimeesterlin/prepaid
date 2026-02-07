@@ -68,7 +68,8 @@
       "Bash(timeout 30 yarn dev)",
       "Bash(MONGODB_URI=mongodb://localhost:27017 MONGODB_DB_NAME=pg-prepaid node:*)",
       "Bash(timeout 5 curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3002/api/v1/customer-auth/me)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

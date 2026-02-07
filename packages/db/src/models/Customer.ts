@@ -95,7 +95,6 @@ const CustomerSchema = new Schema<ICustomer>(
     emailVerified: {
       type: Boolean,
       default: false,
-      index: true,
     },
     verificationToken: {
       type: String,

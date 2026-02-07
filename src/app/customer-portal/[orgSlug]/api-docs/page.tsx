@@ -12,7 +12,7 @@ export default function ApiDocsPage({
 }) {
   const [orgSlug, setOrgSlug] = useState<string>("");
   const [expandedEndpoints, setExpandedEndpoints] = useState<Set<number>>(new Set());
-  const { t } = useTranslation();
+  const { } = useTranslation();
 
   useEffect(() => {
     params.then((p) => setOrgSlug(p.orgSlug));

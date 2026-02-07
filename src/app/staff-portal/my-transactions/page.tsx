@@ -24,7 +24,7 @@ export default function MyTransactionsPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const router = useRouter();
-  const { t } = useTranslation();
+  const { } = useTranslation();
 
   useEffect(() => {
     loadTransactions();

@@ -11,12 +11,12 @@ import { handleApiError } from "@/lib/api-error";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orgSlug: string } },
+  { params }: { params: Promise<{ orgSlug: string }> },
 ) {
   try {
     await dbConnection.connect();
 
-    const { orgSlug } = params;
+    const { orgSlug } = await params;
 
     // Find organization
     const org = await Organization.findOne({ slug: orgSlug });

@@ -30,7 +30,7 @@ export default function StaffDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
-  const { t } = useTranslation();
+  const { } = useTranslation();
 
   useEffect(() => {
     loadDashboardData();

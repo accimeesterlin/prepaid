@@ -11,7 +11,6 @@ import { ApiKey } from "@pg-prepaid/db";
 import { ApiErrors } from "@/lib/api-error";
 import {
   createSuccessResponse,
-  createNoContentResponse,
 } from "@/lib/api-response";
 import { requireAuth, requireCustomerAuth } from "@/lib/auth-middleware";
 import { Permission } from "@pg-prepaid/types";

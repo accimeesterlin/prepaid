@@ -148,7 +148,6 @@ const ApiKeySchema = new Schema<IApiKey>(
     },
     expiresAt: {
       type: Date,
-      index: true,
     },
   },
   {

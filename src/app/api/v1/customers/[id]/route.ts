@@ -56,7 +56,7 @@ export async function PUT(
       const customerSession = await customerAuth(request);
       isCustomer = true;
       customerAuthId = customerSession.customerId;
-    } catch (e) {
+    } catch (_e) {
       // Not a customer, try staff auth
     }
 

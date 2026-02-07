@@ -4,7 +4,6 @@
  */
 
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { ApiErrors } from "@/lib/api-error";
 import { createSuccessResponse } from "@/lib/api-response";
 import { requireAuth } from "@/lib/auth-middleware";

@@ -7,7 +7,6 @@ import { saveEncrypted, loadEncrypted } from "@/lib/encryption";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
   Alert,
@@ -69,14 +68,14 @@ export default function SendMinutesPage({
   const [orgSlug, setOrgSlug] = useState<string>("");
   const [customer, setCustomer] = useState<CustomerData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [detectedOperatorCodes, setDetectedOperatorCodes] = useState<string[]>(
+  const [_detectedOperatorCodes, setDetectedOperatorCodes] = useState<string[]>(
     [],
   );
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [recipientPhone, setRecipientPhone] = useState("");
   const [recentPhones, setRecentPhones] = useState<string[]>([]);
   const [customAmount, setCustomAmount] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const [isTestMode, setIsTestMode] = useState<boolean>(false);
   const [sending, setSending] = useState(false);
@@ -336,7 +335,7 @@ export default function SendMinutesPage({
         );
       }
 
-      const data = await res.json();
+      await res.json(); // Parse the response but don't use it
 
       setSuccess(true);
       setShowProductModal(false);

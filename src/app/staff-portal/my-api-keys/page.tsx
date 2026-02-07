@@ -25,7 +25,7 @@ export default function MyApiKeysPage() {
   });
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const router = useRouter();
-  const { t } = useTranslation();
+  const { } = useTranslation();
 
   const staffScopes = [
     { value: "balance:read", label: "Read Balance" },

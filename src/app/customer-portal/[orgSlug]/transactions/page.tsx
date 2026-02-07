@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Button, Input, Alert, AlertDescription } from "@pg-prepaid/ui";
 
 interface Transaction {
@@ -225,6 +225,7 @@ export default function TransactionsPage({
                   <option value="50">50</option>
                   <option value="100">100</option>
                 </select>
+              </div>
             </div>
           </div>
         )}
@@ -277,16 +278,27 @@ export default function TransactionsPage({
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {tx.recipient?.phoneNumber || "-"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500">
                         {tx.metadata?.productName ? (
                           <>
-                            <div>{tx.metadata.productName}</div>
+                            <div className="font-medium text-gray-900">
+                              {tx.metadata.productName}
+                            </div>
                             <div className="text-xs text-gray-400">
-                              {tx.operator?.country || "-"}
+                              {tx.operator?.name || tx.operator?.country || ""}
+                            </div>
+                          </>
+                        ) : tx.operator?.name ? (
+                          <>
+                            <div className="font-medium text-gray-900">
+                              {tx.operator.name}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {tx.operator.country || ""}
                             </div>
                           </>
                         ) : (
-                          "-"
+                          <span className="text-gray-400">-</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
@@ -314,7 +326,7 @@ export default function TransactionsPage({
                                   : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {tx.status}
+                            {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}
                           </span>
                           {tx.isTestMode && (
                             <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
@@ -338,8 +350,7 @@ export default function TransactionsPage({
                   className="p-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="First page"
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                  <ChevronLeft className="h-4 w-4 -ml-3" />
+                  <ChevronsLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -370,8 +381,7 @@ export default function TransactionsPage({
                   className="p-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Last page"
                 >
-                  <ChevronRight className="h-4 w-4" />
-                  <ChevronRight className="h-4 w-4 -ml-3" />
+                  <ChevronsRight className="h-4 w-4" />
                 </button>
               </div>
             </div>

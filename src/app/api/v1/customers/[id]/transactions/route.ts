@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { requireCustomerAuth } from "@/lib/auth-middleware";
 import { Transaction } from "@pg-prepaid/db";
 import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
-import { ApiErrors } from "@/lib/api-error";
 
 export async function GET(
   request: NextRequest,

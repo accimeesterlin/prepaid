@@ -4,7 +4,6 @@ import {
   ApiErrors,
   createErrorResponse,
   handleApiError,
-  type ProblemDetails,
 } from '../api-error';
 
 describe('ApiException', () => {

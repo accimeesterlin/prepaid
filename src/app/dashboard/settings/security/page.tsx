@@ -29,8 +29,8 @@ export default function SecuritySettingsPage() {
         const data = await response.json();
         setTwoFactorEnabled(data.twoFactorEnabled || false);
       }
-    } catch (error) {
-      console.error("Failed to fetch security settings:", error);
+    } catch (_error) {
+      console.error("Failed to fetch security settings:", _error);
       toast({
         title: "Error",
         description: "Failed to load security settings",
@@ -67,7 +67,7 @@ export default function SecuritySettingsPage() {
           variant: "error",
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update 2FA settings",

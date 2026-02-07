@@ -19,7 +19,6 @@ import {
   TableHeader,
   TableRow,
   Badge,
-  Button,
 } from "@pg-prepaid/ui";
 import { Loader2, Wallet, Send, History, AlertCircle } from "lucide-react";
 
