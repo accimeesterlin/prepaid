@@ -366,6 +366,16 @@ export async function POST(request: NextRequest) {
                 }
               }
 
+              // Determine pricing rule type
+              let pricingRuleType: 'percentage' | 'fixed' | 'percentage_plus_fixed';
+              if (applicablePricingRule.percentageMarkup && applicablePricingRule.fixedMarkup) {
+                pricingRuleType = 'percentage_plus_fixed';
+              } else if (applicablePricingRule.percentageMarkup) {
+                pricingRuleType = 'percentage';
+              } else {
+                pricingRuleType = 'fixed';
+              }
+
               pricing = {
                 costPrice,
                 markup: Math.round(markup * 100) / 100,
@@ -373,6 +383,12 @@ export async function POST(request: NextRequest) {
                 discount: Math.round(discountAmount * 100) / 100,
                 finalPrice: Math.round(finalPrice * 100) / 100,
                 discountApplied,
+                // Include pricing rule parameters for frontend variable-value calculations
+                pricingRule: {
+                  type: pricingRuleType,
+                  percentageValue: applicablePricingRule.percentageMarkup,
+                  fixedValue: applicablePricingRule.fixedMarkup,
+                },
               };
             } else {
               // No pricing rule found - use cost price as final price (0% markup)

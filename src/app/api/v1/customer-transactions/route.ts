@@ -132,13 +132,12 @@ export async function POST(request: NextRequest) {
     );
 
     if (isVariableValue) {
-      if (!data.amount || !data.sendValue) {
+      if (!data.sendValue) {
         throw ApiErrors.BadRequest(
-          "Amount and sendValue required for variable-value products",
+          "sendValue required for variable-value products",
         );
       }
 
-      dingConnectCost = data.amount; // DingConnect cost
       sendValue = data.sendValue;
 
       // Validate amount is within range
@@ -150,6 +149,26 @@ export async function POST(request: NextRequest) {
           `Amount must be between ${minAmount} and ${maxAmount}`,
         );
       }
+
+      // Calculate USD cost based on the product's exchange rate
+      // For variable-value products, Minimum contains both SendValue (in local currency) and ReceiveValue (in USD cost)
+      const minSendValue = productDetails.Minimum?.SendValue || 1;
+      const minReceiveValue =
+        productDetails.Minimum?.ReceiveValue || minSendValue;
+
+      // Calculate the exchange rate from minimum values
+      const exchangeRate = minReceiveValue / minSendValue;
+
+      // Calculate USD cost for the custom sendValue
+      dingConnectCost = sendValue * exchangeRate;
+
+      logger.info("Variable-value product cost calculation", {
+        sendValue,
+        minSendValue,
+        minReceiveValue,
+        exchangeRate,
+        calculatedUsdCost: dingConnectCost,
+      });
 
       // Calculate customer price with markup
       if (applicablePricingRule) {

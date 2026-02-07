@@ -54,6 +54,12 @@ interface Product {
     discount: number; // Discount amount
     finalPrice: number; // Final price customer pays
     discountApplied: boolean;
+    // Pricing rule parameters for variable-value products
+    pricingRule?: {
+      type: "percentage" | "fixed" | "percentage_plus_fixed";
+      percentageValue?: number; // For percentage or percentage_plus_fixed
+      fixedValue?: number; // For fixed or percentage_plus_fixed
+    };
   };
   isVariableValue: boolean;
   minAmount?: number;
@@ -87,6 +93,50 @@ export default function SendMinutesPage({
   const [showProductModal, setShowProductModal] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
+
+  // Helper function to calculate markup for variable-value products
+  const calculateVariableMarkup = (
+    usdCost: number,
+    pricingRule?: Product["pricing"]["pricingRule"],
+  ): number => {
+    if (!pricingRule) return 0;
+
+    let markup = 0;
+
+    // Apply percentage markup
+    if (pricingRule.percentageValue && pricingRule.percentageValue > 0) {
+      markup += usdCost * (pricingRule.percentageValue / 100);
+    }
+
+    // Add fixed markup
+    if (pricingRule.fixedValue && pricingRule.fixedValue > 0) {
+      markup += pricingRule.fixedValue;
+    }
+
+    return markup;
+  };
+
+  // Helper function to calculate total price for variable-value products
+  const calculateVariablePrice = (
+    customAmount: string,
+    product: Product,
+  ): number => {
+    if (!customAmount || !product.isVariableValue) {
+      return product.pricing.finalPrice;
+    }
+
+    const sendValue = parseFloat(customAmount);
+    const minSendValue = product.minAmount || 1;
+    const minUsdCost = product.pricing.costPrice;
+    const exchangeRate = minUsdCost / minSendValue;
+    const usdCost = sendValue * exchangeRate;
+    const markup = calculateVariableMarkup(
+      usdCost,
+      product.pricing.pricingRule,
+    );
+
+    return usdCost + markup;
+  };
 
   useEffect(() => {
     params.then((p) => setOrgSlug(p.orgSlug));
@@ -314,10 +364,10 @@ export default function SendMinutesPage({
         skuCode: selectedProduct.skuCode,
       };
 
-      // For variable-value products, include amount
+      // For variable-value products, only send the sendValue (amount in local currency)
+      // Backend will calculate the USD cost based on exchange rate
       if (selectedProduct.isVariableValue && customAmount) {
         const amount = parseFloat(customAmount);
-        requestBody.amount = amount;
         requestBody.sendValue = amount;
       }
 
@@ -814,49 +864,64 @@ export default function SendMinutesPage({
                   selectedProduct.pricing &&
                   customer &&
                   customAmount &&
-                  parseFloat(customAmount) > 0 && (
-                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-300 dark:border-blue-800">
-                      <CardContent className="pt-4 pb-4">
-                        <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
-                          <span className="text-lg">💳</span> Pricing Breakdown
-                        </h4>
-                        <div className="space-y-2 text-sm text-blue-900 dark:text-blue-100">
-                          <div className="flex justify-between items-center">
-                            <span>Top-Up Amount</span>
-                            <span className="font-medium">
-                              {customer?.balanceCurrency || "USD"}{" "}
-                              {parseFloat(customAmount).toFixed(2)}
-                            </span>
-                          </div>
-                          {selectedProduct.pricing.markup > 0 && (
+                  parseFloat(customAmount) > 0 &&
+                  (() => {
+                    // Calculate USD cost based on exchange rate from product's min/max
+                    const sendValue = parseFloat(customAmount);
+                    const minSendValue = selectedProduct.minAmount || 1;
+                    const minUsdCost = selectedProduct.pricing.costPrice;
+
+                    // Exchange rate = USD cost / local currency amount
+                    const exchangeRate = minUsdCost / minSendValue;
+
+                    // Calculate USD cost for custom amount
+                    const usdCost = sendValue * exchangeRate;
+
+                    // Calculate markup using pricing rule parameters
+                    const markup = calculateVariableMarkup(
+                      usdCost,
+                      selectedProduct.pricing.pricingRule,
+                    );
+
+                    // Final price in USD
+                    const finalPrice = usdCost + markup;
+
+                    return (
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-300 dark:border-blue-800">
+                        <CardContent className="pt-4 pb-4">
+                          <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                            <span className="text-lg">💳</span> Pricing
+                            Breakdown
+                          </h4>
+                          <div className="space-y-2 text-sm text-blue-900 dark:text-blue-100">
                             <div className="flex justify-between items-center">
-                              <span>Service Fee</span>
+                              <span>Top-Up Amount</span>
                               <span className="font-medium">
-                                +{customer?.balanceCurrency || "USD"}{" "}
-                                {(
-                                  (parseFloat(customAmount) *
-                                    selectedProduct.pricing.markup) /
-                                  selectedProduct.pricing.costPrice
-                                ).toFixed(2)}
+                                {customer?.balanceCurrency || "USD"}{" "}
+                                {usdCost.toFixed(2)}
                               </span>
                             </div>
-                          )}
-                          <div className="flex justify-between items-center pt-2 border-t border-blue-300 dark:border-blue-700 font-bold text-base">
-                            <span>You Pay</span>
-                            <span className="text-blue-700 dark:text-blue-300">
-                              {customer?.balanceCurrency || "USD"}{" "}
-                              {(
-                                parseFloat(customAmount) *
-                                (1 +
-                                  selectedProduct.pricing.markup /
-                                    selectedProduct.pricing.costPrice)
-                              ).toFixed(2)}
-                            </span>
+                            {markup > 0 && (
+                              <div className="flex justify-between items-center">
+                                <span>Service Fee</span>
+                                <span className="font-medium">
+                                  +{customer?.balanceCurrency || "USD"}{" "}
+                                  {markup.toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex justify-between items-center pt-2 border-t border-blue-300 dark:border-blue-700 font-bold text-base">
+                              <span>You Pay</span>
+                              <span className="text-blue-700 dark:text-blue-300">
+                                {customer?.balanceCurrency || "USD"}{" "}
+                                {finalPrice.toFixed(2)}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
 
                 {/* Pricing Display for Fixed Products */}
                 {!selectedProduct.isVariableValue &&
@@ -923,12 +988,10 @@ export default function SendMinutesPage({
                       <span
                         className={`font-bold text-lg ${
                           customer.currentBalance -
-                            (selectedProduct.isVariableValue && customAmount
-                              ? parseFloat(customAmount) *
-                                (1 +
-                                  selectedProduct.pricing.markup /
-                                    selectedProduct.pricing.costPrice)
-                              : selectedProduct.pricing.finalPrice) >=
+                            calculateVariablePrice(
+                              customAmount,
+                              selectedProduct,
+                            ) >=
                           0
                             ? "text-green-600 dark:text-green-400"
                             : "text-red-600 dark:text-red-400"
@@ -937,12 +1000,7 @@ export default function SendMinutesPage({
                         {customer.balanceCurrency}{" "}
                         {(
                           customer.currentBalance -
-                          (selectedProduct.isVariableValue && customAmount
-                            ? parseFloat(customAmount) *
-                              (1 +
-                                selectedProduct.pricing.markup /
-                                  selectedProduct.pricing.costPrice)
-                            : selectedProduct.pricing.finalPrice)
+                          calculateVariablePrice(customAmount, selectedProduct)
                         ).toFixed(2)}
                       </span>
                     </div>
@@ -969,12 +1027,7 @@ export default function SendMinutesPage({
                     !customer.emailVerified ||
                     (selectedProduct.isVariableValue && !customAmount) ||
                     customer.currentBalance <
-                      (selectedProduct.isVariableValue && customAmount
-                        ? parseFloat(customAmount) *
-                          (1 +
-                            selectedProduct.pricing.markup /
-                              selectedProduct.pricing.costPrice)
-                        : selectedProduct.pricing.finalPrice)
+                      calculateVariablePrice(customAmount, selectedProduct)
                   }
                 >
                   {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

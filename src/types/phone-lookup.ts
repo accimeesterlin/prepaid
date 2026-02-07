@@ -10,6 +10,12 @@ export interface PricingBreakdown {
   discount: number;
   finalPrice: number;
   discountApplied: boolean;
+  // Pricing rule parameters for variable-value products
+  pricingRule?: {
+    type: 'percentage' | 'fixed' | 'percentage_plus_fixed';
+    percentageValue?: number; // For percentage or percentage_plus_fixed
+    fixedValue?: number; // For fixed or percentage_plus_fixed
+  };
 }
 
 export interface ProductInfo {
