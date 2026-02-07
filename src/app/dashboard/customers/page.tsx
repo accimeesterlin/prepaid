@@ -18,6 +18,8 @@ import {
   Link2,
   Folder,
   X,
+  Filter,
+  Check,
 } from 'lucide-react';
 
 import {
@@ -104,9 +106,6 @@ export default function CustomersPage() {
   });
 
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [editMessage, setEditMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [groupMessage, setGroupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     fetchOrgSlug();
@@ -169,7 +168,6 @@ export default function CustomersPage() {
 
   const handleCreate = async () => {
     setSaving(true);
-    setMessage(null);
 
     try {
       const response = await fetch('/api/v1/customers', {
@@ -195,7 +193,7 @@ export default function CustomersPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to create customer',
@@ -214,7 +212,6 @@ export default function CustomersPage() {
       name: customer.name || '',
       country: customer.country || '',
     });
-    setEditMessage(null);
     setShowEditModal(true);
   };
 
@@ -222,7 +219,6 @@ export default function CustomersPage() {
     if (!editingCustomer) return;
 
     setSaving(true);
-    setEditMessage(null);
 
     try {
       const response = await fetch(`/api/v1/customers/${editingCustomer._id}`, {
@@ -249,7 +245,7 @@ export default function CustomersPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to update customer',
@@ -276,7 +272,7 @@ export default function CustomersPage() {
           variant: 'success',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to toggle favorite',
@@ -297,7 +293,6 @@ export default function CustomersPage() {
 
   const handleCreateGroup = async () => {
     setSaving(true);
-    setGroupMessage(null);
 
     try {
       const response = await fetch('/api/v1/customer-groups', {
@@ -323,7 +318,7 @@ export default function CustomersPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to create group',
@@ -362,7 +357,7 @@ export default function CustomersPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to add to group',
@@ -393,7 +388,7 @@ export default function CustomersPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to remove from group',
@@ -431,7 +426,7 @@ export default function CustomersPage() {
           variant: 'error',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to delete group',
@@ -442,6 +437,17 @@ export default function CustomersPage() {
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+  };
+
+  const getActiveFilterLabel = () => {
+    if (selectedFilter === 'favorites') {
+      return 'Favorites';
+    }
+    if (selectedGroup) {
+      const group = groups.find((g) => g._id === selectedGroup);
+      return group?.name || 'Group';
+    }
+    return 'All Customers';
   };
 
   if (loading) {
@@ -712,7 +718,7 @@ export default function CustomersPage() {
         </div>
 
         {/* Filters and View Toggle */}
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
@@ -724,49 +730,76 @@ export default function CustomersPage() {
             />
           </div>
 
-          {/* Filter Buttons */}
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              variant={selectedFilter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                setSelectedFilter('all');
-                setSelectedGroup('');
-              }}
-            >
-              All Customers
-            </Button>
-            <Button
-              variant={selectedFilter === 'favorites' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                setSelectedFilter('favorites');
-                setSelectedGroup('');
-              }}
-            >
-              <Star className="h-4 w-4 mr-1" />
-              Favorites
-            </Button>
-            {groups.map((group) => (
-              <Button
-                key={group._id}
-                variant={selectedGroup === group._id ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => {
-                  setSelectedFilter('group');
-                  setSelectedGroup(group._id);
-                }}
-                style={
-                  selectedGroup === group._id
-                    ? { backgroundColor: group.color, borderColor: group.color }
-                    : { borderColor: group.color, color: group.color }
-                }
-              >
-                <Users className="h-4 w-4 mr-1" />
-                {group.name} ({group.customerCount})
+          {/* Filter Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="min-w-[160px] justify-between">
+                <span className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  {getActiveFilterLabel()}
+                </span>
+                {(selectedFilter !== 'all' || selectedGroup) && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                    1
+                  </Badge>
+                )}
               </Button>
-            ))}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedFilter('all');
+                  setSelectedGroup('');
+                }}
+                className="flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  All Customers
+                </span>
+                {selectedFilter === 'all' && !selectedGroup && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedFilter('favorites');
+                  setSelectedGroup('');
+                }}
+                className="flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Star className="h-4 w-4" />
+                  Favorites
+                </span>
+                {selectedFilter === 'favorites' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              {groups.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Groups</div>
+                  {groups.map((group) => (
+                    <DropdownMenuItem
+                      key={group._id}
+                      onClick={() => {
+                        setSelectedFilter('group');
+                        setSelectedGroup(group._id);
+                      }}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: group.color }}
+                        />
+                        <span className="truncate">{group.name}</span>
+                        <span className="text-xs text-muted-foreground">({group.customerCount})</span>
+                      </span>
+                      {selectedGroup === group._id && <Check className="h-4 w-4 flex-shrink-0" />}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* View Toggle */}
           <div className="flex gap-1 border rounded-lg p-1">
