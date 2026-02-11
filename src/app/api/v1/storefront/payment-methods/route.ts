@@ -43,7 +43,13 @@ export async function GET(request: NextRequest) {
     logger.info('Payment providers found', {
       orgId,
       count: paymentProviders.length,
-      providers: paymentProviders.map(p => ({ provider: p.provider, status: p.status })),
+      providers: paymentProviders.map(p => ({
+        provider: p.provider,
+        status: p.status,
+        feePercentage: p.settings?.feePercentage,
+        fixedFee: p.settings?.fixedFee,
+        settings: p.settings,
+      })),
     });
 
     // Filter to only active providers for customer-facing
