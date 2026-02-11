@@ -1317,11 +1317,11 @@ export default function PublicStorefrontPage() {
                         let fixedFee = 0;
 
                         if (hasPricingRules && selectedProduct.pricing.pricingRule) {
-                          // Use pricing rule fees
-                          feePercentage = selectedProduct.pricing.pricingRule.percentageValue || 0;
+                          // Use pricing rule fees (percentageValue is stored as whole number, e.g., 3 for 3%)
+                          feePercentage = (selectedProduct.pricing.pricingRule.percentageValue || 0) / 100;
                           fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
                         } else {
-                          // Fallback to payment provider fees
+                          // Fallback to payment provider fees (already stored as decimal, e.g., 0.03 for 3%)
                           const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
                           feePercentage = selectedPaymentMethod?.feePercentage || 0;
                           fixedFee = selectedPaymentMethod?.fixedFee || 0;
@@ -1419,11 +1419,11 @@ export default function PublicStorefrontPage() {
                             let fixedFee = 0;
 
                             if (hasPricingRules && selectedProduct.pricing.pricingRule) {
-                              // Use pricing rule fees
-                              feePercentage = selectedProduct.pricing.pricingRule.percentageValue || 0;
+                              // Use pricing rule fees (percentageValue is stored as whole number, e.g., 3 for 3%)
+                              feePercentage = (selectedProduct.pricing.pricingRule.percentageValue || 0) / 100;
                               fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
                             } else {
-                              // Fallback to payment provider fees
+                              // Fallback to payment provider fees (already stored as decimal, e.g., 0.03 for 3%)
                               const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
                               feePercentage = selectedPaymentMethod?.feePercentage || 0;
                               fixedFee = selectedPaymentMethod?.fixedFee || 0;
@@ -1683,11 +1683,11 @@ export default function PublicStorefrontPage() {
                           let fixedFee = 0;
 
                           if (hasPricingRules && selectedProduct?.pricing?.pricingRule) {
-                            // Use pricing rule fees
-                            feePercentage = selectedProduct.pricing.pricingRule.percentageValue || 0;
+                            // Use pricing rule fees (percentageValue is stored as whole number, e.g., 3 for 3%)
+                            feePercentage = (selectedProduct.pricing.pricingRule.percentageValue || 0) / 100;
                             fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
                           } else {
-                            // Fallback to payment provider fees
+                            // Fallback to payment provider fees (already stored as decimal, e.g., 0.03 for 3%)
                             const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
                             feePercentage = selectedPaymentMethod?.feePercentage || 0;
                             fixedFee = selectedPaymentMethod?.fixedFee || 0;
