@@ -458,6 +458,7 @@ export default function PublicStorefrontPage() {
           skuCode,
           sendValue: amount,
           sendCurrencyIso: 'USD',
+          phoneNumber: lookupData?.phoneNumber, // Pass phone number for country detection
         }),
       });
 

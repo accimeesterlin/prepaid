@@ -660,6 +660,61 @@ export default function PaymentSettingsPage() {
                   )}
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Fee Percentage (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="0.00"
+                      value={formData.settings?.feePercentage ?? ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            feePercentage: parseFloat(e.target.value) || 0,
+                          },
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Percentage fee per transaction (e.g., 3 for 3%)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Fixed Fee ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="0.00"
+                      value={formData.settings?.fixedFee ?? ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            fixedFee: parseFloat(e.target.value) || 0,
+                          },
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Fixed fee per transaction (e.g., 0.50 for $0.50)
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
