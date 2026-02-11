@@ -841,7 +841,7 @@ export default function PublicStorefrontPage() {
                 <Button
                   className="w-full h-12 text-base"
                   size="lg"
-                  onClick={handleLookup}
+                  onClick={() => handleLookup()}
                   disabled={loading || !phoneNumber.trim()}
                 >
                   {loading ? (
