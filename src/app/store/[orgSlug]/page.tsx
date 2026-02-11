@@ -1304,6 +1304,15 @@ export default function PublicStorefrontPage() {
                         const feePercentage = selectedPaymentMethod?.feePercentage || 0;
                         const fixedFee = selectedPaymentMethod?.fixedFee || 0;
 
+                        // Debug logging
+                        console.log('Payment Methods Debug:', {
+                          paymentMethods,
+                          paymentMethod,
+                          selectedPaymentMethod,
+                          feePercentage,
+                          fixedFee
+                        });
+
                         let breakdown;
 
                         if (selectedProduct.isVariableValue && customAmount) {
@@ -1338,17 +1347,22 @@ export default function PublicStorefrontPage() {
                           };
                         }
 
-                        // Always show breakdown if payment method has fees configured OR if there are discounts
-                        const hasConfiguredFees = feePercentage > 0 || fixedFee > 0;
+                        // Always show breakdown - even if fees are $0, show them for transparency
                         const hasDiscount = (breakdown.discountApplied && breakdown.discount > 0) || discountData;
 
-                        if (!hasConfiguredFees && !hasDiscount) return null;
+                        // Don't show breakdown ONLY if there are no fees AND no discounts
+                        // But if payment methods are loaded, always show fees (even if $0)
+                        if (breakdown.processingFee === 0 && !hasDiscount && !paymentMethods?.methods) return null;
 
                         return (
                           <div className="space-y-1 text-sm pt-2 mt-2 border-t">
-                            {hasConfiguredFees && (
+                            {/* Always show fees if payment methods are loaded */}
+                            {paymentMethods?.methods && (
                               <div className="flex justify-between text-gray-600">
-                                <span>Fees:</span>
+                                <span>Processing Fee{feePercentage > 0 ? ` (${(feePercentage * 100).toFixed(1)}%` : ''}
+{fixedFee > 0 && feePercentage > 0 ? ' + ' : ''}
+                                {fixedFee > 0 ? `$${fixedFee.toFixed(2)}` : ''}
+                                {(feePercentage > 0 || fixedFee > 0) ? ')' : ''}:</span>
                                 <span>+${breakdown.processingFee.toFixed(2)}</span>
                               </div>
                             )}
