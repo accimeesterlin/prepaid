@@ -295,8 +295,8 @@ export default function PublicStorefrontPage() {
     }
   };
 
-  const handleLookup = async () => {
-    const trimmed = phoneNumber.trim();
+  const handleLookup = async (numberToLookup?: string) => {
+    const trimmed = (numberToLookup || phoneNumber).trim();
 
     if (!trimmed) {
       setError(t('storefront.enterValidPhoneNumber'));
@@ -319,7 +319,7 @@ export default function PublicStorefrontPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phoneNumber: phoneNumber.trim(),
+          phoneNumber: trimmed,
           orgSlug,
         }),
       });
@@ -335,7 +335,7 @@ export default function PublicStorefrontPage() {
         // Fetch payment methods for this organization
         await fetchPaymentMethods();
         // Save to recent numbers
-        saveRecentNumber(phoneNumber.trim());
+        saveRecentNumber(trimmed);
         // Hide recent numbers dropdown
         setShowRecentNumbers(false);
       } else {
@@ -811,6 +811,8 @@ export default function PublicStorefrontPage() {
                             onClick={() => {
                               setPhoneNumber(number);
                               setShowRecentNumbers(false);
+                              // Automatically trigger lookup with the selected number
+                              handleLookup(number);
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted transition-colors text-left"
                           >
