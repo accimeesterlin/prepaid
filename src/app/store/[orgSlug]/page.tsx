@@ -1338,12 +1338,15 @@ export default function PublicStorefrontPage() {
                           };
                         }
 
-                        // Don't show breakdown if there's no fees or discount
-                        if (breakdown.processingFee <= 0 && (!breakdown.discountApplied || breakdown.discount <= 0) && !discountData) return null;
+                        // Always show breakdown if payment method has fees configured OR if there are discounts
+                        const hasConfiguredFees = feePercentage > 0 || fixedFee > 0;
+                        const hasDiscount = (breakdown.discountApplied && breakdown.discount > 0) || discountData;
+
+                        if (!hasConfiguredFees && !hasDiscount) return null;
 
                         return (
                           <div className="space-y-1 text-sm pt-2 mt-2 border-t">
-                            {breakdown.processingFee > 0 && (
+                            {hasConfiguredFees && (
                               <div className="flex justify-between text-gray-600">
                                 <span>Fees:</span>
                                 <span>+${breakdown.processingFee.toFixed(2)}</span>
