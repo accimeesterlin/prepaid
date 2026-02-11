@@ -372,6 +372,8 @@ export async function POST(request: NextRequest) {
                 SkuCode: p.SkuCode,
                 SendValue: p.Minimum!.SendValue,
                 SendCurrencyIso: p.Minimum!.SendCurrencyIso,
+                ReceiveValue: 0,
+                BatchItemRef: p.SkuCode, // Required by DingConnect API
               }));
 
             const estimates =
