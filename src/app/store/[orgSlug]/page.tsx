@@ -278,8 +278,18 @@ export default function PublicStorefrontPage() {
   const fetchPaymentMethods = async () => {
     setPaymentMethodsLoading(true);
     try {
-      const response = await fetch(`/api/v1/storefront/payment-methods?orgSlug=${orgSlug}`);
+      console.log('Fetching payment methods for orgSlug:', orgSlug);
+      const url = `/api/v1/storefront/payment-methods?orgSlug=${orgSlug}`;
+      console.log('Payment methods URL:', url);
+
+      const response = await fetch(url);
       const data = await response.json();
+
+      console.log('Payment methods response:', {
+        status: response.status,
+        ok: response.ok,
+        data
+      });
 
       if (response.ok) {
         setPaymentMethods(data);
