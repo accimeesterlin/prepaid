@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const paymentProviders = await PaymentProvider.find({
       orgId,
       status: { $in: ['active', 'inactive'] }, // Exclude only 'error' status
-    }).select('provider environment status settings.acceptedCurrencies settings.minAmount settings.maxAmount');
+    }).select('provider environment status settings.acceptedCurrencies settings.minAmount settings.maxAmount settings.feePercentage settings.fixedFee');
 
     logger.info('Payment providers found', {
       orgId,
@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
       acceptedCurrencies: p.settings.acceptedCurrencies,
       minAmount: p.settings.minAmount,
       maxAmount: p.settings.maxAmount,
+      feePercentage: p.settings.feePercentage || 0,
+      fixedFee: p.settings.fixedFee || 0,
     }));
 
     // Check if there are any configured but not active providers

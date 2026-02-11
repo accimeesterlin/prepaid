@@ -1297,48 +1297,54 @@ export default function PublicStorefrontPage() {
                       {(() => {
                         if (!selectedProduct.pricing) return null;
 
+                        // Get payment provider fees from selected payment method
+                        const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
+                        const feePercentage = selectedPaymentMethod?.feePercentage || 0;
+                        const fixedFee = selectedPaymentMethod?.fixedFee || 0;
+
                         let breakdown;
 
                         if (selectedProduct.isVariableValue && customAmount) {
                           const amount = parseFloat(customAmount);
                           if (isNaN(amount) || amount <= 0) return null;
 
-                          // Calculate markup percentage from original pricing (based on minAmount)
-                          const markupPercentage = (selectedProduct.pricing.markup / selectedProduct.pricing.costPrice) * 100;
-
-                          // Calculate markup for this amount - amount is the BASE (what they want to send)
-                          const markup = amount * (markupPercentage / 100);
+                          // Calculate payment processing fee: (amount × feePercentage) + fixedFee
+                          const processingFee = (amount * feePercentage) + fixedFee;
 
                           // Check if there was a discount applied (discount percentage stays the same)
                           const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
                             ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
                             : 0;
 
-                          // Discount applies to (amount + markup)
-                          const discount = discountPercentage > 0 ? ((amount + markup) * discountPercentage / 100) : 0;
+                          // Discount applies to (amount + processingFee)
+                          const discount = discountPercentage > 0 ? ((amount + processingFee) * discountPercentage / 100) : 0;
 
                           breakdown = {
-                            markup,
+                            processingFee,
                             discount,
                             discountApplied: discountPercentage > 0,
                           };
                         } else {
+                          // For fixed-value products, calculate fee on the final price
+                          const basePrice = selectedProduct.pricing.finalPrice;
+                          const processingFee = (basePrice * feePercentage) + fixedFee;
+
                           breakdown = {
-                            markup: selectedProduct.pricing.markup,
+                            processingFee,
                             discount: selectedProduct.pricing.discount,
                             discountApplied: selectedProduct.pricing.discountApplied,
                           };
                         }
 
                         // Don't show breakdown if there's no fees or discount
-                        if (breakdown.markup <= 0 && (!breakdown.discountApplied || breakdown.discount <= 0) && !discountData) return null;
+                        if (breakdown.processingFee <= 0 && (!breakdown.discountApplied || breakdown.discount <= 0) && !discountData) return null;
 
                         return (
                           <div className="space-y-1 text-sm pt-2 mt-2 border-t">
-                            {breakdown.markup > 0 && (
+                            {breakdown.processingFee > 0 && (
                               <div className="flex justify-between text-gray-600">
                                 <span>Fees:</span>
-                                <span>+${breakdown.markup.toFixed(2)}</span>
+                                <span>+${breakdown.processingFee.toFixed(2)}</span>
                               </div>
                             )}
                             {breakdown.discountApplied && breakdown.discount > 0 && (
@@ -1361,28 +1367,31 @@ export default function PublicStorefrontPage() {
                         <span>{t('storefront.total')}</span>
                         <span>
                           ${(() => {
+                            // Get payment provider fees from selected payment method
+                            const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
+                            const feePercentage = selectedPaymentMethod?.feePercentage || 0;
+                            const fixedFee = selectedPaymentMethod?.fixedFee || 0;
+
                             if (selectedProduct.isVariableValue && customAmount) {
                               const amount = parseFloat(customAmount);
                               if (isNaN(amount) || amount <= 0) return '0.00';
 
-                              // Calculate markup percentage from original pricing
-                              const markupPercentage = (selectedProduct.pricing.markup / selectedProduct.pricing.costPrice) * 100;
-
-                              // Calculate markup for this amount
-                              const markup = amount * (markupPercentage / 100);
+                              // Calculate payment processing fee
+                              const processingFee = (amount * feePercentage) + fixedFee;
 
                               // Calculate discount if applicable
                               const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
                                 ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
                                 : 0;
-                              const discount = discountPercentage > 0 ? ((amount + markup) * discountPercentage / 100) : 0;
+                              const discount = discountPercentage > 0 ? ((amount + processingFee) * discountPercentage / 100) : 0;
 
-                              // Total = amount + markup - discount - discountCode
-                              const total = amount + markup - discount - (discountData?.discountAmount || 0);
+                              // Total = amount + processingFee - discount - discountCode
+                              const total = amount + processingFee - discount - (discountData?.discountAmount || 0);
                               return Math.max(0, total).toFixed(2);
                             }
-                            const baseTotal = selectedProduct.pricing.finalPrice;
-                            const total = baseTotal - (discountData?.discountAmount || 0);
+                            const basePrice = selectedProduct.pricing.finalPrice;
+                            const processingFee = (basePrice * feePercentage) + fixedFee;
+                            const total = basePrice + processingFee - (discountData?.discountAmount || 0);
                             return Math.max(0, total).toFixed(2);
                           })()}
                         </span>
@@ -1609,25 +1618,30 @@ export default function PublicStorefrontPage() {
                     ) : (
                       t('storefront.pay', {
                         amount: (() => {
+                          // Get payment provider fees from selected payment method
+                          const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
+                          const feePercentage = selectedPaymentMethod?.feePercentage || 0;
+                          const fixedFee = selectedPaymentMethod?.fixedFee || 0;
+
                           if (selectedProduct?.isVariableValue && customAmount) {
                             const amount = parseFloat(customAmount);
                             if (isNaN(amount) || amount <= 0) return '0.00';
 
-                            // Calculate markup percentage from original pricing
-                            const markupPercentage = (selectedProduct.pricing.markup / selectedProduct.pricing.costPrice) * 100;
-                            const markup = amount * (markupPercentage / 100);
+                            // Calculate payment processing fee
+                            const processingFee = (amount * feePercentage) + fixedFee;
 
                             // Calculate discount if applicable
                             const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
                               ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
                               : 0;
-                            const discount = discountPercentage > 0 ? ((amount + markup) * discountPercentage / 100) : 0;
+                            const discount = discountPercentage > 0 ? ((amount + processingFee) * discountPercentage / 100) : 0;
 
-                            // Total = amount + markup - discount - discountCode
-                            return Math.max(0, amount + markup - discount - (discountData?.discountAmount || 0)).toFixed(2);
+                            // Total = amount + processingFee - discount - discountCode
+                            return Math.max(0, amount + processingFee - discount - (discountData?.discountAmount || 0)).toFixed(2);
                           }
-                          const baseTotal = selectedProduct?.pricing.finalPrice || 0;
-                          return Math.max(0, baseTotal - (discountData?.discountAmount || 0)).toFixed(2);
+                          const basePrice = selectedProduct?.pricing.finalPrice || 0;
+                          const processingFee = (basePrice * feePercentage) + fixedFee;
+                          return Math.max(0, basePrice + processingFee - (discountData?.discountAmount || 0)).toFixed(2);
                         })()
                       })
                     )}
