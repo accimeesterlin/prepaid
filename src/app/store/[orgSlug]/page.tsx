@@ -528,6 +528,63 @@ export default function PublicStorefrontPage() {
     };
   }, [customAmount, selectedProduct]);
 
+  // Calculate fees and total - reused by both payment call and display
+  const calculateOrderTotal = () => {
+    if (!selectedProduct?.pricing) return null;
+
+    const hasPricingRules = selectedProduct.pricing.pricingRule && selectedProduct.pricing.markup > 0;
+
+    let feePercentage = 0;
+    let fixedFee = 0;
+
+    if (hasPricingRules && selectedProduct.pricing.pricingRule) {
+      feePercentage = (selectedProduct.pricing.pricingRule.percentageValue || 0) / 100;
+      fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
+    } else {
+      const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
+      feePercentage = selectedPaymentMethod?.feePercentage || 0;
+      fixedFee = selectedPaymentMethod?.fixedFee || 0;
+    }
+
+    if (selectedProduct.isVariableValue && customAmount) {
+      const amount = parseFloat(customAmount);
+      if (isNaN(amount) || amount <= 0) return null;
+
+      const processingFee = (amount * feePercentage) + fixedFee;
+
+      const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
+        ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
+        : 0;
+      const discount = discountPercentage > 0 ? ((amount + processingFee) * discountPercentage / 100) : 0;
+
+      const total = Math.max(0, amount + processingFee - discount - (discountData?.discountAmount || 0));
+
+      return {
+        baseAmount: amount,
+        feePercentage,
+        fixedFee,
+        processingFee,
+        discount,
+        discountApplied: discountPercentage > 0,
+        total,
+      };
+    } else {
+      const basePrice = selectedProduct.pricing.finalPrice;
+      const processingFee = (basePrice * feePercentage) + fixedFee;
+      const total = Math.max(0, basePrice + processingFee - (discountData?.discountAmount || 0));
+
+      return {
+        baseAmount: basePrice,
+        feePercentage,
+        fixedFee,
+        processingFee,
+        discount: selectedProduct.pricing.discount || 0,
+        discountApplied: selectedProduct.pricing.discountApplied || false,
+        total,
+      };
+    }
+  };
+
   const handlePayment = async () => {
     if (!customerEmail) {
       toast({
@@ -562,6 +619,10 @@ export default function PublicStorefrontPage() {
     setPaymentStatus('processing');
 
     try {
+      // Calculate total including processing fees
+      const orderTotal = calculateOrderTotal();
+      const finalAmount = orderTotal?.total ?? (selectedProduct.isVariableValue ? parseFloat(customAmount) : selectedProduct.pricing.finalPrice);
+
       // Call actual payment API endpoint
       const response = await fetch('/api/v1/payments/process', {
         method: 'POST',
@@ -572,7 +633,7 @@ export default function PublicStorefrontPage() {
           product: selectedProduct, // Send full product object
           customerEmail,
           paymentMethod,
-          amount: selectedProduct.isVariableValue ? parseFloat(customAmount) : selectedProduct.pricing.finalPrice,
+          amount: parseFloat(finalAmount.toFixed(2)),
           sendValue: selectedProduct.isVariableValue ? parseFloat(customAmount) : undefined,
         }),
       });
@@ -1307,72 +1368,9 @@ export default function PublicStorefrontPage() {
 
                       {/* Pricing Breakdown - Show fees and discount, but NOT cost price (internal seller info) */}
                       {(() => {
-                        if (!selectedProduct.pricing) return null;
+                        const breakdown = calculateOrderTotal();
+                        if (!breakdown) return null;
 
-                        // Check if pricing rules are configured
-                        const hasPricingRules = selectedProduct.pricing.pricingRule && selectedProduct.pricing.markup > 0;
-
-                        // Get fees: prioritize pricing rules, fallback to payment provider fees
-                        let feePercentage = 0;
-                        let fixedFee = 0;
-
-                        if (hasPricingRules && selectedProduct.pricing.pricingRule) {
-                          // Use pricing rule fees (percentageValue is stored as whole number, e.g., 3 for 3%)
-                          feePercentage = (selectedProduct.pricing.pricingRule.percentageValue || 0) / 100;
-                          fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
-                        } else {
-                          // Fallback to payment provider fees (already stored as decimal, e.g., 0.03 for 3%)
-                          const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
-                          feePercentage = selectedPaymentMethod?.feePercentage || 0;
-                          fixedFee = selectedPaymentMethod?.fixedFee || 0;
-                        }
-
-                        // Debug logging
-                        console.log('Pricing Debug:', {
-                          hasPricingRules,
-                          markup: selectedProduct.pricing.markup,
-                          pricingRule: selectedProduct.pricing.pricingRule,
-                          feePercentage,
-                          fixedFee,
-                        });
-
-                        let breakdown;
-
-                        if (selectedProduct.isVariableValue && customAmount) {
-                          const amount = parseFloat(customAmount);
-                          if (isNaN(amount) || amount <= 0) return null;
-
-                          // Calculate payment processing fee ONLY if no pricing rules
-                          // (if pricing rules exist, markup already includes all fees)
-                          const processingFee = (amount * feePercentage) + fixedFee;
-
-                          // Check if there was a discount applied (discount percentage stays the same)
-                          const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
-                            ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
-                            : 0;
-
-                          // Discount applies to (amount + processingFee)
-                          const discount = discountPercentage > 0 ? ((amount + processingFee) * discountPercentage / 100) : 0;
-
-                          breakdown = {
-                            processingFee,
-                            discount,
-                            discountApplied: discountPercentage > 0,
-                          };
-                        } else {
-                          // For fixed-value products, calculate fee on the final price
-                          // ONLY if no pricing rules (markup = 0)
-                          const basePrice = selectedProduct.pricing.finalPrice;
-                          const processingFee = (basePrice * feePercentage) + fixedFee;
-
-                          breakdown = {
-                            processingFee,
-                            discount: selectedProduct.pricing.discount,
-                            discountApplied: selectedProduct.pricing.discountApplied,
-                          };
-                        }
-
-                        // Always show breakdown - even if fees are $0, show them for transparency
                         const hasDiscount = (breakdown.discountApplied && breakdown.discount > 0) || discountData;
 
                         // Don't show breakdown ONLY if there are no fees AND no discounts
@@ -1384,10 +1382,10 @@ export default function PublicStorefrontPage() {
                             {/* Always show fees if payment methods are loaded */}
                             {paymentMethods?.methods && (
                               <div className="flex justify-between text-gray-600">
-                                <span>Processing Fee{feePercentage > 0 ? ` (${(feePercentage * 100).toFixed(1)}%` : ''}
-{fixedFee > 0 && feePercentage > 0 ? ' + ' : ''}
-                                {fixedFee > 0 ? `$${fixedFee.toFixed(2)}` : ''}
-                                {(feePercentage > 0 || fixedFee > 0) ? ')' : ''}:</span>
+                                <span>Processing Fee{breakdown.feePercentage > 0 ? ` (${(breakdown.feePercentage * 100).toFixed(1)}%` : ''}
+{breakdown.fixedFee > 0 && breakdown.feePercentage > 0 ? ' + ' : ''}
+                                {breakdown.fixedFee > 0 ? `$${breakdown.fixedFee.toFixed(2)}` : ''}
+                                {(breakdown.feePercentage > 0 || breakdown.fixedFee > 0) ? ')' : ''}:</span>
                                 <span>+${breakdown.processingFee.toFixed(2)}</span>
                               </div>
                             )}
@@ -1410,47 +1408,7 @@ export default function PublicStorefrontPage() {
                       <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t">
                         <span>{t('storefront.total')}</span>
                         <span>
-                          ${(() => {
-                            // Check if pricing rules are configured
-                            const hasPricingRules = selectedProduct.pricing.pricingRule && selectedProduct.pricing.markup > 0;
-
-                            // Get fees: prioritize pricing rules, fallback to payment provider fees
-                            let feePercentage = 0;
-                            let fixedFee = 0;
-
-                            if (hasPricingRules && selectedProduct.pricing.pricingRule) {
-                              // Use pricing rule fees (percentageValue is stored as whole number, e.g., 3 for 3%)
-                              feePercentage = (selectedProduct.pricing.pricingRule.percentageValue || 0) / 100;
-                              fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
-                            } else {
-                              // Fallback to payment provider fees (already stored as decimal, e.g., 0.03 for 3%)
-                              const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
-                              feePercentage = selectedPaymentMethod?.feePercentage || 0;
-                              fixedFee = selectedPaymentMethod?.fixedFee || 0;
-                            }
-
-                            if (selectedProduct.isVariableValue && customAmount) {
-                              const amount = parseFloat(customAmount);
-                              if (isNaN(amount) || amount <= 0) return '0.00';
-
-                              // Calculate payment processing fee
-                              const processingFee = (amount * feePercentage) + fixedFee;
-
-                              // Calculate discount if applicable
-                              const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
-                                ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
-                                : 0;
-                              const discount = discountPercentage > 0 ? ((amount + processingFee) * discountPercentage / 100) : 0;
-
-                              // Total = amount + processingFee - discount - discountCode
-                              const total = amount + processingFee - discount - (discountData?.discountAmount || 0);
-                              return Math.max(0, total).toFixed(2);
-                            }
-                            const basePrice = selectedProduct.pricing.finalPrice;
-                            const processingFee = (basePrice * feePercentage) + fixedFee;
-                            const total = basePrice + processingFee - (discountData?.discountAmount || 0);
-                            return Math.max(0, total).toFixed(2);
-                          })()}
+                          ${(calculateOrderTotal()?.total ?? 0).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -1674,45 +1632,7 @@ export default function PublicStorefrontPage() {
                       </div>
                     ) : (
                       t('storefront.pay', {
-                        amount: (() => {
-                          // Check if pricing rules are configured
-                          const hasPricingRules = selectedProduct?.pricing?.pricingRule && selectedProduct?.pricing?.markup > 0;
-
-                          // Get fees: prioritize pricing rules, fallback to payment provider fees
-                          let feePercentage = 0;
-                          let fixedFee = 0;
-
-                          if (hasPricingRules && selectedProduct?.pricing?.pricingRule) {
-                            // Use pricing rule fees (percentageValue is stored as whole number, e.g., 3 for 3%)
-                            feePercentage = (selectedProduct.pricing.pricingRule.percentageValue || 0) / 100;
-                            fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
-                          } else {
-                            // Fallback to payment provider fees (already stored as decimal, e.g., 0.03 for 3%)
-                            const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
-                            feePercentage = selectedPaymentMethod?.feePercentage || 0;
-                            fixedFee = selectedPaymentMethod?.fixedFee || 0;
-                          }
-
-                          if (selectedProduct?.isVariableValue && customAmount) {
-                            const amount = parseFloat(customAmount);
-                            if (isNaN(amount) || amount <= 0) return '0.00';
-
-                            // Calculate payment processing fee
-                            const processingFee = (amount * feePercentage) + fixedFee;
-
-                            // Calculate discount if applicable
-                            const discountPercentage = selectedProduct.pricing.discountApplied && selectedProduct.pricing.priceBeforeDiscount > 0
-                              ? ((selectedProduct.pricing.priceBeforeDiscount - selectedProduct.pricing.finalPrice) / selectedProduct.pricing.priceBeforeDiscount) * 100
-                              : 0;
-                            const discount = discountPercentage > 0 ? ((amount + processingFee) * discountPercentage / 100) : 0;
-
-                            // Total = amount + processingFee - discount - discountCode
-                            return Math.max(0, amount + processingFee - discount - (discountData?.discountAmount || 0)).toFixed(2);
-                          }
-                          const basePrice = selectedProduct?.pricing.finalPrice || 0;
-                          const processingFee = (basePrice * feePercentage) + fixedFee;
-                          return Math.max(0, basePrice + processingFee - (discountData?.discountAmount || 0)).toFixed(2);
-                        })()
+                        amount: (calculateOrderTotal()?.total ?? 0).toFixed(2)
                       })
                     )}
                   </Button>
