@@ -122,6 +122,7 @@ export default function PaymentSettingsPage() {
   const [configDialog, setConfigDialog] = useState<{
     open: boolean;
     provider: string | null;
+    existingProviderId?: string;
   }>({ open: false, provider: null });
   const [formData, setFormData] = useState<any>({});
   const [saving, setSaving] = useState(false);
@@ -154,7 +155,7 @@ export default function PaymentSettingsPage() {
     providerId: string,
     existingProviderId?: string
   ) => {
-    setConfigDialog({ open: true, provider: providerId });
+    setConfigDialog({ open: true, provider: providerId, existingProviderId });
 
     // If editing existing provider, fetch full details including credentials
     if (existingProviderId) {
@@ -190,8 +191,14 @@ export default function PaymentSettingsPage() {
 
     setSaving(true);
     try {
-      const response = await fetch("/api/v1/payment-providers", {
-        method: "POST",
+      const isEditing = !!configDialog.existingProviderId;
+      const url = isEditing
+        ? `/api/v1/payment-providers/${configDialog.existingProviderId}`
+        : "/api/v1/payment-providers";
+      const method = isEditing ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           provider: configDialog.provider,
@@ -204,7 +211,7 @@ export default function PaymentSettingsPage() {
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Payment provider saved successfully",
+          description: `Payment provider ${isEditing ? "updated" : "saved"} successfully`,
           variant: "success",
         });
         setConfigDialog({ open: false, provider: null });
@@ -296,10 +303,6 @@ export default function PaymentSettingsPage() {
         variant: "error",
       });
     }
-  };
-
-  const _getProviderConfig = (providerId: string) => {
-    return providers.find((p) => p.provider === providerId);
   };
 
   const getGatewayInfo = (providerId: string) => {
@@ -672,13 +675,17 @@ export default function PaymentSettingsPage() {
                       step="0.01"
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       placeholder="0.00"
-                      value={formData.settings?.feePercentage ?? ""}
+                      value={
+                        formData.settings?.feePercentage
+                          ? (formData.settings.feePercentage * 100).toFixed(2)
+                          : ""
+                      }
                       onChange={(e) =>
                         setFormData({
                           ...formData,
                           settings: {
                             ...formData.settings,
-                            feePercentage: parseFloat(e.target.value) || 0,
+                            feePercentage: (parseFloat(e.target.value) || 0) / 100,
                           },
                         })
                       }
