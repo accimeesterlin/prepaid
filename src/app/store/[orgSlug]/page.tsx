@@ -1309,22 +1309,31 @@ export default function PublicStorefrontPage() {
                       {(() => {
                         if (!selectedProduct.pricing) return null;
 
-                        // Check if pricing rules are configured (markup > 0 means pricing rules exist)
-                        const hasPricingRules = selectedProduct.pricing.markup > 0;
+                        // Check if pricing rules are configured
+                        const hasPricingRules = selectedProduct.pricing.pricingRule && selectedProduct.pricing.markup > 0;
 
-                        // Get payment provider fees from selected payment method
-                        // ONLY use payment fees if no pricing rules are configured
-                        const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
-                        const feePercentage = !hasPricingRules ? (selectedPaymentMethod?.feePercentage || 0) : 0;
-                        const fixedFee = !hasPricingRules ? (selectedPaymentMethod?.fixedFee || 0) : 0;
+                        // Get fees: prioritize pricing rules, fallback to payment provider fees
+                        let feePercentage = 0;
+                        let fixedFee = 0;
+
+                        if (hasPricingRules && selectedProduct.pricing.pricingRule) {
+                          // Use pricing rule fees
+                          feePercentage = selectedProduct.pricing.pricingRule.percentageValue || 0;
+                          fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
+                        } else {
+                          // Fallback to payment provider fees
+                          const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
+                          feePercentage = selectedPaymentMethod?.feePercentage || 0;
+                          fixedFee = selectedPaymentMethod?.fixedFee || 0;
+                        }
 
                         // Debug logging
                         console.log('Pricing Debug:', {
                           hasPricingRules,
                           markup: selectedProduct.pricing.markup,
+                          pricingRule: selectedProduct.pricing.pricingRule,
                           feePercentage,
                           fixedFee,
-                          paymentMethod: selectedPaymentMethod
                         });
 
                         let breakdown;
@@ -1402,20 +1411,29 @@ export default function PublicStorefrontPage() {
                         <span>{t('storefront.total')}</span>
                         <span>
                           ${(() => {
-                            // Check if pricing rules are configured (markup > 0 means pricing rules exist)
-                            const hasPricingRules = selectedProduct.pricing.markup > 0;
+                            // Check if pricing rules are configured
+                            const hasPricingRules = selectedProduct.pricing.pricingRule && selectedProduct.pricing.markup > 0;
 
-                            // Get payment provider fees from selected payment method
-                            // ONLY use payment fees if no pricing rules are configured
-                            const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
-                            const feePercentage = !hasPricingRules ? (selectedPaymentMethod?.feePercentage || 0) : 0;
-                            const fixedFee = !hasPricingRules ? (selectedPaymentMethod?.fixedFee || 0) : 0;
+                            // Get fees: prioritize pricing rules, fallback to payment provider fees
+                            let feePercentage = 0;
+                            let fixedFee = 0;
+
+                            if (hasPricingRules && selectedProduct.pricing.pricingRule) {
+                              // Use pricing rule fees
+                              feePercentage = selectedProduct.pricing.pricingRule.percentageValue || 0;
+                              fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
+                            } else {
+                              // Fallback to payment provider fees
+                              const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
+                              feePercentage = selectedPaymentMethod?.feePercentage || 0;
+                              fixedFee = selectedPaymentMethod?.fixedFee || 0;
+                            }
 
                             if (selectedProduct.isVariableValue && customAmount) {
                               const amount = parseFloat(customAmount);
                               if (isNaN(amount) || amount <= 0) return '0.00';
 
-                              // Calculate payment processing fee ONLY if no pricing rules
+                              // Calculate payment processing fee
                               const processingFee = (amount * feePercentage) + fixedFee;
 
                               // Calculate discount if applicable
@@ -1657,20 +1675,29 @@ export default function PublicStorefrontPage() {
                     ) : (
                       t('storefront.pay', {
                         amount: (() => {
-                          // Check if pricing rules are configured (markup > 0 means pricing rules exist)
-                          const hasPricingRules = selectedProduct?.pricing?.markup > 0;
+                          // Check if pricing rules are configured
+                          const hasPricingRules = selectedProduct?.pricing?.pricingRule && selectedProduct?.pricing?.markup > 0;
 
-                          // Get payment provider fees from selected payment method
-                          // ONLY use payment fees if no pricing rules are configured
-                          const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
-                          const feePercentage = !hasPricingRules ? (selectedPaymentMethod?.feePercentage || 0) : 0;
-                          const fixedFee = !hasPricingRules ? (selectedPaymentMethod?.fixedFee || 0) : 0;
+                          // Get fees: prioritize pricing rules, fallback to payment provider fees
+                          let feePercentage = 0;
+                          let fixedFee = 0;
+
+                          if (hasPricingRules && selectedProduct?.pricing?.pricingRule) {
+                            // Use pricing rule fees
+                            feePercentage = selectedProduct.pricing.pricingRule.percentageValue || 0;
+                            fixedFee = selectedProduct.pricing.pricingRule.fixedValue || 0;
+                          } else {
+                            // Fallback to payment provider fees
+                            const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
+                            feePercentage = selectedPaymentMethod?.feePercentage || 0;
+                            fixedFee = selectedPaymentMethod?.fixedFee || 0;
+                          }
 
                           if (selectedProduct?.isVariableValue && customAmount) {
                             const amount = parseFloat(customAmount);
                             if (isNaN(amount) || amount <= 0) return '0.00';
 
-                            // Calculate payment processing fee ONLY if no pricing rules
+                            // Calculate payment processing fee
                             const processingFee = (amount * feePercentage) + fixedFee;
 
                             // Calculate discount if applicable
