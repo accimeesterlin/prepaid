@@ -1309,18 +1309,22 @@ export default function PublicStorefrontPage() {
                       {(() => {
                         if (!selectedProduct.pricing) return null;
 
+                        // Check if pricing rules are configured (markup > 0 means pricing rules exist)
+                        const hasPricingRules = selectedProduct.pricing.markup > 0;
+
                         // Get payment provider fees from selected payment method
+                        // ONLY use payment fees if no pricing rules are configured
                         const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
-                        const feePercentage = selectedPaymentMethod?.feePercentage || 0;
-                        const fixedFee = selectedPaymentMethod?.fixedFee || 0;
+                        const feePercentage = !hasPricingRules ? (selectedPaymentMethod?.feePercentage || 0) : 0;
+                        const fixedFee = !hasPricingRules ? (selectedPaymentMethod?.fixedFee || 0) : 0;
 
                         // Debug logging
-                        console.log('Payment Methods Debug:', {
-                          paymentMethods,
-                          paymentMethod,
-                          selectedPaymentMethod,
+                        console.log('Pricing Debug:', {
+                          hasPricingRules,
+                          markup: selectedProduct.pricing.markup,
                           feePercentage,
-                          fixedFee
+                          fixedFee,
+                          paymentMethod: selectedPaymentMethod
                         });
 
                         let breakdown;
@@ -1329,7 +1333,8 @@ export default function PublicStorefrontPage() {
                           const amount = parseFloat(customAmount);
                           if (isNaN(amount) || amount <= 0) return null;
 
-                          // Calculate payment processing fee: (amount × feePercentage) + fixedFee
+                          // Calculate payment processing fee ONLY if no pricing rules
+                          // (if pricing rules exist, markup already includes all fees)
                           const processingFee = (amount * feePercentage) + fixedFee;
 
                           // Check if there was a discount applied (discount percentage stays the same)
@@ -1347,6 +1352,7 @@ export default function PublicStorefrontPage() {
                           };
                         } else {
                           // For fixed-value products, calculate fee on the final price
+                          // ONLY if no pricing rules (markup = 0)
                           const basePrice = selectedProduct.pricing.finalPrice;
                           const processingFee = (basePrice * feePercentage) + fixedFee;
 
@@ -1396,16 +1402,20 @@ export default function PublicStorefrontPage() {
                         <span>{t('storefront.total')}</span>
                         <span>
                           ${(() => {
+                            // Check if pricing rules are configured (markup > 0 means pricing rules exist)
+                            const hasPricingRules = selectedProduct.pricing.markup > 0;
+
                             // Get payment provider fees from selected payment method
+                            // ONLY use payment fees if no pricing rules are configured
                             const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
-                            const feePercentage = selectedPaymentMethod?.feePercentage || 0;
-                            const fixedFee = selectedPaymentMethod?.fixedFee || 0;
+                            const feePercentage = !hasPricingRules ? (selectedPaymentMethod?.feePercentage || 0) : 0;
+                            const fixedFee = !hasPricingRules ? (selectedPaymentMethod?.fixedFee || 0) : 0;
 
                             if (selectedProduct.isVariableValue && customAmount) {
                               const amount = parseFloat(customAmount);
                               if (isNaN(amount) || amount <= 0) return '0.00';
 
-                              // Calculate payment processing fee
+                              // Calculate payment processing fee ONLY if no pricing rules
                               const processingFee = (amount * feePercentage) + fixedFee;
 
                               // Calculate discount if applicable
@@ -1647,16 +1657,20 @@ export default function PublicStorefrontPage() {
                     ) : (
                       t('storefront.pay', {
                         amount: (() => {
+                          // Check if pricing rules are configured (markup > 0 means pricing rules exist)
+                          const hasPricingRules = selectedProduct?.pricing?.markup > 0;
+
                           // Get payment provider fees from selected payment method
+                          // ONLY use payment fees if no pricing rules are configured
                           const selectedPaymentMethod = paymentMethods?.methods?.find((m: any) => m.provider === paymentMethod);
-                          const feePercentage = selectedPaymentMethod?.feePercentage || 0;
-                          const fixedFee = selectedPaymentMethod?.fixedFee || 0;
+                          const feePercentage = !hasPricingRules ? (selectedPaymentMethod?.feePercentage || 0) : 0;
+                          const fixedFee = !hasPricingRules ? (selectedPaymentMethod?.fixedFee || 0) : 0;
 
                           if (selectedProduct?.isVariableValue && customAmount) {
                             const amount = parseFloat(customAmount);
                             if (isNaN(amount) || amount <= 0) return '0.00';
 
-                            // Calculate payment processing fee
+                            // Calculate payment processing fee ONLY if no pricing rules
                             const processingFee = (amount * feePercentage) + fixedFee;
 
                             // Calculate discount if applicable
