@@ -1,18 +1,16 @@
 import { NextRequest } from 'next/server';
 import { dbConnection } from '@pg-prepaid/db/connection';
-import { Integration, Org, Organization, PricingRule } from '@pg-prepaid/db';
+import { Integration, Org, Organization } from '@pg-prepaid/db';
 import { createSuccessResponse, createErrorResponse } from '@/lib/api-response';
 import { handleApiError } from '@/lib/api-error';
 import { logger } from '@/lib/logger';
 import { createDingConnectService } from '@/lib/services/dingconnect.service';
-import { parsePhoneNumber } from 'awesome-phonenumber';
 
 interface EstimateRequest {
   orgSlug: string;
   skuCode: string;
-  sendValue: number; // This is the CUSTOMER-FACING price (includes markup)
+  sendValue: number;
   sendCurrencyIso?: string;
-  phoneNumber?: string; // Optional: to detect country for pricing rule
 }
 
 /**
@@ -63,87 +61,20 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Service integration not configured', 500);
     }
 
-    // Fetch active pricing rules to determine markup
-    const pricingRules = await PricingRule.find({
-      orgId,
-      isActive: true,
-    }).sort({ priority: -1 }); // Sort by priority descending (highest first)
-
-    // Detect country from phone number if provided (optional)
-    let detectedCountry: string | null = null;
-    if (body.phoneNumber) {
-      try {
-        const parsedPhone = parsePhoneNumber(body.phoneNumber);
-        if (parsedPhone.valid) {
-          detectedCountry = parsedPhone.regionCode || null;
-        }
-      } catch (error) {
-        // If phone parsing fails, continue without country detection
-        logger.warn('Failed to parse phone number for country detection', { phoneNumber: body.phoneNumber });
-      }
-    }
-
-    // Find applicable pricing rule (fallback to first active rule if no country-specific match)
-    let applicablePricingRule = null;
-    if (detectedCountry) {
-      for (const rule of pricingRules) {
-        if (rule.isApplicableToCountry(detectedCountry)) {
-          applicablePricingRule = rule;
-          break; // First match is best (sorted by priority)
-        }
-      }
-    }
-
-    // Fallback to first active pricing rule if no country-specific rule found
-    if (!applicablePricingRule && pricingRules.length > 0) {
-      applicablePricingRule = pricingRules[0];
-    }
-
-    logger.info('Pricing rule for estimate', {
-      ruleName: applicablePricingRule?.name || 'None',
-      detectedCountry,
-      percentageMarkup: applicablePricingRule?.percentageMarkup,
-      fixedMarkup: applicablePricingRule?.fixedMarkup,
-    });
-
-    // Convert customer-facing price to cost price (reverse markup calculation)
-    // Customer price = costPrice + markup
-    // If markup is (costPrice * percentage) + fixed:
-    //   customerPrice = costPrice + (costPrice * percentage) + fixed
-    //   customerPrice = costPrice * (1 + percentage) + fixed
-    //   costPrice = (customerPrice - fixed) / (1 + percentage)
-    let costPrice = sendValue; // Default to sendValue if no markup
-    if (applicablePricingRule) {
-      const percentageMarkup = applicablePricingRule.percentageMarkup || 0;
-      const fixedMarkup = applicablePricingRule.fixedMarkup || 0;
-
-      // Reverse the markup calculation
-      costPrice = (sendValue - fixedMarkup) / (1 + percentageMarkup / 100);
-
-      logger.info('Converted customer price to cost price', {
-        customerPrice: sendValue,
-        costPrice,
-        percentageMarkup,
-        fixedMarkup,
-        savings: sendValue - costPrice,
-      });
-    }
-
-    // Use DingConnect API to estimate prices with the COST PRICE (not customer price)
+    // Use DingConnect API to estimate prices
     const dingService = createDingConnectService(integration.credentials as any);
 
     try {
       logger.info('Calling DingConnect estimatePrices', {
         skuCode,
-        customerPrice: sendValue,
-        costPrice,
+        sendValue,
         sendCurrencyIso,
       });
 
       const estimates = await dingService.estimatePrices([
         {
           SkuCode: skuCode,
-          SendValue: costPrice, // Send COST PRICE to DingConnect, not customer price
+          SendValue: sendValue,
           SendCurrencyIso: sendCurrencyIso,
           ReceiveValue: 0,
           BatchItemRef: skuCode,
