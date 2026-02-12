@@ -312,7 +312,7 @@ CustomerSchema.pre("save", async function (next) {
   if (
     this.isModified("passwordHash") &&
     this.passwordHash &&
-    !this.passwordHash.startsWith("$2a$")
+    !/^\$2[aby]\$\d+\$/.test(this.passwordHash)
   ) {
     this.passwordHash = await bcrypt.hash(this.passwordHash, 12);
   }
