@@ -7,7 +7,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { Customer, Org } from "@pg-prepaid/db";
 import { dbConnection } from "@pg-prepaid/db/connection";
-import { ApiErrors } from "@/lib/api-error";
+import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { createSuccessResponse } from "@/lib/api-response";
 import { createCustomerSession } from "@/lib/customer-auth";
 
@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw ApiErrors.BadRequest(error.errors[0].message);
+      return handleApiError(ApiErrors.BadRequest(error.errors[0].message));
     }
-    throw error;
+    return handleApiError(error);
   }
 }

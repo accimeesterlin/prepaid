@@ -8,7 +8,7 @@ import { z } from "zod";
 import { Customer } from "@pg-prepaid/db";
 import { Org } from "@pg-prepaid/db";
 import { dbConnection } from "@pg-prepaid/db/connection";
-import { ApiErrors } from "@/lib/api-error";
+import { ApiErrors, handleApiError } from "@/lib/api-error";
 import {
   createCreatedResponse,
 } from "@/lib/api-response";
@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw ApiErrors.BadRequest(error.errors[0].message);
+      return handleApiError(ApiErrors.BadRequest(error.errors[0].message));
     }
-    throw error;
+    return handleApiError(error);
   }
 }

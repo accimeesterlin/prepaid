@@ -37,10 +37,11 @@ export default function CustomerLoginPage({
         body: JSON.stringify({ email, password, orgSlug }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
 
       if (!res.ok) {
-        throw new Error(data.error?.message || "Login failed");
+        throw new Error(data.detail || data.error?.message || "Login failed");
       }
 
       // Check if 2FA is required
