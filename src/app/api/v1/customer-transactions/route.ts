@@ -21,6 +21,14 @@ import { requireVerifiedCustomer } from "@/lib/auth-middleware";
 import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { logger } from "@/lib/logger";
 import { parsePhoneNumber } from "awesome-phonenumber";
+import countries from "i18n-iso-countries";
+import en from "i18n-iso-countries/langs/en.json";
+
+countries.registerLocale(en);
+
+function getCountryName(countryCode: string): string {
+  return countries.getName(countryCode, "en") || countryCode;
+}
 
 const sendTopupSchema = z.object({
   phoneNumber: z.string().min(10, "Phone number is required"),
@@ -28,6 +36,7 @@ const sendTopupSchema = z.object({
   amount: z.number().optional(), // For variable-value products
   sendValue: z.number().optional(), // For variable-value products
   estimatedUsdCost: z.number().optional(), // Pre-calculated USD cost from frontend
+  browserMetadata: z.record(z.unknown()).optional(), // Client-side browser info
 });
 
 export async function POST(request: NextRequest) {
@@ -70,29 +79,45 @@ export async function POST(request: NextRequest) {
       customerId: session.customerId,
     });
 
-    let productDetails;
-    try {
-      // Get all products and find the matching one
-      const products = await dingConnect.getProducts();
-      productDetails = products.find((p) => p.SkuCode === data.skuCode);
-
-      if (!productDetails) {
-        throw ApiErrors.NotFound("Product not found");
-      }
-    } catch (error) {
-      logger.error("Failed to fetch product from DingConnect", {
-        error: error instanceof Error ? error.message : "Unknown error",
-        skuCode: data.skuCode,
-      });
-      throw ApiErrors.BadRequest("Failed to fetch product details");
-    }
-
     // Detect country from phone number for pricing rules
     const parsedPhone = parsePhoneNumber(data.phoneNumber);
     const detectedCountry = parsedPhone.regionCode || "";
 
     if (!detectedCountry) {
       throw ApiErrors.BadRequest("Unable to detect country from phone number");
+    }
+
+    const countryName = getCountryName(detectedCountry);
+
+    let productDetails;
+    let providerName = "Unknown Operator";
+    try {
+      // Fetch products and providers in parallel for proper operator name resolution
+      const [products, providers] = await Promise.all([
+        dingConnect.getProducts(),
+        dingConnect.getProviders({ countryIso: detectedCountry }).catch(() => []),
+      ]);
+
+      productDetails = products.find((p) => p.SkuCode === data.skuCode);
+
+      if (!productDetails) {
+        throw ApiErrors.NotFound("Product not found");
+      }
+
+      // Resolve operator name from providers list
+      const matchedProvider = providers.find(
+        (p) => p.ProviderCode === productDetails!.ProviderCode,
+      );
+      providerName = matchedProvider?.ProviderName || productDetails.ProviderCode;
+    } catch (error) {
+      if (error instanceof Error && error.message === "Product not found") {
+        throw ApiErrors.NotFound("Product not found");
+      }
+      logger.error("Failed to fetch product from DingConnect", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        skuCode: data.skuCode,
+      });
+      throw ApiErrors.BadRequest("Failed to fetch product details");
     }
 
     // Get organization's storefront settings for discount
@@ -320,28 +345,40 @@ export async function POST(request: NextRequest) {
       },
       operator: {
         id: productDetails.ProviderCode || "UNKNOWN",
-        name: productDetails.ProviderCode || "Unknown Operator",
-        country: productDetails.CountryIso || detectedCountry,
+        name: providerName,
+        country: detectedCountry,
       },
       metadata: {
         productSkuCode: data.skuCode,
         productName: productDetails.DefaultDisplayText || "Top-up",
+        providerName,
         isVariableValue,
         sendValue,
         benefitAmount: productDetails.BenefitTypes?.Airtime?.Amount || 0,
         benefitUnit: productDetails.BenefitTypes?.Airtime?.Unit || "",
+        // Country info
+        countryCode: detectedCountry,
+        countryName,
         // Pricing breakdown
-        dingConnectCost, // What we pay to DingConnect
+        costPrice: dingConnectCost, // What we pay to DingConnect
         customerPrice, // Price with markup
         discountAmount, // Discount applied
         finalPrice, // What customer actually pays
         markup: customerPrice - dingConnectCost,
         pricingRuleName: applicablePricingRule?.name || "None",
+        // Client & request info
         ipAddress:
           request.headers.get("x-forwarded-for") ||
           request.headers.get("x-real-ip") ||
           "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
+        acceptLanguage: request.headers.get("accept-language") || undefined,
+        referer: request.headers.get("referer") || undefined,
+        origin: request.headers.get("origin") || undefined,
+        secChUa: request.headers.get("sec-ch-ua") || undefined,
+        secChUaPlatform: request.headers.get("sec-ch-ua-platform") || undefined,
+        secChUaMobile: request.headers.get("sec-ch-ua-mobile") || undefined,
+        ...(data.browserMetadata ? { browser: data.browserMetadata } : {}),
       },
       timeline: {
         createdAt: new Date(),
@@ -420,6 +457,16 @@ export async function POST(request: NextRequest) {
       (transaction.metadata as any).dingStatus = transferResult.Status;
 
       await transaction.save();
+
+      // Update customer purchase metadata
+      customer.metadata = customer.metadata || {};
+      customer.metadata.totalPurchases =
+        (customer.metadata.totalPurchases || 0) + 1;
+      customer.metadata.totalSpent =
+        (customer.metadata.totalSpent || 0) + finalPrice;
+      customer.metadata.lastPurchaseAt = new Date();
+      customer.metadata.currency = customer.balanceCurrency || "USD";
+      await customer.save();
 
       return createSuccessResponse({
         success: true,

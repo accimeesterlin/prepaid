@@ -137,32 +137,52 @@ export async function PUT(
       }
     }
 
+    // Determine the new phone and email values being set
+    const newPhone = phone ?? phoneNumber;
+    const newEmail = isCustomer ? undefined : email;
+
+    // Check uniqueness if phone or email is changing
+    const checkPhone =
+      newPhone !== undefined && newPhone !== customer.phoneNumber
+        ? newPhone
+        : undefined;
+    const checkEmail =
+      newEmail !== undefined && newEmail !== customer.email
+        ? newEmail
+        : undefined;
+
+    if (checkPhone || checkEmail) {
+      const duplicate = await Customer.checkDuplicates(
+        customer.orgId,
+        { phoneNumber: checkPhone, email: checkEmail },
+        String(customer._id),
+      );
+
+      if (duplicate) {
+        const msg =
+          duplicate.field === "email"
+            ? "Another customer with this email already exists"
+            : "Another customer with this phone number already exists";
+        return NextResponse.json({ error: msg }, { status: 409 });
+      }
+    }
+
     // Allow customer to update limited fields
     if (isCustomer) {
-      console.log('[Customer Update] Before:', {
-        name: customer.name,
-        phoneNumber: customer.phoneNumber
-      });
-      console.log('[Customer Update] Request body:', { firstName, lastName, phone, phoneNumber });
-
       // Customers can update their name and phone
       if (firstName !== undefined && lastName !== undefined) {
         customer.name = `${firstName} ${lastName}`.trim();
-        console.log('[Customer Update] Set name to:', customer.name);
       } else if (name !== undefined) {
         customer.name = name;
       }
       if (phone !== undefined) {
         customer.phoneNumber = phone;
-        console.log('[Customer Update] Set phoneNumber to:', customer.phoneNumber);
       }
       if (phoneNumber !== undefined) {
         customer.phoneNumber = phoneNumber;
       }
     } else {
       // Staff can update all fields
-      console.log('[Customer Update] Staff updating customer:', { password: !!password });
-
       if (phoneNumber) customer.phoneNumber = phoneNumber;
       if (email !== undefined) customer.email = email;
       if (name !== undefined) customer.name = name;
@@ -173,22 +193,11 @@ export async function PUT(
       if (phone !== undefined) customer.phoneNumber = phone;
 
       if (password) {
-        console.log('[Customer Update] Setting new password');
         customer.passwordHash = password; // Will be hashed by pre-save hook
       }
     }
 
-    console.log('[Customer Update] After updates:', {
-      name: customer.name,
-      phoneNumber: customer.phoneNumber
-    });
-
     await customer.save();
-
-    console.log('[Customer Update] After save:', {
-      name: customer.name,
-      phoneNumber: customer.phoneNumber
-    });
 
     return NextResponse.json(customer);
   } catch (error) {

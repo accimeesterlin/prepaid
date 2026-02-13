@@ -37,14 +37,18 @@ export async function POST(request: NextRequest) {
       throw ApiErrors.NotFound("Organization not found");
     }
 
-    // Check if customer already exists with this email in this org
-    const existingCustomer = await Customer.findOne({
-      email: data.email.toLowerCase(),
-      orgId: org._id.toString(),
+    // Check if customer already exists with this email or phone in this org
+    const duplicate = await Customer.checkDuplicates(org._id.toString(), {
+      email: data.email,
+      phoneNumber: data.phoneNumber,
     });
 
-    if (existingCustomer) {
-      throw ApiErrors.BadRequest("An account with this email already exists");
+    if (duplicate) {
+      const msg =
+        duplicate.field === "email"
+          ? "An account with this email already exists"
+          : "An account with this phone number already exists";
+      throw ApiErrors.BadRequest(msg);
     }
 
     // Create customer

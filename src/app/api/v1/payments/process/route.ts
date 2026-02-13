@@ -12,6 +12,15 @@ import {
 import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { createPGPayService } from "@/lib/services/pgpay.service";
 import { logger } from "@/lib/logger";
+import { parsePhoneNumber } from "awesome-phonenumber";
+import countries from "i18n-iso-countries";
+import en from "i18n-iso-countries/langs/en.json";
+
+countries.registerLocale(en);
+
+function getCountryName(countryCode: string): string {
+  return countries.getName(countryCode, "en") || countryCode;
+}
 
 class PaymentError extends Error {
   constructor(
@@ -43,6 +52,7 @@ export async function POST(request: NextRequest) {
       paymentMethod,
       amount, // For variable-value products
       sendValue, // For variable-value products (amount in USD to send)
+      browserMetadata, // Client-side browser info
     } = body as {
       orgSlug?: string;
       phoneNumber?: string;
@@ -51,6 +61,7 @@ export async function POST(request: NextRequest) {
       paymentMethod?: string;
       amount?: number;
       sendValue?: number;
+      browserMetadata?: Record<string, unknown>;
     };
 
     // Validate required fields
@@ -234,12 +245,30 @@ export async function POST(request: NextRequest) {
       ? sendValue || finalAmount // Use sendValue if provided, otherwise use finalAmount
       : undefined;
 
+    // Detect country from phone number
+    const parsedPhone = parsePhoneNumber(phoneNumber!);
+    const detectedCountry = parsedPhone.regionCode || "";
+    const countryName = detectedCountry ? getCountryName(detectedCountry) : "Unknown";
+
+    // Extract pricing breakdown from product data
+    const pricing = productData.pricing as Record<string, unknown> | undefined;
+    const costPrice = Number(pricing?.costPrice) || 0;
+    const markup = Number(pricing?.markup) || 0;
+    const discount = Number(pricing?.discount) || 0;
+
+    // Resolve operator name: prefer providerName, then name, then providerCode
+    const operatorName = (productData.providerName || productData.name || productData.providerCode || "Unknown") as string;
+    const operatorId = (productData.providerCode || productData.provider || "unknown") as string;
+
     logger.info("Transaction metadata preparation", {
       isVariableValue: productData.isVariableValue,
       sendValue,
       finalAmount,
       actualSendValue,
       skuCode: productData.skuCode,
+      detectedCountry,
+      countryName,
+      operatorName,
     });
 
     // Create transaction record
@@ -258,29 +287,41 @@ export async function POST(request: NextRequest) {
         email: customerEmail,
       },
       operator: {
-        id: (productData.providerCode ||
-          productData.provider ||
-          "unknown") as string,
-        name: (productData.providerName ||
-          productData.name ||
-          "unknown") as string,
-        country: (productData.regionCode || "unknown") as string,
+        id: operatorId,
+        name: operatorName,
+        country: detectedCountry || "unknown",
       },
       metadata: {
+        // Client & request info
         ipAddress:
           request.headers.get("x-forwarded-for") ||
           request.headers.get("x-real-ip") ||
           "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
+        acceptLanguage: request.headers.get("accept-language") || undefined,
+        referer: request.headers.get("referer") || undefined,
+        origin: request.headers.get("origin") || undefined,
+        secChUa: request.headers.get("sec-ch-ua") || undefined,
+        secChUaPlatform: request.headers.get("sec-ch-ua-platform") || undefined,
+        secChUaMobile: request.headers.get("sec-ch-ua-mobile") || undefined,
+        ...(browserMetadata ? { browser: browserMetadata } : {}),
         retryCount: 0,
         // Store product details for webhook processing
-        // Use skuCode directly (not providerCode which may have 'ding-' prefix)
         productSkuCode: productData.skuCode as string,
-        productName: productData.name as string,
-        isVariableValue: !!productData.isVariableValue, // Ensure boolean
-        sendValue: actualSendValue, // Use calculated value
+        productName: (productData.name as string) || operatorName,
+        providerName: operatorName,
+        isVariableValue: !!productData.isVariableValue,
+        sendValue: actualSendValue,
         benefitAmount: productData.benefitAmount as number,
         benefitUnit: productData.benefitUnit as string,
+        // Country info
+        countryCode: detectedCountry,
+        countryName,
+        // Pricing breakdown
+        costPrice,
+        markup,
+        discount,
+        finalPrice: finalAmount,
         pgpayToken: undefined,
         pgpayOrderId: undefined,
       },
@@ -365,6 +406,13 @@ export async function POST(request: NextRequest) {
             sendValue: actualSendValue,
             benefitAmount: productData.benefitAmount,
             benefitUnit: productData.benefitUnit,
+            // Country and pricing for enrichment
+            countryCode: detectedCountry,
+            countryName,
+            providerName: operatorName,
+            costPrice,
+            markup,
+            discount,
           },
         });
 

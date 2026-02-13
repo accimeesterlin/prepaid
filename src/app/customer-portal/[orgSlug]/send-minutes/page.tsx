@@ -359,9 +359,12 @@ export default function SendMinutesPage({
         formattedPhone = "+" + formattedPhone;
       }
 
+      const { collectBrowserMetadata } = await import("@/lib/browser-metadata");
+
       const requestBody: any = {
         phoneNumber: formattedPhone,
         skuCode: selectedProduct.skuCode,
+        browserMetadata: collectBrowserMetadata(),
       };
 
       // For variable-value products, send the sendValue and pre-calculated USD cost

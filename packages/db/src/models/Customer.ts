@@ -1,6 +1,11 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import bcrypt from "bcryptjs";
 
+export interface FindByIdentifierParams {
+  email?: string;
+  phoneNumber?: string;
+}
+
 export interface ICustomer extends Document {
   orgId: string;
   phoneNumber: string;
@@ -69,6 +74,18 @@ export interface ICustomer extends Document {
     metadata?: any,
   ): Promise<void>;
   canUseBalance(): boolean;
+}
+
+export interface ICustomerModel extends Model<ICustomer> {
+  findByOrgAndIdentifier(
+    orgId: string,
+    identifier: FindByIdentifierParams,
+  ): Promise<ICustomer | null>;
+  checkDuplicates(
+    orgId: string,
+    identifier: FindByIdentifierParams,
+    excludeId?: string,
+  ): Promise<{ field: "email" | "phoneNumber"; value: string } | null>;
 }
 
 const CustomerSchema = new Schema<ICustomer>(
@@ -226,7 +243,7 @@ const CustomerSchema = new Schema<ICustomer>(
 
 // Indexes
 CustomerSchema.index({ orgId: 1, phoneNumber: 1 }, { unique: true });
-CustomerSchema.index({ orgId: 1, email: 1 }, { sparse: true });
+CustomerSchema.index({ orgId: 1, email: 1 }, { unique: true, sparse: true });
 CustomerSchema.index({ email: 1 });
 CustomerSchema.index({ "metadata.totalPurchases": -1 });
 CustomerSchema.index({ "metadata.lastPurchaseAt": -1 });
@@ -307,6 +324,63 @@ CustomerSchema.methods.addBalance = async function (
   });
 };
 
+/**
+ * Find an existing customer by email OR phone number within an organization.
+ * Used for deduplication - returns the first match found.
+ */
+CustomerSchema.statics.findByOrgAndIdentifier = async function (
+  orgId: string,
+  identifier: FindByIdentifierParams,
+): Promise<ICustomer | null> {
+  const conditions: Record<string, unknown>[] = [];
+  if (identifier.phoneNumber) {
+    conditions.push({ orgId, phoneNumber: identifier.phoneNumber });
+  }
+  if (identifier.email) {
+    conditions.push({ orgId, email: identifier.email.toLowerCase() });
+  }
+  if (conditions.length === 0) return null;
+  return this.findOne({ $or: conditions });
+};
+
+/**
+ * Check if another customer in the org already has the given email or phone.
+ * Optionally exclude a specific customer ID (for update operations).
+ * Returns the conflicting field or null if no conflict.
+ */
+CustomerSchema.statics.checkDuplicates = async function (
+  orgId: string,
+  identifier: FindByIdentifierParams,
+  excludeId?: string,
+): Promise<{ field: "email" | "phoneNumber"; value: string } | null> {
+  const baseFilter: Record<string, unknown> = { orgId };
+  if (excludeId) {
+    baseFilter._id = { $ne: excludeId };
+  }
+
+  if (identifier.phoneNumber) {
+    const byPhone = await this.findOne({
+      ...baseFilter,
+      phoneNumber: identifier.phoneNumber,
+    });
+    if (byPhone) {
+      return { field: "phoneNumber", value: identifier.phoneNumber };
+    }
+  }
+
+  if (identifier.email) {
+    const byEmail = await this.findOne({
+      ...baseFilter,
+      email: identifier.email.toLowerCase(),
+    });
+    if (byEmail) {
+      return { field: "email", value: identifier.email.toLowerCase() };
+    }
+  }
+
+  return null;
+};
+
 // Hash password before saving
 CustomerSchema.pre("save", async function (next) {
   if (
@@ -319,6 +393,6 @@ CustomerSchema.pre("save", async function (next) {
   next();
 });
 
-export const Customer: Model<ICustomer> =
-  mongoose.models.Customer ||
-  mongoose.model<ICustomer>("Customer", CustomerSchema);
+export const Customer =
+  (mongoose.models.Customer as ICustomerModel) ||
+  mongoose.model<ICustomer, ICustomerModel>("Customer", CustomerSchema);

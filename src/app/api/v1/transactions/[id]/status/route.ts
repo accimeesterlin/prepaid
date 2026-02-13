@@ -146,10 +146,13 @@ export async function PATCH(
       transaction.recipient?.phoneNumber
     ) {
       try {
-        const existingCustomer = await Customer.findOne({
-          orgId: session.orgId,
-          phoneNumber: transaction.recipient.phoneNumber,
-        });
+        const existingCustomer = await Customer.findByOrgAndIdentifier(
+          session.orgId,
+          {
+            phoneNumber: transaction.recipient.phoneNumber,
+            email: transaction.recipient.email,
+          },
+        );
 
         if (!existingCustomer) {
           // Create new customer
@@ -181,7 +184,7 @@ export async function PATCH(
             (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
           existingCustomer.metadata.lastPurchaseAt = now;
 
-          // Update name and email if not set
+          // Backfill missing fields
           if (!existingCustomer.name && transaction.recipient.name) {
             existingCustomer.name = transaction.recipient.name;
           }
@@ -190,6 +193,9 @@ export async function PATCH(
           }
           if (!existingCustomer.country && transaction.operator?.country) {
             existingCustomer.country = transaction.operator.country;
+          }
+          if (!existingCustomer.phoneNumber && transaction.recipient.phoneNumber) {
+            existingCustomer.phoneNumber = transaction.recipient.phoneNumber;
           }
 
           await existingCustomer.save();

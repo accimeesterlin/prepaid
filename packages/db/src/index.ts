@@ -7,7 +7,12 @@ export * from "./models/org.model";
 export { Integration, type IIntegration } from "./models/Integration";
 export { Product, type IProduct } from "./models/Product";
 export { Transaction, type ITransaction } from "./models/Transaction";
-export { Customer, type ICustomer } from "./models/Customer";
+export {
+  Customer,
+  type ICustomer,
+  type ICustomerModel,
+  type FindByIdentifierParams,
+} from "./models/Customer";
 export {
   CustomerGroup,
   type ICustomerGroup,

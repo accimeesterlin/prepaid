@@ -71,7 +71,8 @@
       "Bash(timeout:*)",
       "Bash(find:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

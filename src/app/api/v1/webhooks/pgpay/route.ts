@@ -13,6 +13,74 @@ import { createPGPayService } from "@/lib/services/pgpay.service";
 import { logger } from "@/lib/logger";
 
 /**
+ * Find or create/update a customer record from a transaction.
+ * Looks up by phone OR email to avoid duplicates.
+ */
+async function findOrUpdateCustomer(
+  transaction: { orgId: string; amount: number; currency: string; recipient: { phoneNumber: string; email?: string; name?: string } },
+  maskedPhone: string,
+): Promise<string | undefined> {
+  const existingCustomer = await Customer.findByOrgAndIdentifier(
+    transaction.orgId,
+    {
+      phoneNumber: transaction.recipient.phoneNumber,
+      email: transaction.recipient.email,
+    },
+  );
+
+  if (existingCustomer) {
+    existingCustomer.metadata = existingCustomer.metadata || {};
+    existingCustomer.metadata.totalPurchases =
+      (existingCustomer.metadata.totalPurchases || 0) + 1;
+    existingCustomer.metadata.totalSpent =
+      (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
+    existingCustomer.metadata.currency = transaction.currency;
+    existingCustomer.metadata.lastPurchaseAt = new Date();
+
+    // Backfill missing fields
+    if (!existingCustomer.email && transaction.recipient.email) {
+      existingCustomer.email = transaction.recipient.email;
+    }
+    if (!existingCustomer.name && transaction.recipient.name) {
+      existingCustomer.name = transaction.recipient.name;
+    }
+    if (!existingCustomer.phoneNumber && transaction.recipient.phoneNumber) {
+      existingCustomer.phoneNumber = transaction.recipient.phoneNumber;
+    }
+
+    await existingCustomer.save();
+
+    logger.info("Customer updated", {
+      customerId: existingCustomer._id?.toString(),
+      phoneNumber: maskedPhone,
+      totalPurchases: existingCustomer.metadata.totalPurchases,
+    });
+
+    return existingCustomer._id?.toString();
+  }
+
+  const newCustomer = await Customer.create({
+    orgId: transaction.orgId,
+    phoneNumber: transaction.recipient.phoneNumber,
+    email: transaction.recipient.email,
+    name: transaction.recipient.name,
+    metadata: {
+      totalPurchases: 1,
+      totalSpent: transaction.amount,
+      currency: transaction.currency,
+      lastPurchaseAt: new Date(),
+    },
+  });
+
+  logger.info("New customer created", {
+    customerId: newCustomer._id?.toString(),
+    phoneNumber: maskedPhone,
+  });
+
+  return newCustomer._id?.toString();
+}
+
+/**
  * POST /api/v1/webhooks/pgpay
  * Handle PGPay payment webhook callbacks
  * Public endpoint - no auth required (PGPay calls this)
@@ -398,51 +466,11 @@ export async function POST(request: NextRequest) {
 
         // Create or update customer record
         try {
-          const existingCustomer = await Customer.findOne({
-            orgId: transaction.orgId,
-            phoneNumber: transaction.recipient.phoneNumber,
-          });
-
-          if (existingCustomer) {
-            // Update existing customer
-            existingCustomer.metadata = existingCustomer.metadata || {};
-            existingCustomer.metadata.totalPurchases =
-              (existingCustomer.metadata.totalPurchases || 0) + 1;
-            existingCustomer.metadata.totalSpent =
-              (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
-            existingCustomer.metadata.currency = transaction.currency;
-            existingCustomer.metadata.lastPurchaseAt = new Date();
-            await existingCustomer.save();
-
-            transaction.customerId = existingCustomer._id?.toString();
-
-            logger.info("Customer updated", {
-              customerId: existingCustomer._id?.toString(),
-              phoneNumber: phoneNumber.substring(0, 5) + "***",
-              totalPurchases: existingCustomer.metadata.totalPurchases,
-            });
-          } else {
-            // Create new customer
-            const newCustomer = await Customer.create({
-              orgId: transaction.orgId,
-              phoneNumber: transaction.recipient.phoneNumber,
-              email: transaction.recipient.email,
-              name: transaction.recipient.name,
-              metadata: {
-                totalPurchases: 1,
-                totalSpent: transaction.amount,
-                currency: transaction.currency,
-                lastPurchaseAt: new Date(),
-              },
-            });
-
-            transaction.customerId = newCustomer._id?.toString();
-
-            logger.info("New customer created", {
-              customerId: newCustomer._id?.toString(),
-              phoneNumber: phoneNumber.substring(0, 5) + "***",
-            });
-          }
+          const customerId = await findOrUpdateCustomer(
+            transaction,
+            phoneNumber.substring(0, 5) + "***",
+          );
+          if (customerId) transaction.customerId = customerId;
         } catch (customerError) {
           logger.error("Failed to create/update customer", {
             error:
@@ -451,7 +479,6 @@ export async function POST(request: NextRequest) {
                 : "Unknown error",
             orderId: transaction.orderId,
           });
-          // Don't fail the transaction if customer creation fails
         }
 
         // Update storefront metadata
@@ -498,51 +525,11 @@ export async function POST(request: NextRequest) {
 
           // Create or update customer record
           try {
-            const existingCustomer = await Customer.findOne({
-              orgId: transaction.orgId,
-              phoneNumber: transaction.recipient.phoneNumber,
-            });
-
-            if (existingCustomer) {
-              // Update existing customer
-              existingCustomer.metadata = existingCustomer.metadata || {};
-              existingCustomer.metadata.totalPurchases =
-                (existingCustomer.metadata.totalPurchases || 0) + 1;
-              existingCustomer.metadata.totalSpent =
-                (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
-              existingCustomer.metadata.currency = transaction.currency;
-              existingCustomer.metadata.lastPurchaseAt = new Date();
-              await existingCustomer.save();
-
-              transaction.customerId = existingCustomer._id?.toString();
-
-              logger.info("Customer updated", {
-                customerId: existingCustomer._id?.toString(),
-                phoneNumber: phoneNumber.substring(0, 5) + "***",
-                totalPurchases: existingCustomer.metadata.totalPurchases,
-              });
-            } else {
-              // Create new customer
-              const newCustomer = await Customer.create({
-                orgId: transaction.orgId,
-                phoneNumber: transaction.recipient.phoneNumber,
-                email: transaction.recipient.email,
-                name: transaction.recipient.name,
-                metadata: {
-                  totalPurchases: 1,
-                  totalSpent: transaction.amount,
-                  currency: transaction.currency,
-                  lastPurchaseAt: new Date(),
-                },
-              });
-
-              transaction.customerId = newCustomer._id?.toString();
-
-              logger.info("New customer created", {
-                customerId: newCustomer._id?.toString(),
-                phoneNumber: phoneNumber.substring(0, 5) + "***",
-              });
-            }
+            const customerId = await findOrUpdateCustomer(
+              transaction,
+              phoneNumber.substring(0, 5) + "***",
+            );
+            if (customerId) transaction.customerId = customerId;
           } catch (customerError) {
             logger.error("Failed to create/update customer", {
               error:
@@ -551,7 +538,6 @@ export async function POST(request: NextRequest) {
                   : "Unknown error",
               orderId: transaction.orderId,
             });
-            // Don't fail the transaction if customer creation fails
           }
 
           // Update storefront metadata
@@ -600,51 +586,11 @@ export async function POST(request: NextRequest) {
 
           // Create or update customer record
           try {
-            const existingCustomer = await Customer.findOne({
-              orgId: transaction.orgId,
-              phoneNumber: transaction.recipient.phoneNumber,
-            });
-
-            if (existingCustomer) {
-              // Update existing customer
-              existingCustomer.metadata = existingCustomer.metadata || {};
-              existingCustomer.metadata.totalPurchases =
-                (existingCustomer.metadata.totalPurchases || 0) + 1;
-              existingCustomer.metadata.totalSpent =
-                (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
-              existingCustomer.metadata.currency = transaction.currency;
-              existingCustomer.metadata.lastPurchaseAt = new Date();
-              await existingCustomer.save();
-
-              transaction.customerId = existingCustomer._id?.toString();
-
-              logger.info("Customer updated", {
-                customerId: existingCustomer._id?.toString(),
-                phoneNumber: phoneNumber.substring(0, 5) + "***",
-                totalPurchases: existingCustomer.metadata.totalPurchases,
-              });
-            } else {
-              // Create new customer
-              const newCustomer = await Customer.create({
-                orgId: transaction.orgId,
-                phoneNumber: transaction.recipient.phoneNumber,
-                email: transaction.recipient.email,
-                name: transaction.recipient.name,
-                metadata: {
-                  totalPurchases: 1,
-                  totalSpent: transaction.amount,
-                  currency: transaction.currency,
-                  lastPurchaseAt: new Date(),
-                },
-              });
-
-              transaction.customerId = newCustomer._id?.toString();
-
-              logger.info("New customer created", {
-                customerId: newCustomer._id?.toString(),
-                phoneNumber: phoneNumber.substring(0, 5) + "***",
-              });
-            }
+            const customerId = await findOrUpdateCustomer(
+              transaction,
+              phoneNumber.substring(0, 5) + "***",
+            );
+            if (customerId) transaction.customerId = customerId;
           } catch (customerError) {
             logger.error("Failed to create/update customer", {
               error:
@@ -653,7 +599,6 @@ export async function POST(request: NextRequest) {
                   : "Unknown error",
               orderId: transaction.orderId,
             });
-            // Don't fail the transaction if customer creation fails
           }
 
           // Update storefront metadata
@@ -690,51 +635,11 @@ export async function POST(request: NextRequest) {
 
           // Create or update customer record
           try {
-            const existingCustomer = await Customer.findOne({
-              orgId: transaction.orgId,
-              phoneNumber: transaction.recipient.phoneNumber,
-            });
-
-            if (existingCustomer) {
-              // Update existing customer
-              existingCustomer.metadata = existingCustomer.metadata || {};
-              existingCustomer.metadata.totalPurchases =
-                (existingCustomer.metadata.totalPurchases || 0) + 1;
-              existingCustomer.metadata.totalSpent =
-                (existingCustomer.metadata.totalSpent || 0) + transaction.amount;
-              existingCustomer.metadata.currency = transaction.currency;
-              existingCustomer.metadata.lastPurchaseAt = new Date();
-              await existingCustomer.save();
-
-              transaction.customerId = existingCustomer._id?.toString();
-
-              logger.info("Customer updated", {
-                customerId: existingCustomer._id?.toString(),
-                phoneNumber: phoneNumber.substring(0, 5) + "***",
-                totalPurchases: existingCustomer.metadata.totalPurchases,
-              });
-            } else {
-              // Create new customer
-              const newCustomer = await Customer.create({
-                orgId: transaction.orgId,
-                phoneNumber: transaction.recipient.phoneNumber,
-                email: transaction.recipient.email,
-                name: transaction.recipient.name,
-                metadata: {
-                  totalPurchases: 1,
-                  totalSpent: transaction.amount,
-                  currency: transaction.currency,
-                  lastPurchaseAt: new Date(),
-                },
-              });
-
-              transaction.customerId = newCustomer._id?.toString();
-
-              logger.info("New customer created", {
-                customerId: newCustomer._id?.toString(),
-                phoneNumber: phoneNumber.substring(0, 5) + "***",
-              });
-            }
+            const customerId = await findOrUpdateCustomer(
+              transaction,
+              phoneNumber.substring(0, 5) + "***",
+            );
+            if (customerId) transaction.customerId = customerId;
           } catch (customerError) {
             logger.error("Failed to create/update customer", {
               error:
@@ -743,7 +648,6 @@ export async function POST(request: NextRequest) {
                   : "Unknown error",
               orderId: transaction.orderId,
             });
-            // Don't fail the transaction if customer creation fails
           }
 
           // Update storefront metadata

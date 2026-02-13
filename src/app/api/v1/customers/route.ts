@@ -65,14 +65,18 @@ export async function POST(request: NextRequest) {
 
     await dbConnection.connect();
 
-    // Check if customer already exists
-    const existing = await Customer.findOne({
-      orgId: session.orgId,
+    // Check if customer already exists with this phone or email
+    const duplicate = await Customer.checkDuplicates(session.orgId, {
       phoneNumber,
+      email,
     });
 
-    if (existing) {
-      return NextResponse.json({ error: 'Customer with this phone number already exists' }, { status: 409 });
+    if (duplicate) {
+      const msg =
+        duplicate.field === "email"
+          ? "A customer with this email already exists"
+          : "A customer with this phone number already exists";
+      return NextResponse.json({ error: msg }, { status: 409 });
     }
 
     const customer = await Customer.create({

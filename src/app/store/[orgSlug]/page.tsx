@@ -623,6 +623,9 @@ export default function PublicStorefrontPage() {
       const orderTotal = calculateOrderTotal();
       const finalAmount = orderTotal?.total ?? (selectedProduct.isVariableValue ? parseFloat(customAmount) : selectedProduct.pricing.finalPrice);
 
+      // Collect browser metadata for fraud detection & analytics
+      const { collectBrowserMetadata } = await import("@/lib/browser-metadata");
+
       // Call actual payment API endpoint
       const response = await fetch('/api/v1/payments/process', {
         method: 'POST',
@@ -635,6 +638,7 @@ export default function PublicStorefrontPage() {
           paymentMethod,
           amount: parseFloat(finalAmount.toFixed(2)),
           sendValue: selectedProduct.isVariableValue ? parseFloat(customAmount) : undefined,
+          browserMetadata: collectBrowserMetadata(),
         }),
       });
 

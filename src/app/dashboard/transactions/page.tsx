@@ -857,7 +857,8 @@ export default function TransactionsPage() {
                               Operator
                             </p>
                             <p className="text-sm font-medium">
-                              {selectedTransaction.operator.name}
+                              {selectedTransaction.metadata?.providerName ||
+                                selectedTransaction.operator.name}
                             </p>
                           </div>
                           <div>
@@ -865,7 +866,8 @@ export default function TransactionsPage() {
                               Country
                             </p>
                             <p className="text-sm font-medium">
-                              {selectedTransaction.operator.country}
+                              {selectedTransaction.metadata?.countryName ||
+                                selectedTransaction.operator.country}
                             </p>
                           </div>
                         </>
@@ -873,6 +875,82 @@ export default function TransactionsPage() {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Pricing & Fees */}
+                {(selectedTransaction.metadata?.costPrice != null ||
+                  selectedTransaction.metadata?.dingConnectCost != null) && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">
+                      Pricing & Fees
+                    </h3>
+                    <Card>
+                      <CardContent className="p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-muted-foreground">
+                            Cost Price
+                          </p>
+                          <p className="text-sm font-medium">
+                            {formatCurrency(
+                              selectedTransaction.metadata?.costPrice ??
+                                selectedTransaction.metadata?.dingConnectCost ??
+                                0,
+                              selectedTransaction.currency,
+                            )}
+                          </p>
+                        </div>
+                        {(selectedTransaction.metadata?.markup ?? 0) > 0 && (
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-muted-foreground">
+                              Markup
+                              {selectedTransaction.metadata?.pricingRuleName &&
+                                selectedTransaction.metadata.pricingRuleName !==
+                                  "None" && (
+                                  <span className="text-xs ml-1">
+                                    ({selectedTransaction.metadata.pricingRuleName})
+                                  </span>
+                                )}
+                            </p>
+                            <p className="text-sm font-medium text-amber-600">
+                              +
+                              {formatCurrency(
+                                selectedTransaction.metadata.markup,
+                                selectedTransaction.currency,
+                              )}
+                            </p>
+                          </div>
+                        )}
+                        {(selectedTransaction.metadata?.discountAmount ??
+                          selectedTransaction.metadata?.discount ??
+                          0) > 0 && (
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-muted-foreground">
+                              Discount
+                            </p>
+                            <p className="text-sm font-medium text-green-600">
+                              -
+                              {formatCurrency(
+                                selectedTransaction.metadata?.discountAmount ??
+                                  selectedTransaction.metadata?.discount ??
+                                  0,
+                                selectedTransaction.currency,
+                              )}
+                            </p>
+                          </div>
+                        )}
+                        <div className="border-t pt-2 flex items-center justify-between">
+                          <p className="text-sm font-semibold">Total Charged</p>
+                          <p className="text-sm font-bold">
+                            {formatCurrency(
+                              selectedTransaction.metadata?.finalPrice ??
+                                selectedTransaction.amount,
+                              selectedTransaction.currency,
+                            )}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {/* Provider Transaction ID */}
                 {selectedTransaction.providerTransactionId && (
@@ -980,24 +1058,49 @@ export default function TransactionsPage() {
 
                 {/* Metadata */}
                 {selectedTransaction.metadata &&
-                  Object.keys(selectedTransaction.metadata).length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold mb-3">
-                        Additional Information
-                      </h3>
-                      <Card>
-                        <CardContent className="p-4">
-                          <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
-                            {JSON.stringify(
-                              selectedTransaction.metadata,
-                              null,
-                              2,
-                            )}
-                          </pre>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
+                  (() => {
+                    // Filter out fields already displayed in dedicated sections
+                    const hiddenKeys = new Set([
+                      "testMode",
+                      "productName",
+                      "productSkuCode",
+                      "providerName",
+                      "countryCode",
+                      "countryName",
+                      "costPrice",
+                      "dingConnectCost",
+                      "customerPrice",
+                      "markup",
+                      "discountAmount",
+                      "discount",
+                      "finalPrice",
+                      "pricingRuleName",
+                      "ipAddress",
+                      "userAgent",
+                      "pgpayToken",
+                      "pgpayOrderId",
+                    ]);
+                    const filtered = Object.fromEntries(
+                      Object.entries(selectedTransaction.metadata).filter(
+                        ([key]) => !hiddenKeys.has(key),
+                      ),
+                    );
+                    if (Object.keys(filtered).length === 0) return null;
+                    return (
+                      <div>
+                        <h3 className="text-sm font-semibold mb-3">
+                          Additional Information
+                        </h3>
+                        <Card>
+                          <CardContent className="p-4">
+                            <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
+                              {JSON.stringify(filtered, null, 2)}
+                            </pre>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    );
+                  })()}
               </div>
             </div>
           </>
