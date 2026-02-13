@@ -1,81 +1,261 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { TrendingUp, TrendingDown, Download, DollarSign, Users, ShoppingCart, CheckCircle, ChevronDown } from 'lucide-react';
-import { Button, Card, CardContent, CardHeader, CardTitle } from '@pg-prepaid/ui';
-import { DashboardLayout } from '@/components/dashboard-layout';
+import { useState, useEffect, useRef } from "react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Download,
+  DollarSign,
+  Users,
+  ShoppingCart,
+  CheckCircle,
+  ChevronDown,
+  AlertTriangle,
+  Globe,
+  Phone,
+  CreditCard,
+  Package,
+} from "lucide-react";
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@pg-prepaid/ui";
+import { DashboardLayout } from "@/components/dashboard-layout";
+import { format } from "date-fns";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  Legend,
+} from "recharts";
 
-interface Metrics {
-  revenue: {
-    total: number;
-    trend: number;
-  };
-  transactions: {
-    total: number;
-    completed: number;
-    trend: number;
-  };
-  customers: {
-    total: number;
-    newCustomers: number;
-    trend: number;
-  };
-  successRate: {
-    rate: number;
-    trend: number;
-  };
-  averageTransactionValue: number;
+// --- Types ---
+
+interface AnalyticsSummary {
+  revenue: number;
+  revenueTrend: number;
+  transactions: number;
+  transactionsTrend: number;
+  completed: number;
+  failed: number;
+  refunded: number;
+  pending: number;
+  customers: number;
+  newCustomers: number;
+  customersTrend: number;
+  successRate: number;
+  successRateTrend: number;
+  avgTransactionValue: number;
 }
 
+interface RevenuePoint {
+  date: string;
+  revenue: number;
+  count: number;
+}
+
+interface StatusItem {
+  status: string;
+  count: number;
+  amount: number;
+}
+
+interface TopCustomer {
+  phoneNumber: string;
+  email?: string;
+  name?: string;
+  country?: string;
+  totalSpent: number;
+  transactionCount: number;
+  lastPurchase: string;
+}
+
+interface CountryItem {
+  country: string;
+  countryName: string;
+  revenue: number;
+  count: number;
+}
+
+interface OperatorItem {
+  operator: string;
+  revenue: number;
+  count: number;
+}
+
+interface PaymentMethodItem {
+  method: string;
+  count: number;
+  amount: number;
+}
+
+interface ProductItem {
+  skuCode: string;
+  productName: string;
+  count: number;
+  revenue: number;
+}
+
+interface FailureItem {
+  orderId: string;
+  phoneNumber: string;
+  amount: number;
+  currency: string;
+  failureReason?: string;
+  createdAt: string;
+}
+
+interface AnalyticsData {
+  summary: AnalyticsSummary;
+  revenueOverTime: RevenuePoint[];
+  statusBreakdown: StatusItem[];
+  topCustomers: TopCustomer[];
+  topCountries: CountryItem[];
+  topOperators: OperatorItem[];
+  paymentMethods: PaymentMethodItem[];
+  topProducts: ProductItem[];
+  recentFailures: FailureItem[];
+}
+
+// --- Constants ---
+
+const STATUS_COLORS: Record<string, string> = {
+  completed: "#22c55e",
+  pending: "#eab308",
+  paid: "#3b82f6",
+  processing: "#a855f7",
+  failed: "#ef4444",
+  refunded: "#6b7280",
+};
+
+const PAYMENT_COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#6b7280"];
+
+const PERIOD_OPTIONS = [
+  { value: "today", label: "Today" },
+  { value: "7d", label: "Last 7 Days" },
+  { value: "30d", label: "Last 30 Days" },
+  { value: "90d", label: "Last 90 Days" },
+  { value: "1y", label: "Last Year" },
+  { value: "all", label: "All Time" },
+];
+
+// --- Helpers ---
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
+}
+
+function formatPaymentMethod(method: string): string {
+  const labels: Record<string, string> = {
+    pgpay: "PGPay",
+    balance: "Customer Balance",
+    stripe: "Stripe",
+    paypal: "PayPal",
+    unknown: "Unknown",
+  };
+  return labels[method] || method;
+}
+
+function TrendBadge({ value }: { value: number }) {
+  const isPositive = value >= 0;
+  const Icon = isPositive ? TrendingUp : TrendingDown;
+  const color = isPositive ? "text-green-600" : "text-red-600";
+
+  return (
+    <div className="flex items-center gap-1 text-xs">
+      <Icon className={`h-3 w-3 ${color}`} />
+      <span className={color}>
+        {isPositive ? "+" : ""}
+        {value.toFixed(1)}%
+      </span>
+      <span className="text-muted-foreground">vs previous period</span>
+    </div>
+  );
+}
+
+// --- Custom Tooltip ---
+
+function RevenueTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-medium mb-1">{label}</p>
+      <p className="text-green-600">
+        Revenue: {formatCurrency(payload[0]?.value || 0)}
+      </p>
+      <p className="text-muted-foreground">
+        Transactions: {payload[0]?.payload?.count || 0}
+      </p>
+    </div>
+  );
+}
+
+function PieTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const data = payload[0];
+  return (
+    <div className="bg-white border rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-medium">{data.name}</p>
+      <p>Count: {data.value}</p>
+      {data.payload?.amount != null && (
+        <p>Amount: {formatCurrency(data.payload.amount)}</p>
+      )}
+    </div>
+  );
+}
+
+// --- Main Component ---
+
 export default function AnalyticsPage() {
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('30d');
+  const [period, setPeriod] = useState("30d");
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
-
-  const periodOptions = [
-    { value: 'today', label: 'Today' },
-    { value: '7d', label: 'Last 7 Days' },
-    { value: '30d', label: 'Last 30 Days' },
-    { value: '90d', label: 'Last 90 Days' },
-    { value: '1y', label: 'Last Year' },
-    { value: 'all', label: 'All Time' },
-  ];
-
-  const selectedPeriodLabel = periodOptions.find(opt => opt.value === period)?.label || 'Last 30 Days';
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const selectedPeriodLabel =
+    PERIOD_OPTIONS.find((opt) => opt.value === period)?.label || "Last 30 Days";
+
   useEffect(() => {
-    fetchMetrics();
+    fetchAnalytics();
   }, [period]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowPeriodDropdown(false);
       }
     };
-
     if (showPeriodDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showPeriodDropdown]);
 
-  const fetchMetrics = async () => {
+  const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/v1/dashboard/metrics?period=${period}`);
+      const response = await fetch(
+        `/api/v1/dashboard/analytics?period=${period}`,
+      );
       if (response.ok) {
-        const data = await response.json();
-        setMetrics(data);
+        const json = await response.json();
+        setData(json.data || json);
       }
-    } catch (_error) {
-      console.error('Failed to fetch metrics:', _error);
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
     } finally {
       setLoading(false);
     }
@@ -86,7 +266,7 @@ export default function AnalyticsPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
             <p className="text-muted-foreground">Loading analytics...</p>
           </div>
         </div>
@@ -94,11 +274,9 @@ export default function AnalyticsPage() {
     );
   }
 
-  const hasData = metrics && (
-    metrics.revenue.total > 0 ||
-    metrics.transactions.total > 0 ||
-    metrics.customers.total > 0
-  );
+  const s = data?.summary;
+  const hasData =
+    s && (s.revenue > 0 || s.transactions > 0 || s.customers > 0);
 
   return (
     <DashboardLayout>
@@ -108,11 +286,10 @@ export default function AnalyticsPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
             <p className="text-muted-foreground mt-1">
-              Gain insights into your business performance
+              Comprehensive insights into your business performance
             </p>
           </div>
           <div className="flex gap-2">
-            {/* Period Selector Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <Button
                 variant="outline"
@@ -120,11 +297,13 @@ export default function AnalyticsPage() {
                 className="min-w-[160px] justify-between"
               >
                 {selectedPeriodLabel}
-                <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showPeriodDropdown ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`h-4 w-4 ml-2 transition-transform ${showPeriodDropdown ? "rotate-180" : ""}`}
+                />
               </Button>
               {showPeriodDropdown && (
                 <div className="absolute top-full mt-1 left-0 w-full bg-white border rounded-lg shadow-lg z-10 overflow-hidden animate-in slide-in-from-top-2">
-                  {periodOptions.map((option) => (
+                  {PERIOD_OPTIONS.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => {
@@ -133,8 +312,8 @@ export default function AnalyticsPage() {
                       }}
                       className={`w-full px-4 py-2 text-left text-sm transition-colors ${
                         period === option.value
-                          ? 'bg-primary text-white font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? "bg-primary text-white font-medium"
+                          : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
                       {option.label}
@@ -143,7 +322,7 @@ export default function AnalyticsPage() {
                 </div>
               )}
             </div>
-            <Button variant="outline">
+            <Button variant="outline" disabled>
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
@@ -151,23 +330,24 @@ export default function AnalyticsPage() {
         </div>
 
         {!hasData ? (
-          /* Empty State */
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
                 <TrendingUp className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No analytics data yet</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                No analytics data yet
+              </h3>
               <p className="text-muted-foreground text-center max-w-md">
-                Start processing transactions to see detailed analytics and insights about your business.
+                Start processing transactions to see detailed analytics and
+                insights about your business.
               </p>
             </CardContent>
           </Card>
         ) : (
           <>
-            {/* Metrics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Revenue */}
+            {/* Row 1: KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -176,22 +356,13 @@ export default function AnalyticsPage() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${metrics.revenue.total.toFixed(2)}</div>
-                  <div className="flex items-center gap-1 mt-1 text-xs">
-                    {metrics.revenue.trend >= 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600" />
-                    )}
-                    <span className={metrics.revenue.trend >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {metrics.revenue.trend >= 0 ? '+' : ''}{metrics.revenue.trend.toFixed(1)}%
-                    </span>
-                    <span className="text-muted-foreground">vs previous period</span>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(s!.revenue)}
                   </div>
+                  <TrendBadge value={s!.revenueTrend} />
                 </CardContent>
               </Card>
 
-              {/* Transactions */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -200,22 +371,11 @@ export default function AnalyticsPage() {
                   <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics.transactions.total}</div>
-                  <div className="flex items-center gap-1 mt-1 text-xs">
-                    {metrics.transactions.trend >= 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600" />
-                    )}
-                    <span className={metrics.transactions.trend >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {metrics.transactions.trend >= 0 ? '+' : ''}{metrics.transactions.trend.toFixed(1)}%
-                    </span>
-                    <span className="text-muted-foreground">vs previous period</span>
-                  </div>
+                  <div className="text-2xl font-bold">{s!.transactions}</div>
+                  <TrendBadge value={s!.transactionsTrend} />
                 </CardContent>
               </Card>
 
-              {/* Customers */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -224,24 +384,17 @@ export default function AnalyticsPage() {
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics.customers.total}</div>
-                  <div className="flex items-center gap-1 mt-1 text-xs">
-                    {metrics.customers.trend >= 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600" />
-                    )}
-                    <span className={metrics.customers.trend >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {metrics.customers.trend >= 0 ? '+' : ''}{metrics.customers.trend.toFixed(1)}%
+                  <div className="text-2xl font-bold">{s!.customers}</div>
+                  <div className="flex items-center gap-1 text-xs">
+                    <TrendingUp className="h-3 w-3 text-green-600" />
+                    <span className="text-green-600">
+                      {s!.newCustomers} new
                     </span>
-                    <span className="text-muted-foreground">
-                      ({metrics.customers.newCustomers} new)
-                    </span>
+                    <span className="text-muted-foreground">this period</span>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Success Rate */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -250,52 +403,493 @@ export default function AnalyticsPage() {
                   <CheckCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics.successRate.rate.toFixed(1)}%</div>
-                  <div className="flex items-center gap-1 mt-1 text-xs">
-                    {metrics.successRate.trend >= 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600" />
-                    )}
-                    <span className={metrics.successRate.trend >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {metrics.successRate.trend >= 0 ? '+' : ''}{metrics.successRate.trend.toFixed(1)}%
-                    </span>
-                    <span className="text-muted-foreground">vs previous period</span>
+                  <div className="text-2xl font-bold">{s!.successRate}%</div>
+                  <TrendBadge value={s!.successRateTrend} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Avg. Transaction
+                  </CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(s!.avgTransactionValue)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {s!.completed} completed
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Additional Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Analytics Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Period</span>
-                    <span className="font-medium">{selectedPeriodLabel}</span>
+            {/* Row 2: Revenue Over Time */}
+            {data!.revenueOverTime.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Revenue Over Time
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={data!.revenueOverTime}>
+                      <defs>
+                        <linearGradient
+                          id="revenueGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#3b82f6"
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#3b82f6"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        className="stroke-muted"
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        tickFormatter={(v) => `$${v}`}
+                      />
+                      <Tooltip content={<RevenueTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        fill="url(#revenueGradient)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Row 3: Status Breakdown + Payment Methods */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Status Breakdown */}
+              {data!.statusBreakdown.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5" />
+                      Transaction Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={data!.statusBreakdown}
+                          dataKey="count"
+                          nameKey="status"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          innerRadius={50}
+                          paddingAngle={2}
+                          label={({ status, count }) =>
+                            `${status} (${count})`
+                          }
+                        >
+                          {data!.statusBreakdown.map((entry, index) => (
+                            <Cell
+                              key={index}
+                              fill={
+                                STATUS_COLORS[entry.status] || "#6b7280"
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<PieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap justify-center gap-3 mt-2">
+                      {data!.statusBreakdown.map((item) => (
+                        <div
+                          key={item.status}
+                          className="flex items-center gap-1.5 text-xs"
+                        >
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{
+                              backgroundColor:
+                                STATUS_COLORS[item.status] || "#6b7280",
+                            }}
+                          />
+                          <span className="capitalize">{item.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Payment Methods */}
+              {data!.paymentMethods.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" />
+                      Payment Methods
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={data!.paymentMethods.map((p) => ({
+                            ...p,
+                            name: formatPaymentMethod(p.method),
+                          }))}
+                          dataKey="count"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          innerRadius={50}
+                          paddingAngle={2}
+                          label={({ name, count }) => `${name} (${count})`}
+                        >
+                          {data!.paymentMethods.map((_, index) => (
+                            <Cell
+                              key={index}
+                              fill={
+                                PAYMENT_COLORS[index % PAYMENT_COLORS.length]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<PieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap justify-center gap-3 mt-2">
+                      {data!.paymentMethods.map((item, i) => (
+                        <div
+                          key={item.method}
+                          className="flex items-center gap-1.5 text-xs"
+                        >
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{
+                              backgroundColor:
+                                PAYMENT_COLORS[i % PAYMENT_COLORS.length],
+                            }}
+                          />
+                          <span>{formatPaymentMethod(item.method)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Row 4: Top Countries + Top Operators */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Top Countries */}
+              {data!.topCountries.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5" />
+                      Top Countries by Revenue
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart
+                        data={data!.topCountries}
+                        layout="vertical"
+                        margin={{ left: 20 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          className="stroke-muted"
+                        />
+                        <XAxis
+                          type="number"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(v) => `$${v}`}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="countryName"
+                          tick={{ fontSize: 12 }}
+                          width={120}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => [
+                            formatCurrency(value),
+                            "Revenue",
+                          ]}
+                        />
+                        <Bar
+                          dataKey="revenue"
+                          fill="#3b82f6"
+                          radius={[0, 4, 4, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Top Operators */}
+              {data!.topOperators.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Phone className="h-5 w-5" />
+                      Top Operators by Revenue
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart
+                        data={data!.topOperators}
+                        layout="vertical"
+                        margin={{ left: 20 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          className="stroke-muted"
+                        />
+                        <XAxis
+                          type="number"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(v) => `$${v}`}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="operator"
+                          tick={{ fontSize: 12 }}
+                          width={120}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => [
+                            formatCurrency(value),
+                            "Revenue",
+                          ]}
+                        />
+                        <Bar
+                          dataKey="revenue"
+                          fill="#8b5cf6"
+                          radius={[0, 4, 4, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Row 5: Top Customers + Top Products */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Top Customers */}
+              {data!.topCustomers.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Top Customers
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left">
+                            <th className="pb-2 font-medium text-muted-foreground">
+                              #
+                            </th>
+                            <th className="pb-2 font-medium text-muted-foreground">
+                              Customer
+                            </th>
+                            <th className="pb-2 font-medium text-muted-foreground text-right">
+                              Spent
+                            </th>
+                            <th className="pb-2 font-medium text-muted-foreground text-right">
+                              Txns
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data!.topCustomers.map((customer, i) => (
+                            <tr key={customer.phoneNumber} className="border-b last:border-0">
+                              <td className="py-2.5 text-muted-foreground">
+                                {i + 1}
+                              </td>
+                              <td className="py-2.5">
+                                <div className="font-medium">
+                                  {customer.name || customer.phoneNumber}
+                                </div>
+                                {customer.name && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {customer.phoneNumber}
+                                  </div>
+                                )}
+                                {customer.country && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {customer.country}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-2.5 text-right font-medium">
+                                {formatCurrency(customer.totalSpent)}
+                              </td>
+                              <td className="py-2.5 text-right text-muted-foreground">
+                                {customer.transactionCount}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Top Products */}
+              {data!.topProducts.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Top Products
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left">
+                            <th className="pb-2 font-medium text-muted-foreground">
+                              #
+                            </th>
+                            <th className="pb-2 font-medium text-muted-foreground">
+                              Product
+                            </th>
+                            <th className="pb-2 font-medium text-muted-foreground text-right">
+                              Revenue
+                            </th>
+                            <th className="pb-2 font-medium text-muted-foreground text-right">
+                              Sales
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data!.topProducts.map((product, i) => (
+                            <tr key={product.skuCode} className="border-b last:border-0">
+                              <td className="py-2.5 text-muted-foreground">
+                                {i + 1}
+                              </td>
+                              <td className="py-2.5">
+                                <div className="font-medium">
+                                  {product.productName}
+                                </div>
+                                <div className="text-xs text-muted-foreground font-mono">
+                                  {product.skuCode}
+                                </div>
+                              </td>
+                              <td className="py-2.5 text-right font-medium">
+                                {formatCurrency(product.revenue)}
+                              </td>
+                              <td className="py-2.5 text-right text-muted-foreground">
+                                {product.count}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Row 6: Recent Failures */}
+            {data!.recentFailures.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    Recent Failed Transactions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left">
+                          <th className="pb-2 font-medium text-muted-foreground">
+                            Order ID
+                          </th>
+                          <th className="pb-2 font-medium text-muted-foreground">
+                            Phone
+                          </th>
+                          <th className="pb-2 font-medium text-muted-foreground text-right">
+                            Amount
+                          </th>
+                          <th className="pb-2 font-medium text-muted-foreground">
+                            Reason
+                          </th>
+                          <th className="pb-2 font-medium text-muted-foreground">
+                            Date
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data!.recentFailures.map((failure) => (
+                          <tr
+                            key={failure.orderId}
+                            className="border-b last:border-0"
+                          >
+                            <td className="py-2.5 font-mono text-xs">
+                              {failure.orderId}
+                            </td>
+                            <td className="py-2.5">{failure.phoneNumber}</td>
+                            <td className="py-2.5 text-right font-medium">
+                              {formatCurrency(failure.amount)}
+                            </td>
+                            <td className="py-2.5 text-red-600 max-w-[200px] truncate">
+                              {failure.failureReason || "Unknown"}
+                            </td>
+                            <td className="py-2.5 text-muted-foreground">
+                              {format(
+                                new Date(failure.createdAt),
+                                "MMM dd, HH:mm",
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Total Customers</span>
-                    <span className="font-medium">{metrics.customers.total}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Average Transaction Value</span>
-                    <span className="font-medium">
-                      ${metrics.averageTransactionValue.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Completed Transactions</span>
-                    <span className="font-medium">
-                      {metrics.transactions.completed}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>
