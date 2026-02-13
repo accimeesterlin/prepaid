@@ -13,6 +13,7 @@ import {
   isReasonRequired,
 } from "@/lib/validations/transaction";
 import { ZodError } from "zod";
+import { trackTransactionCompletion } from "@/lib/services/usage-tracking.service";
 
 /**
  * PATCH /api/v1/transactions/[id]/status
@@ -139,6 +140,14 @@ export async function PATCH(
     }
 
     await transaction.save();
+
+    // Track plan usage for completed transactions
+    if (status === TransactionStatus.COMPLETED) {
+      void trackTransactionCompletion({
+        orgId: session.orgId,
+        transactionAmount: transaction.amount,
+      });
+    }
 
     // Create or update customer if transaction is completed
     if (

@@ -36,14 +36,14 @@ export async function GET(req: NextRequest) {
 
     // Count transactions this month
     const transactionCount = await Transaction.countDocuments({
-      organizationId: organization._id,
+      orgId: organization._id?.toString(),
       createdAt: { $gte: monthStart, $lte: monthEnd },
     });
 
     // Count team members
     const teamMemberCount = await UserOrganization.countDocuments({
-      organizationId: organization._id,
-      status: "active",
+      orgId: organization._id,
+      isActive: true,
     });
 
     // For organizations count, we'd need a parent-child relationship

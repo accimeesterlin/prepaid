@@ -20,6 +20,7 @@ import { createSuccessResponse } from "@/lib/api-response";
 import { requireVerifiedCustomer } from "@/lib/auth-middleware";
 import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { logger } from "@/lib/logger";
+import { trackTransactionCompletion, checkTransactionLimit } from "@/lib/services/usage-tracking.service";
 import { parsePhoneNumber } from "awesome-phonenumber";
 import countries from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
@@ -55,6 +56,14 @@ export async function POST(request: NextRequest) {
 
     if (!customer) {
       throw ApiErrors.NotFound("Customer not found");
+    }
+
+    // Check transaction limit for organization's plan
+    const limitCheck = await checkTransactionLimit(session.orgId);
+    if (!limitCheck.allowed) {
+      throw ApiErrors.BadRequest(
+        `Monthly transaction limit reached (${limitCheck.limit}). Please upgrade your plan to continue.`,
+      );
     }
 
     // Get DingConnect integration for this organization
@@ -457,6 +466,12 @@ export async function POST(request: NextRequest) {
       (transaction.metadata as any).dingStatus = transferResult.Status;
 
       await transaction.save();
+
+      // Track plan usage
+      void trackTransactionCompletion({
+        orgId: session.orgId,
+        transactionAmount: finalPrice,
+      });
 
       // Update customer purchase metadata
       customer.metadata = customer.metadata || {};

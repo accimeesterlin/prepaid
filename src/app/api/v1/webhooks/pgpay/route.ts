@@ -11,6 +11,7 @@ import {
 import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { createPGPayService } from "@/lib/services/pgpay.service";
 import { logger } from "@/lib/logger";
+import { trackTransactionCompletion } from "@/lib/services/usage-tracking.service";
 
 /**
  * Find or create/update a customer record from a transaction.
@@ -464,6 +465,12 @@ export async function POST(request: NextRequest) {
           validateOnly: true,
         });
 
+        // Track plan usage
+        void trackTransactionCompletion({
+          orgId: transaction.orgId,
+          transactionAmount: transaction.amount,
+        });
+
         // Create or update customer record
         try {
           const customerId = await findOrUpdateCustomer(
@@ -523,6 +530,12 @@ export async function POST(request: NextRequest) {
             validateOnly: false,
           });
 
+          // Track plan usage
+          void trackTransactionCompletion({
+            orgId: transaction.orgId,
+            transactionAmount: transaction.amount,
+          });
+
           // Create or update customer record
           try {
             const customerId = await findOrUpdateCustomer(
@@ -577,6 +590,12 @@ export async function POST(request: NextRequest) {
           (transaction.metadata as Record<string, unknown>).dingconnectStatus = transferResult.Status;
           (transaction.metadata as Record<string, unknown>).processingNote = "Marked as completed while DingConnect processes the transfer";
 
+          // Track plan usage
+          void trackTransactionCompletion({
+            orgId: transaction.orgId,
+            transactionAmount: transaction.amount,
+          });
+
           logger.info("Transaction marked as completed (DingConnect still processing)", {
             orderId: transaction.orderId,
             transferId: transferResult.TransferId,
@@ -625,6 +644,12 @@ export async function POST(request: NextRequest) {
           transaction.timeline.completedAt = new Date();
           (transaction.metadata as Record<string, unknown>).dingconnectStatus = transferResult.Status;
           (transaction.metadata as Record<string, unknown>).unknownStatusNote = "Completed despite unknown DingConnect status - requires manual verification";
+
+          // Track plan usage
+          void trackTransactionCompletion({
+            orgId: transaction.orgId,
+            transactionAmount: transaction.amount,
+          });
 
           logger.warn("Unknown DingConnect status - marking as completed", {
             orderId: transaction.orderId,

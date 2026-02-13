@@ -12,6 +12,7 @@ import {
 import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { createPGPayService } from "@/lib/services/pgpay.service";
 import { logger } from "@/lib/logger";
+import { checkTransactionLimit } from "@/lib/services/usage-tracking.service";
 import { parsePhoneNumber } from "awesome-phonenumber";
 import countries from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
@@ -93,6 +94,15 @@ export async function POST(request: NextRequest) {
       orgSlug,
       model: legacyOrg ? "Org" : "Organization",
     });
+
+    // Check transaction limit for organization's plan
+    const limitCheck = await checkTransactionLimit(orgId);
+    if (!limitCheck.allowed) {
+      throw new PaymentError(
+        403,
+        "Monthly transaction limit reached. Please contact the store owner to upgrade their plan.",
+      );
+    }
 
     // Get storefront settings
     const storefrontSettings = await StorefrontSettings.findOne({ orgId });
