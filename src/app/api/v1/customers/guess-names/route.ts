@@ -52,8 +52,8 @@ export async function POST() {
     for (const customer of unnamedCustomers) {
       const result = await guessNameFromEmail(customer.email as string);
 
-      // Only return guesses with at least "suggest" confidence
-      if (result.decision !== "blank" && result.guessedName) {
+      // Return all guesses that produced a name — let the user decide
+      if (result.guessedName) {
         guesses.push({
           customerId: String(customer._id),
           email: customer.email as string,

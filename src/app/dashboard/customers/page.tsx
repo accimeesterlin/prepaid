@@ -1539,7 +1539,9 @@ export default function CustomersPage() {
                             className={
                               guess.confidence >= 0.75
                                 ? 'text-xs border-green-500 text-green-700'
-                                : 'text-xs border-amber-500 text-amber-700'
+                                : guess.confidence >= 0.5
+                                  ? 'text-xs border-amber-500 text-amber-700'
+                                  : 'text-xs border-gray-400 text-gray-500'
                             }
                           >
                             {Math.round(guess.confidence * 100)}%

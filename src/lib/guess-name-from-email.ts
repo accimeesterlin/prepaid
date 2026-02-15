@@ -234,8 +234,24 @@ export async function guessNameFromEmail(
 
   let tokens = await tokenize(localClean);
 
-  if (looksLikeBrandOrRole(tokens.map((t) => t.toLowerCase()))) {
-    out.reason = "brand/role keywords detected";
+  const isBrandOrRole = looksLikeBrandOrRole(
+    tokens.map((t) => t.toLowerCase()),
+  );
+
+  if (isBrandOrRole) {
+    // Still produce a guess but with very low confidence
+    const cleaned = tokens.filter(
+      (t) => !BLOCKLIST_WORDS.has(t.toLowerCase()),
+    );
+    if (cleaned.length > 0) {
+      out.tokens = cleaned;
+      out.guessedName = capitalCase(cleaned.join(" "));
+      out.confidence = 0.1;
+      out.decision = "blank";
+      out.reason = "brand/role keywords detected — low confidence";
+      return out;
+    }
+    out.reason = "brand/role keywords only";
     return out;
   }
 
@@ -253,10 +269,36 @@ export async function guessNameFromEmail(
   tokens = dropTrailingNoise(tokens);
   tokens = dropNicknames(tokens);
 
-  if (!tokens.length) return out;
+  if (!tokens.length) {
+    // Fallback: use the cleaned local part as-is
+    const fallbackTokens = localClean
+      .split(" ")
+      .filter(Boolean)
+      .map((t) => t.replace(/\d+/g, ""))
+      .filter((t) => t.length >= 2);
+    if (fallbackTokens.length > 0) {
+      out.tokens = fallbackTokens;
+      out.guessedName = capitalCase(fallbackTokens.join(" "));
+      out.confidence = 0.1;
+      out.decision = "blank";
+      out.reason = "fallback from cleaned local part";
+    }
+    return out;
+  }
 
   if (looksLikeBrandOrRole(tokens.map((t) => t.toLowerCase()))) {
-    out.reason = "brand/role keywords detected (post-cleanup)";
+    const cleaned = tokens.filter(
+      (t) => !BLOCKLIST_WORDS.has(t.toLowerCase()),
+    );
+    if (cleaned.length > 0) {
+      out.tokens = cleaned;
+      out.guessedName = capitalCase(cleaned.join(" "));
+      out.confidence = 0.1;
+      out.decision = "blank";
+      out.reason = "brand/role keywords detected (post-cleanup)";
+      return out;
+    }
+    out.reason = "brand/role keywords only (post-cleanup)";
     return out;
   }
 
@@ -272,6 +314,9 @@ export async function guessNameFromEmail(
   if (tokens.length === 1 && !isNameHit(tokens[0].toLowerCase())) {
     confidence = Math.min(confidence, 0.35);
   }
+
+  // Ensure a minimum confidence so guesses always surface for review
+  confidence = Math.max(0.1, confidence);
 
   out.tokens = tokens;
   out.guessedName = capitalCase(tokens.join(" "));
