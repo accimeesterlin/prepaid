@@ -22,6 +22,11 @@ import {
   Plus,
   Minus,
   Key,
+  ShoppingCart,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Loader2,
 } from "lucide-react";
 
 const COUNTRIES = [
@@ -75,6 +80,23 @@ interface Customer {
   };
   createdAt: string;
   updatedAt: string;
+}
+
+interface Transaction {
+  _id: string;
+  orderId: string;
+  amount: number;
+  status: string;
+  recipient: {
+    phoneNumber: string;
+    email?: string;
+  };
+  metadata?: {
+    productName?: string;
+    productSkuCode?: string;
+    testMode?: boolean;
+  };
+  createdAt: string;
 }
 
 interface BalanceHistory {
@@ -135,6 +157,11 @@ export default function CustomerDetailPage() {
   const [countrySearch, setCountrySearch] = useState("");
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [orgSlug, setOrgSlug] = useState<string>("");
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [txnPage, setTxnPage] = useState(1);
+  const [txnPagination, setTxnPagination] = useState({ total: 0, totalPages: 0 });
+  const TXN_PER_PAGE = 10;
 
   const filteredCountries = COUNTRIES.filter((country) =>
     country.toLowerCase().includes(countrySearch.toLowerCase()),
@@ -145,6 +172,13 @@ export default function CustomerDetailPage() {
     fetchBalanceHistory();
     fetchOrgSlug();
   }, [customerId]);
+
+  // Fetch transactions when customer data is loaded or page changes
+  useEffect(() => {
+    if (customer?.phoneNumber) {
+      fetchTransactions();
+    }
+  }, [customer?.phoneNumber, txnPage]);
 
   const fetchOrgSlug = async () => {
     try {
@@ -331,6 +365,61 @@ export default function CustomerDetailPage() {
       console.error("Failed to fetch balance history:", error);
     } finally {
       setLoadingHistory(false);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    if (!customer?.phoneNumber) return;
+    setLoadingTransactions(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("search", customer.phoneNumber);
+      params.append("page", txnPage.toString());
+      params.append("limit", TXN_PER_PAGE.toString());
+
+      const response = await fetch(`/api/v1/transactions?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTransactions(data.transactions || []);
+        setTxnPagination({
+          total: data.pagination?.total || 0,
+          totalPages: data.pagination?.totalPages || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch transactions:", error);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case "failed":
+      case "refunded":
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      case "processing":
+      case "payment_pending":
+        return <Clock className="h-4 w-4 text-amber-600" />;
+      default:
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-50 text-green-700 border-green-200";
+      case "failed":
+      case "refunded":
+        return "bg-red-50 text-red-700 border-red-200";
+      case "processing":
+      case "payment_pending":
+        return "bg-amber-50 text-amber-700 border-amber-200";
+      default:
+        return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
 
@@ -899,6 +988,120 @@ export default function CustomerDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Transaction History */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Transaction History
+              </CardTitle>
+              <CardDescription>
+                {txnPagination.total} transaction{txnPagination.total !== 1 ? "s" : ""} found
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/dashboard/transactions`)}
+            >
+              View All
+              <ExternalLink className="h-4 w-4 ml-2" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {loadingTransactions ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : transactions.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No transactions found for this customer
+              </p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="pb-3 font-medium text-muted-foreground">Order ID</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Product</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Status</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.map((txn) => (
+                        <tr
+                          key={txn._id}
+                          className="border-b last:border-0 hover:bg-muted/50 cursor-pointer"
+                          onClick={() => router.push(`/dashboard/transactions`)}
+                        >
+                          <td className="py-3">
+                            <span className="font-mono text-xs">{txn.orderId}</span>
+                            {txn.metadata?.testMode && (
+                              <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
+                                Test
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 text-muted-foreground">
+                            {txn.metadata?.productName || txn.metadata?.productSkuCode || "—"}
+                          </td>
+                          <td className="py-3 font-medium">
+                            ${txn.amount.toFixed(2)}
+                          </td>
+                          <td className="py-3">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(txn.status)}`}>
+                              {getStatusIcon(txn.status)}
+                              {txn.status}
+                            </span>
+                          </td>
+                          <td className="py-3 text-muted-foreground">
+                            {new Date(txn.createdAt).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {txnPagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Page {txnPage} of {txnPagination.totalPages} ({txnPagination.total} total)
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setTxnPage((p) => Math.max(1, p - 1))}
+                        disabled={txnPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setTxnPage((p) => Math.min(txnPagination.totalPages, p + 1))}
+                        disabled={txnPage >= txnPagination.totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Balance Action Modal */}
         <Dialog open={showBalanceModal} onOpenChange={setShowBalanceModal}>

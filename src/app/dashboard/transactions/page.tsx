@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Search,
   Filter,
@@ -85,6 +85,8 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [showTestMode, setShowTestMode] = useState(true);
@@ -151,15 +153,31 @@ export default function TransactionsPage() {
     }
   }, [search, statusFilter, showTestMode, pageSize, currentPage, showFilters]);
 
+  // Debounce search input - wait 300ms after user stops typing
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [search]);
+
   useEffect(() => {
     fetchTransactions();
-  }, [search, statusFilter, showTestMode, currentPage, pageSize]);
+  }, [debouncedSearch, statusFilter, showTestMode, currentPage, pageSize]);
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.append("search", search);
+      if (debouncedSearch) params.append("search", debouncedSearch);
       if (statusFilter !== "all") params.append("status", statusFilter);
       if (!showTestMode) params.append("excludeTestMode", "true");
       params.append("page", currentPage.toString());

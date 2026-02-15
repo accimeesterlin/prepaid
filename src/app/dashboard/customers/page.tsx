@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Plus,
@@ -97,6 +97,8 @@ export default function CustomersPage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [orgSlug, setOrgSlug] = useState<string>('');
@@ -152,9 +154,25 @@ export default function CustomersPage() {
     fetchGroups();
   }, []);
 
+  // Debounce search input - wait 300ms after user stops typing
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [search]);
+
   useEffect(() => {
     fetchCustomers();
-  }, [search, selectedFilter, selectedGroup, currentPage, pageSize]);
+  }, [debouncedSearch, selectedFilter, selectedGroup, currentPage, pageSize]);
 
   const fetchOrgSlug = async () => {
     try {
@@ -189,7 +207,7 @@ export default function CustomersPage() {
       params.append('page', currentPage.toString());
       params.append('limit', pageSize.toString());
 
-      if (search) params.append('search', search);
+      if (debouncedSearch) params.append('search', debouncedSearch);
       if (selectedFilter === 'favorites') params.append('favorites', 'true');
       if (selectedGroup) params.append('groupId', selectedGroup);
 
@@ -1123,10 +1141,7 @@ export default function CustomersPage() {
               placeholder="Search by phone, email, or name..."
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
