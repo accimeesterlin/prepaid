@@ -165,8 +165,8 @@ export default function DashboardPage() {
       const usageResponse = await fetch("/api/v1/subscriptions/usage");
       if (usageResponse.ok) {
         const usageData = await usageResponse.json();
-        setTransactionCount(usageData.usage?.transactions || 0);
-        setTransactionLimit(usageData.limits?.transactions || 200);
+        setTransactionCount(usageData.transactions?.current || 0);
+        setTransactionLimit(usageData.transactions?.limit || 200);
       }
     } catch (error) {
       console.error("Failed to fetch subscription info:", error);
