@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const favoritesOnly = searchParams.get('favorites') === 'true';
     const groupId = searchParams.get('groupId');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
 
     const query: any = { orgId: session.orgId };
 
@@ -39,9 +41,21 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const customers = await Customer.find(query).sort({ createdAt: -1 });
+    const total = await Customer.countDocuments(query);
+    const customers = await Customer.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-    return NextResponse.json(customers);
+    return NextResponse.json({
+      customers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Get customers error:', error);
     return NextResponse.json({ error: 'Failed to fetch customers' }, { status: 500 });

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
 import { dbConnection } from "@pg-prepaid/db/connection";
-import { Transaction, Integration, Customer } from "@pg-prepaid/db";
+import { Transaction, Integration, Customer, StorefrontSettings } from "@pg-prepaid/db";
 import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
 import { handleApiError } from "@/lib/api-error";
 import { logger } from "@/lib/logger";
@@ -228,7 +228,7 @@ export async function POST(
           transactionAmount: transaction.amount,
         });
 
-        // Create or update customer
+        // Create or update customer and assign customerId
         if (transaction.recipient?.phoneNumber) {
           try {
             const existingCustomer = await Customer.findByOrgAndIdentifier(
@@ -240,7 +240,7 @@ export async function POST(
             );
 
             if (!existingCustomer) {
-              await Customer.create({
+              const newCustomer = await Customer.create({
                 orgId: session.orgId,
                 phoneNumber: transaction.recipient.phoneNumber,
                 email: transaction.recipient.email,
@@ -254,6 +254,9 @@ export async function POST(
                   acquisitionSource: "transaction",
                 },
               });
+              if (newCustomer._id) {
+                transaction.customerId = newCustomer._id.toString();
+              }
             } else {
               existingCustomer.metadata.totalPurchases =
                 (existingCustomer.metadata.totalPurchases || 0) + 1;
@@ -268,13 +271,47 @@ export async function POST(
                 existingCustomer.country = transaction.operator.country;
               }
               await existingCustomer.save();
+              if (existingCustomer._id) {
+                transaction.customerId = existingCustomer._id.toString();
+              }
             }
+
+            // Save the customerId to the transaction
+            await transaction.save();
           } catch (customerError) {
             logger.error("Error creating/updating customer on retry", {
               error: customerError,
               transactionId: id,
             });
           }
+        }
+
+        // Update storefront metadata (totalOrders, totalRevenue, lastOrderAt)
+        try {
+          const storefrontSettings = await StorefrontSettings.findOne({
+            orgId: session.orgId,
+          });
+          if (storefrontSettings?.metadata) {
+            const previousOrders = storefrontSettings.metadata.totalOrders || 0;
+            const previousRevenue = storefrontSettings.metadata.totalRevenue || 0;
+
+            storefrontSettings.metadata.totalOrders = previousOrders + 1;
+            storefrontSettings.metadata.totalRevenue =
+              previousRevenue + transaction.amount;
+            storefrontSettings.metadata.lastOrderAt = now;
+            await storefrontSettings.save();
+
+            logger.info("Storefront metadata updated on retry", {
+              orgId: session.orgId,
+              totalOrders: storefrontSettings.metadata.totalOrders,
+              totalRevenue: storefrontSettings.metadata.totalRevenue,
+            });
+          }
+        } catch (storefrontError) {
+          logger.error("Error updating storefront metadata on retry", {
+            error: storefrontError,
+            transactionId: id,
+          });
         }
 
         logger.info("Transaction retry succeeded", {

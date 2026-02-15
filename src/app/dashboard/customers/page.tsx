@@ -20,6 +20,7 @@ import {
   X,
   Filter,
   Check,
+  Copy,
 } from 'lucide-react';
 
 import {
@@ -106,6 +107,14 @@ export default function CustomersPage() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  });
 
   useEffect(() => {
     fetchOrgSlug();
@@ -114,7 +123,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     fetchCustomers();
-  }, [search, selectedFilter, selectedGroup]);
+  }, [search, selectedFilter, selectedGroup, currentPage, pageSize]);
 
   const fetchOrgSlug = async () => {
     try {
@@ -145,19 +154,21 @@ export default function CustomersPage() {
 
   const fetchCustomers = async () => {
     try {
-      let url = '/api/v1/customers';
       const params = new URLSearchParams();
+      params.append('page', currentPage.toString());
+      params.append('limit', pageSize.toString());
 
       if (search) params.append('search', search);
       if (selectedFilter === 'favorites') params.append('favorites', 'true');
       if (selectedGroup) params.append('groupId', selectedGroup);
 
-      if (params.toString()) url += `?${params.toString()}`;
-
-      const response = await fetch(url);
+      const response = await fetch(`/api/v1/customers?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
-        setCustomers(data);
+        setCustomers(data.customers || []);
+        setPagination(
+          data.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 },
+        );
       }
     } catch (error) {
       console.error('Failed to fetch customers:', error);
@@ -287,6 +298,16 @@ export default function CustomersPage() {
     toast({
       title: 'Success',
       description: 'Customer portal link copied to clipboard',
+      variant: 'success',
+    });
+  };
+
+  const copyEmail = (customer: Customer) => {
+    if (!customer.email) return;
+    navigator.clipboard.writeText(customer.email);
+    toast({
+      title: 'Copied',
+      description: 'Email copied to clipboard',
       variant: 'success',
     });
   };
@@ -510,15 +531,26 @@ export default function CustomersPage() {
                     Add to Group
                   </DropdownMenuItem>
                   {customer.email && (
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyPortalLink(customer);
-                      }}
-                    >
-                      <Link2 className="h-4 w-4 mr-2" />
-                      Copy Portal Link
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyEmail(customer);
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Email
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyPortalLink(customer);
+                        }}
+                      >
+                        <Link2 className="h-4 w-4 mr-2" />
+                        Copy Portal Link
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -667,15 +699,26 @@ export default function CustomersPage() {
                     Add to Group
                   </DropdownMenuItem>
                   {customer.email && (
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyPortalLink(customer);
-                      }}
-                    >
-                      <Link2 className="h-4 w-4 mr-2" />
-                      Copy Portal Link
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyEmail(customer);
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Email
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyPortalLink(customer);
+                        }}
+                      >
+                        <Link2 className="h-4 w-4 mr-2" />
+                        Copy Portal Link
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -726,7 +769,10 @@ export default function CustomersPage() {
               placeholder="Search by phone, email, or name..."
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
@@ -750,6 +796,7 @@ export default function CustomersPage() {
                 onClick={() => {
                   setSelectedFilter('all');
                   setSelectedGroup('');
+                  setCurrentPage(1);
                 }}
                 className="flex items-center justify-between"
               >
@@ -763,6 +810,7 @@ export default function CustomersPage() {
                 onClick={() => {
                   setSelectedFilter('favorites');
                   setSelectedGroup('');
+                  setCurrentPage(1);
                 }}
                 className="flex items-center justify-between"
               >
@@ -782,6 +830,7 @@ export default function CustomersPage() {
                       onClick={() => {
                         setSelectedFilter('group');
                         setSelectedGroup(group._id);
+                        setCurrentPage(1);
                       }}
                       className="flex items-center justify-between"
                     >
@@ -851,6 +900,110 @@ export default function CustomersPage() {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* Pagination Info */}
+        {!loading && pagination.total > 0 && (
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div>
+              Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+              {Math.min(pagination.page * pagination.limit, pagination.total)}{' '}
+              of {pagination.total} customers
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="font-medium">Per page:</label>
+              <select
+                className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between border-t pt-4">
+            <div className="text-sm text-muted-foreground">
+              Page <span className="font-medium">{pagination.page}</span> of{' '}
+              <span className="font-medium">{pagination.totalPages}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                First
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+
+              {/* Page Numbers */}
+              <div className="hidden sm:flex items-center gap-1">
+                {Array.from(
+                  { length: Math.min(5, pagination.totalPages) },
+                  (_, i) => {
+                    let pageNum;
+                    if (pagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= pagination.totalPages - 2) {
+                      pageNum = pagination.totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="min-w-[2.5rem]"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  },
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(pagination.totalPages, p + 1))}
+                disabled={currentPage === pagination.totalPages}
+              >
+                Next
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(pagination.totalPages)}
+                disabled={currentPage === pagination.totalPages}
+              >
+                Last
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Create Customer Modal */}
