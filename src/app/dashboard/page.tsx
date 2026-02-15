@@ -105,6 +105,8 @@ export default function DashboardPage() {
   const [subscriptionTier, setSubscriptionTier] = useState<string>("starter");
   const [transactionCount, setTransactionCount] = useState<number>(0);
   const [transactionLimit, setTransactionLimit] = useState<number>(200);
+  const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
   const [providerBalance, setProviderBalance] =
     useState<ProviderBalance | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
@@ -159,6 +161,9 @@ export default function DashboardPage() {
         setSubscriptionTier(
           data.tier || data.organization?.subscriptionTier || "starter",
         );
+        if (data.currentPeriodEnd) {
+          setPeriodEnd(data.currentPeriodEnd);
+        }
       }
 
       // Fetch usage
@@ -167,6 +172,9 @@ export default function DashboardPage() {
         const usageData = await usageResponse.json();
         setTransactionCount(usageData.transactions?.current || 0);
         setTransactionLimit(usageData.transactions?.limit || 200);
+        if (usageData.period?.daysRemaining != null) {
+          setDaysRemaining(usageData.period.daysRemaining);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch subscription info:", error);
@@ -484,6 +492,21 @@ export default function DashboardPage() {
                     {usagePercent > 80 && transactionLimit !== 999999 && (
                       <span className="text-xs text-amber-600 font-medium whitespace-nowrap">
                         Approaching limit
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Period info: days remaining + renewal date */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    {daysRemaining != null && (
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {daysRemaining} {daysRemaining === 1 ? "day" : "days"} remaining in cycle
+                      </span>
+                    )}
+                    {periodEnd && (
+                      <span className="inline-flex items-center gap-1">
+                        Renews {new Date(periodEnd).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                       </span>
                     )}
                   </div>
