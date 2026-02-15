@@ -22,6 +22,8 @@ import {
   Check,
   Copy,
   GitMerge,
+  Sparkles,
+  Pencil,
 } from 'lucide-react';
 
 import {
@@ -66,6 +68,17 @@ interface CustomerGroup {
   description?: string;
   color: string;
   customerCount: number;
+}
+
+interface NameGuess {
+  customerId: string;
+  email: string;
+  phoneNumber: string;
+  currentName: string | null;
+  guessedName: string | null;
+  confidence: number;
+  decision: 'autofill' | 'suggest' | 'blank';
+  reason: string;
 }
 
 type ViewMode = 'grid' | 'list';
@@ -113,6 +126,12 @@ export default function CustomersPage() {
   const [selectedDuplicates, setSelectedDuplicates] = useState<string[]>([]);
   const [showMergeConfirmModal, setShowMergeConfirmModal] = useState(false);
   const [merging, setMerging] = useState(false);
+  const [showGuessNamesModal, setShowGuessNamesModal] = useState(false);
+  const [guessing, setGuessing] = useState(false);
+  const [nameGuesses, setNameGuesses] = useState<NameGuess[]>([]);
+  const [editedNames, setEditedNames] = useState<Record<string, string>>({});
+  const [editingGuessId, setEditingGuessId] = useState<string | null>(null);
+  const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState({
@@ -380,6 +399,103 @@ export default function CustomersPage() {
       });
     } finally {
       setMerging(false);
+    }
+  };
+
+  const fetchNameGuesses = async () => {
+    setGuessing(true);
+    setNameGuesses([]);
+    setEditedNames({});
+    setEditingGuessId(null);
+    setApprovingIds(new Set());
+    try {
+      const response = await fetch('/api/v1/customers/guess-names', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNameGuesses(data.guesses || []);
+        if ((data.guesses || []).length === 0) {
+          toast({
+            title: 'No guesses',
+            description: data.totalUnnamed
+              ? `Found ${data.totalUnnamed} unnamed customers but could not guess any names from their emails.`
+              : 'All customers already have names.',
+            variant: 'default',
+          });
+        }
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.error || 'Failed to guess names',
+          variant: 'error',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to guess names',
+        variant: 'error',
+      });
+    } finally {
+      setGuessing(false);
+    }
+  };
+
+  const getDisplayName = (guess: NameGuess): string => {
+    return editedNames[guess.customerId] ?? guess.guessedName ?? '';
+  };
+
+  const approveGuess = async (guess: NameGuess) => {
+    const name = getDisplayName(guess);
+    if (!name.trim()) return;
+
+    setApprovingIds((prev) => new Set(prev).add(guess.customerId));
+    try {
+      const response = await fetch(`/api/v1/customers/${guess.customerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Name updated',
+          description: `${guess.email} → ${name.trim()}`,
+          variant: 'success',
+        });
+        setNameGuesses((prev) => prev.filter((g) => g.customerId !== guess.customerId));
+        await fetchCustomers();
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.error || 'Failed to update name',
+          variant: 'error',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update name',
+        variant: 'error',
+      });
+    } finally {
+      setApprovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(guess.customerId);
+        return next;
+      });
+    }
+  };
+
+  const approveAll = async () => {
+    for (const guess of nameGuesses) {
+      await approveGuess(guess);
+    }
+    if (nameGuesses.length === 0) {
+      setShowGuessNamesModal(false);
     }
   };
 
@@ -858,7 +974,17 @@ export default function CustomersPage() {
             <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
             <p className="text-muted-foreground mt-1">Manage your customer database and relationships</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowGuessNamesModal(true);
+                fetchNameGuesses();
+              }}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Guess Names
+            </Button>
             <Button
               variant={mergeMode ? 'default' : 'outline'}
               onClick={() => (mergeMode ? cancelMerge() : setMergeMode(true))}
@@ -1369,6 +1495,137 @@ export default function CustomersPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Guess Names Modal */}
+        <Dialog open={showGuessNamesModal} onOpenChange={setShowGuessNamesModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Guess Customer Names
+              </DialogTitle>
+              <DialogDescription>
+                Names guessed from customer email addresses. Review, edit if needed, then approve.
+              </DialogDescription>
+            </DialogHeader>
+
+            {guessing ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4" />
+                <p className="text-sm text-muted-foreground">Analyzing emails...</p>
+              </div>
+            ) : nameGuesses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Sparkles className="h-8 w-8 text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">No name guesses available.</p>
+                <p className="text-xs text-muted-foreground mt-1">All customers already have names, or emails didn&apos;t yield confident guesses.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {nameGuesses.map((guess) => {
+                  const isEditing = editingGuessId === guess.customerId;
+                  const displayName = getDisplayName(guess);
+                  const isApproving = approvingIds.has(guess.customerId);
+
+                  return (
+                    <div
+                      key={guess.customerId}
+                      className="flex items-center gap-3 p-3 border rounded-lg"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground truncate">{guess.email}</span>
+                          <Badge
+                            variant="outline"
+                            className={
+                              guess.confidence >= 0.75
+                                ? 'text-xs border-green-500 text-green-700'
+                                : 'text-xs border-amber-500 text-amber-700'
+                            }
+                          >
+                            {Math.round(guess.confidence * 100)}%
+                          </Badge>
+                        </div>
+                        {isEditing ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <input
+                              type="text"
+                              className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                              value={displayName}
+                              onChange={(e) =>
+                                setEditedNames((prev) => ({
+                                  ...prev,
+                                  [guess.customerId]: e.target.value,
+                                }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') setEditingGuessId(null);
+                                if (e.key === 'Escape') {
+                                  setEditedNames((prev) => {
+                                    const next = { ...prev };
+                                    delete next[guess.customerId];
+                                    return next;
+                                  });
+                                  setEditingGuessId(null);
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditingGuessId(null)}>
+                              <Check className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="font-semibold text-sm mt-0.5">{displayName}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {!isEditing && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setEditingGuessId(guess.customerId)}
+                            disabled={isApproving}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={() => setNameGuesses((prev) => prev.filter((g) => g.customerId !== guess.customerId))}
+                          disabled={isApproving}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => approveGuess(guess)}
+                          disabled={isApproving || !displayName.trim()}
+                        >
+                          {isApproving ? 'Saving...' : 'Approve'}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowGuessNamesModal(false)}>
+                Close
+              </Button>
+              {nameGuesses.length > 0 && (
+                <Button onClick={approveAll} disabled={approvingIds.size > 0}>
+                  {approvingIds.size > 0 ? 'Saving...' : `Approve All (${nameGuesses.length})`}
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Merge Confirmation Modal */}
         <Dialog open={showMergeConfirmModal} onOpenChange={setShowMergeConfirmModal}>
           <DialogContent className="max-w-2xl">

@@ -74,7 +74,8 @@
       "Bash(tee:*)",
       "Bash(grep:*)",
       "Bash(yarn remove:*)",
-      "Bash(npx tsx -e:*)"
+      "Bash(npx tsx -e:*)",
+      "Bash(yarn list:*)"
     ],
     "deny": [],
     "ask": []
