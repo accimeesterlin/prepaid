@@ -60,6 +60,7 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 interface Customer {
   _id: string;
   phoneNumber: string;
+  additionalPhoneNumbers?: string[];
   email?: string;
   name?: string;
   country?: string;
@@ -523,6 +524,24 @@ export default function CustomerDetailPage() {
                     <span>{customer.phoneNumber}</span>
                   )}
                 </div>
+                {!editing &&
+                  customer.additionalPhoneNumbers &&
+                  customer.additionalPhoneNumbers.length > 0 && (
+                    <div className="ml-7 space-y-1">
+                      {customer.additionalPhoneNumbers.map((phone, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 text-sm text-muted-foreground"
+                        >
+                          <Phone className="h-3 w-3" />
+                          <span>{phone}</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded border text-muted-foreground">
+                            additional
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 <div className="flex items-center gap-3">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   {editing ? (

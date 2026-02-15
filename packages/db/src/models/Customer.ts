@@ -9,6 +9,7 @@ export interface FindByIdentifierParams {
 export interface ICustomer extends Document {
   orgId: string;
   phoneNumber: string;
+  additionalPhoneNumbers: string[];
   email?: string;
   name?: string;
   country?: string;
@@ -99,6 +100,10 @@ const CustomerSchema = new Schema<ICustomer>(
       type: String,
       required: true,
       trim: true,
+    },
+    additionalPhoneNumbers: {
+      type: [String],
+      default: [],
     },
     email: {
       type: String,
@@ -335,6 +340,7 @@ CustomerSchema.statics.findByOrgAndIdentifier = async function (
   const conditions: Record<string, unknown>[] = [];
   if (identifier.phoneNumber) {
     conditions.push({ orgId, phoneNumber: identifier.phoneNumber });
+    conditions.push({ orgId, additionalPhoneNumbers: identifier.phoneNumber });
   }
   if (identifier.email) {
     conditions.push({ orgId, email: identifier.email.toLowerCase() });
@@ -361,7 +367,10 @@ CustomerSchema.statics.checkDuplicates = async function (
   if (identifier.phoneNumber) {
     const byPhone = await this.findOne({
       ...baseFilter,
-      phoneNumber: identifier.phoneNumber,
+      $or: [
+        { phoneNumber: identifier.phoneNumber },
+        { additionalPhoneNumbers: identifier.phoneNumber },
+      ],
     });
     if (byPhone) {
       return { field: "phoneNumber", value: identifier.phoneNumber };

@@ -21,6 +21,7 @@ import {
   Filter,
   Check,
   Copy,
+  GitMerge,
 } from 'lucide-react';
 
 import {
@@ -107,6 +108,11 @@ export default function CustomersPage() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [mergeMode, setMergeMode] = useState(false);
+  const [primaryCustomer, setPrimaryCustomer] = useState<Customer | null>(null);
+  const [selectedDuplicates, setSelectedDuplicates] = useState<string[]>([]);
+  const [showMergeConfirmModal, setShowMergeConfirmModal] = useState(false);
+  const [merging, setMerging] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState({
@@ -312,6 +318,71 @@ export default function CustomersPage() {
     });
   };
 
+  const handleMergeSelection = (customer: Customer) => {
+    if (!primaryCustomer) {
+      setPrimaryCustomer(customer);
+    } else if (customer._id === primaryCustomer._id) {
+      setPrimaryCustomer(null);
+      setSelectedDuplicates([]);
+    } else {
+      setSelectedDuplicates((prev) =>
+        prev.includes(customer._id)
+          ? prev.filter((id) => id !== customer._id)
+          : [...prev, customer._id],
+      );
+    }
+  };
+
+  const cancelMerge = () => {
+    setMergeMode(false);
+    setPrimaryCustomer(null);
+    setSelectedDuplicates([]);
+  };
+
+  const handleMerge = async () => {
+    if (!primaryCustomer || selectedDuplicates.length === 0) return;
+
+    setMerging(true);
+    try {
+      const response = await fetch('/api/v1/customers/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          primaryCustomerId: primaryCustomer._id,
+          duplicateCustomerIds: selectedDuplicates,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: 'Success',
+          description: `Merged ${data.mergedCount} customer(s). ${data.migratedRecords.transactions} transactions migrated.`,
+          variant: 'success',
+        });
+        cancelMerge();
+        setShowMergeConfirmModal(false);
+        await fetchCustomers();
+        await fetchGroups();
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.error || 'Failed to merge customers',
+          variant: 'error',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to merge customers',
+        variant: 'error',
+      });
+    } finally {
+      setMerging(false);
+    }
+  };
+
   const handleCreateGroup = async () => {
     setSaving(true);
 
@@ -484,21 +555,44 @@ export default function CustomersPage() {
     );
   }
 
+  const getMergeCardClasses = (customerId: string) => {
+    if (!mergeMode) return 'hover:border-primary';
+    if (primaryCustomer?._id === customerId) return 'border-green-500 bg-green-50 ring-2 ring-green-200';
+    if (selectedDuplicates.includes(customerId)) return 'border-orange-500 bg-orange-50 ring-2 ring-orange-200';
+    return 'hover:border-primary';
+  };
+
   const CustomerCard = ({ customer }: { customer: Customer }) => (
     <Card
-      className="hover:border-primary transition-colors cursor-pointer"
-      onClick={() => router.push(`/dashboard/customers/${customer._id}`)}
+      className={`transition-colors cursor-pointer ${getMergeCardClasses(customer._id)}`}
+      onClick={() =>
+        mergeMode
+          ? handleMergeSelection(customer)
+          : router.push(`/dashboard/customers/${customer._id}`)
+      }
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <User className="h-5 w-5 text-primary" />
+            {mergeMode && primaryCustomer?._id === customer._id ? (
+              <Check className="h-5 w-5 text-green-600" />
+            ) : mergeMode && selectedDuplicates.includes(customer._id) ? (
+              <Check className="h-5 w-5 text-orange-600" />
+            ) : (
+              <User className="h-5 w-5 text-primary" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <h3 className="font-semibold text-sm truncate">{customer.name || 'Unnamed Customer'}</h3>
                 {customer.isFavorite && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 flex-shrink-0" />}
+                {mergeMode && primaryCustomer?._id === customer._id && (
+                  <Badge variant="outline" className="text-xs border-green-500 text-green-700 flex-shrink-0">Primary</Badge>
+                )}
+                {mergeMode && selectedDuplicates.includes(customer._id) && (
+                  <Badge variant="outline" className="text-xs border-orange-500 text-orange-700 flex-shrink-0">Duplicate</Badge>
+                )}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -629,13 +723,23 @@ export default function CustomersPage() {
 
   const CustomerListItem = ({ customer }: { customer: Customer }) => (
     <Card
-      className="hover:border-primary transition-colors cursor-pointer"
-      onClick={() => router.push(`/dashboard/customers/${customer._id}`)}
+      className={`transition-colors cursor-pointer ${getMergeCardClasses(customer._id)}`}
+      onClick={() =>
+        mergeMode
+          ? handleMergeSelection(customer)
+          : router.push(`/dashboard/customers/${customer._id}`)
+      }
     >
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <User className="h-6 w-6 text-primary" />
+            {mergeMode && primaryCustomer?._id === customer._id ? (
+              <Check className="h-6 w-6 text-green-600" />
+            ) : mergeMode && selectedDuplicates.includes(customer._id) ? (
+              <Check className="h-6 w-6 text-orange-600" />
+            ) : (
+              <User className="h-6 w-6 text-primary" />
+            )}
           </div>
           <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="flex items-center gap-2">
@@ -643,6 +747,12 @@ export default function CustomersPage() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold">{customer.name || 'Unnamed Customer'}</h3>
                   {customer.isFavorite && <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                  {mergeMode && primaryCustomer?._id === customer._id && (
+                    <Badge variant="outline" className="text-xs border-green-500 text-green-700">Primary</Badge>
+                  )}
+                  {mergeMode && selectedDuplicates.includes(customer._id) && (
+                    <Badge variant="outline" className="text-xs border-orange-500 text-orange-700">Duplicate</Badge>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">{customer.phoneNumber}</p>
               </div>
@@ -749,6 +859,13 @@ export default function CustomersPage() {
             <p className="text-muted-foreground mt-1">Manage your customer database and relationships</p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant={mergeMode ? 'default' : 'outline'}
+              onClick={() => (mergeMode ? cancelMerge() : setMergeMode(true))}
+            >
+              <GitMerge className="h-4 w-4 mr-2" />
+              {mergeMode ? 'Cancel Merge' : 'Merge Customers'}
+            </Button>
             <Button variant="outline" onClick={() => setShowGroupModal(true)}>
               <Users className="h-4 w-4 mr-2" />
               Manage Groups
@@ -759,6 +876,28 @@ export default function CustomersPage() {
             </Button>
           </div>
         </div>
+
+        {/* Merge Mode Banner */}
+        {mergeMode && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="font-medium text-amber-800">
+              {!primaryCustomer
+                ? 'Step 1: Click on a customer to select them as the primary (they will keep their identity).'
+                : `Step 2: Primary selected: ${primaryCustomer.name || primaryCustomer.phoneNumber}. Now click duplicate customers to merge into them.${selectedDuplicates.length > 0 ? ` Selected: ${selectedDuplicates.length}` : ''}`}
+            </p>
+            <div className="flex gap-2 mt-2">
+              {primaryCustomer && selectedDuplicates.length > 0 && (
+                <Button size="sm" onClick={() => setShowMergeConfirmModal(true)}>
+                  <GitMerge className="h-4 w-4 mr-2" />
+                  Merge {selectedDuplicates.length} Customer{selectedDuplicates.length > 1 ? 's' : ''}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={cancelMerge}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Filters and View Toggle */}
         <div className="flex flex-col md:flex-row gap-3">
@@ -1226,6 +1365,72 @@ export default function CustomersPage() {
                 }}
               >
                 Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Merge Confirmation Modal */}
+        <Dialog open={showMergeConfirmModal} onOpenChange={setShowMergeConfirmModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Confirm Customer Merge</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. The following customers will be merged into the primary customer.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {/* Primary Customer */}
+              {primaryCustomer && (
+                <div className="p-3 border-2 border-green-500 rounded-lg bg-green-50">
+                  <Badge variant="outline" className="mb-2 border-green-500 text-green-700">Primary — keeps identity</Badge>
+                  <p className="font-semibold">{primaryCustomer.name || 'Unnamed Customer'}</p>
+                  <p className="text-sm text-muted-foreground">{primaryCustomer.phoneNumber}</p>
+                  {primaryCustomer.email && (
+                    <p className="text-sm text-muted-foreground">{primaryCustomer.email}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {primaryCustomer.metadata.totalPurchases} purchases &middot; {formatCurrency(primaryCustomer.metadata.totalSpent, primaryCustomer.metadata.currency)}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <GitMerge className="h-4 w-4" />
+                <span>Merging into primary:</span>
+              </div>
+
+              {/* Duplicate Customers */}
+              {selectedDuplicates.map((dupId) => {
+                const dup = customers.find((c) => c._id === dupId);
+                if (!dup) return null;
+                return (
+                  <div key={dupId} className="p-3 border border-orange-300 rounded-lg bg-orange-50">
+                    <Badge variant="outline" className="mb-2 border-orange-500 text-orange-700">Will be merged &amp; deleted</Badge>
+                    <p className="font-semibold">{dup.name || 'Unnamed Customer'}</p>
+                    <p className="text-sm text-muted-foreground">{dup.phoneNumber}</p>
+                    {dup.email && (
+                      <p className="text-sm text-muted-foreground">{dup.email}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {dup.metadata.totalPurchases} purchases &middot; {formatCurrency(dup.metadata.totalSpent, dup.metadata.currency)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+              <strong>Warning:</strong> {selectedDuplicates.length} customer record{selectedDuplicates.length > 1 ? 's' : ''} will
+              be permanently deleted. Their transactions, balance history, and other data will be transferred to the primary customer.
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowMergeConfirmModal(false)} disabled={merging}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleMerge} disabled={merging}>
+                {merging ? 'Merging...' : `Merge ${selectedDuplicates.length} Customer${selectedDuplicates.length > 1 ? 's' : ''}`}
               </Button>
             </DialogFooter>
           </DialogContent>
