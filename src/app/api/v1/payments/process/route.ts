@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       amount, // For variable-value products
       sendValue, // For variable-value products (amount in USD to send)
       browserMetadata, // Client-side browser info
+      country, // Country detected from phone lookup
     } = body as {
       orgSlug?: string;
       phoneNumber?: string;
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
       amount?: number;
       sendValue?: number;
       browserMetadata?: Record<string, unknown>;
+      country?: { code: string; name: string };
     };
 
     // Validate required fields
@@ -255,10 +257,10 @@ export async function POST(request: NextRequest) {
       ? sendValue || finalAmount // Use sendValue if provided, otherwise use finalAmount
       : undefined;
 
-    // Detect country from phone number
+    // Use country from lookup if provided, otherwise detect from phone number
     const parsedPhone = parsePhoneNumber(phoneNumber!);
-    const detectedCountry = parsedPhone.regionCode || "";
-    const countryName = detectedCountry ? getCountryName(detectedCountry) : "Unknown";
+    const detectedCountry = country?.code || parsedPhone.regionCode || "";
+    const countryName = country?.name || (detectedCountry ? getCountryName(detectedCountry) : "Unknown");
 
     // Extract pricing breakdown from product data
     const pricing = productData.pricing as Record<string, unknown> | undefined;

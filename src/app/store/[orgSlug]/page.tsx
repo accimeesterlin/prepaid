@@ -639,6 +639,7 @@ export default function PublicStorefrontPage() {
           amount: parseFloat(finalAmount.toFixed(2)),
           sendValue: selectedProduct.isVariableValue ? parseFloat(customAmount) : undefined,
           browserMetadata: collectBrowserMetadata(),
+          country: lookupData.country, // Pass detected country from lookup
         }),
       });
 

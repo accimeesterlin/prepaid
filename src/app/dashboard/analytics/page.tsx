@@ -15,8 +15,21 @@ import {
   Phone,
   CreditCard,
   Package,
+  Eye,
+  ExternalLink,
 } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@pg-prepaid/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@pg-prepaid/ui";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { format } from "date-fns";
 import {
@@ -220,6 +233,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("30d");
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
+  const [selectedFailure, setSelectedFailure] = useState<FailureItem | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedPeriodLabel =
@@ -843,44 +857,49 @@ export default function AnalyticsPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b text-left">
-                          <th className="pb-2 font-medium text-muted-foreground">
+                          <th className="pb-2 pr-4 font-medium text-muted-foreground">
                             Order ID
                           </th>
-                          <th className="pb-2 font-medium text-muted-foreground">
+                          <th className="pb-2 pr-4 font-medium text-muted-foreground">
                             Phone
                           </th>
-                          <th className="pb-2 font-medium text-muted-foreground text-right">
+                          <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">
                             Amount
                           </th>
-                          <th className="pb-2 font-medium text-muted-foreground">
+                          <th className="pb-2 pr-4 font-medium text-muted-foreground">
                             Reason
                           </th>
-                          <th className="pb-2 font-medium text-muted-foreground">
+                          <th className="pb-2 pr-4 font-medium text-muted-foreground">
                             Date
                           </th>
+                          <th className="pb-2 font-medium text-muted-foreground w-10" />
                         </tr>
                       </thead>
                       <tbody>
                         {data!.recentFailures.map((failure) => (
                           <tr
                             key={failure.orderId}
-                            className="border-b last:border-0"
+                            className="border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => setSelectedFailure(failure)}
                           >
-                            <td className="py-2.5 font-mono text-xs">
+                            <td className="py-2.5 pr-4 font-mono text-xs">
                               {failure.orderId}
                             </td>
-                            <td className="py-2.5">{failure.phoneNumber}</td>
-                            <td className="py-2.5 text-right font-medium">
+                            <td className="py-2.5 pr-4">{failure.phoneNumber}</td>
+                            <td className="py-2.5 pr-4 text-right font-medium">
                               {formatCurrency(failure.amount)}
                             </td>
-                            <td className="py-2.5 text-red-600 max-w-[200px] truncate">
+                            <td className="py-2.5 pr-4 text-red-600 max-w-[250px] truncate">
                               {failure.failureReason || "Unknown"}
                             </td>
-                            <td className="py-2.5 text-muted-foreground">
+                            <td className="py-2.5 pr-4 text-muted-foreground">
                               {format(
                                 new Date(failure.createdAt),
                                 "MMM dd, HH:mm",
                               )}
+                            </td>
+                            <td className="py-2.5">
+                              <Eye className="h-4 w-4 text-muted-foreground" />
                             </td>
                           </tr>
                         ))}
@@ -890,6 +909,77 @@ export default function AnalyticsPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Failure Detail Dialog */}
+            <Dialog
+              open={!!selectedFailure}
+              onOpenChange={(open) => {
+                if (!open) setSelectedFailure(null);
+              }}
+            >
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    Failed Transaction
+                  </DialogTitle>
+                  <DialogDescription>
+                    Order {selectedFailure?.orderId}
+                  </DialogDescription>
+                </DialogHeader>
+                {selectedFailure && (
+                  <div className="space-y-4">
+                    {/* Failure Reason */}
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                      <p className="text-xs font-medium text-red-800 mb-1">
+                        Failure Reason
+                      </p>
+                      <p className="text-sm text-red-700 break-words whitespace-pre-wrap">
+                        {selectedFailure.failureReason || "No failure reason recorded"}
+                      </p>
+                    </div>
+
+                    {/* Transaction Details */}
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Phone Number</p>
+                        <p className="font-medium">{selectedFailure.phoneNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Amount</p>
+                        <p className="font-medium">
+                          {formatCurrency(selectedFailure.amount)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Date</p>
+                        <p className="font-medium">
+                          {format(
+                            new Date(selectedFailure.createdAt),
+                            "MMM dd, yyyy 'at' HH:mm:ss",
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Order ID</p>
+                        <p className="font-mono text-xs font-medium">
+                          {selectedFailure.orderId}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Link to transactions page */}
+                    <a
+                      href={`/dashboard/transactions`}
+                      className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      View in Transactions
+                    </a>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </>
         )}
       </div>
