@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
       recentFailures,
       deviceBreakdown,
       browserBreakdown,
+      languageBreakdown,
       totalCustomers,
       newCustomers,
       prevNewCustomers,
@@ -319,13 +320,45 @@ export async function GET(request: NextRequest) {
         { $project: { _id: 0, browser: "$_id", count: 1 } },
       ]),
 
-      // 13. Total customers
+      // 13. Language breakdown (extract primary language from Accept-Language header)
+      Transaction.aggregate([
+        { $match: baseMatch },
+        {
+          $addFields: {
+            primaryLang: {
+              $cond: {
+                if: { $and: [{ $ne: ["$metadata.acceptLanguage", null] }, { $ne: ["$metadata.acceptLanguage", ""] }] },
+                then: {
+                  $toUpper: {
+                    $arrayElemAt: [
+                      { $split: [{ $arrayElemAt: [{ $split: [{ $arrayElemAt: [{ $split: ["$metadata.acceptLanguage", ","] }, 0] }, ";"] }, 0] }, "-"] },
+                      0,
+                    ],
+                  },
+                },
+                else: "Unknown",
+              },
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$primaryLang",
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+        { $project: { _id: 0, language: "$_id", count: 1 } },
+      ]),
+
+      // 14. Total customers
       Customer.countDocuments({ orgId }),
 
-      // 12. New customers in period
+      // 15. New customers in period
       Customer.countDocuments({ orgId, createdAt: { $gte: startDate } }),
 
-      // 13. Previous period new customers
+      // 16. Previous period new customers
       Customer.countDocuments({
         orgId,
         createdAt: { $gte: prevStartDate, $lt: startDate },
@@ -405,6 +438,7 @@ export async function GET(request: NextRequest) {
       recentFailures,
       deviceBreakdown,
       browserBreakdown,
+      languageBreakdown,
     };
 
     return createSuccessResponse(analytics);

@@ -19,6 +19,7 @@ import {
   ExternalLink,
   Smartphone,
   Monitor,
+  Languages,
 } from "lucide-react";
 import {
   Button,
@@ -136,6 +137,11 @@ interface BrowserItem {
   count: number;
 }
 
+interface LanguageItem {
+  language: string;
+  count: number;
+}
+
 interface AnalyticsData {
   summary: AnalyticsSummary;
   revenueOverTime: RevenuePoint[];
@@ -148,6 +154,7 @@ interface AnalyticsData {
   recentFailures: FailureItem[];
   deviceBreakdown: DeviceItem[];
   browserBreakdown: BrowserItem[];
+  languageBreakdown: LanguageItem[];
 }
 
 // --- Constants ---
@@ -179,6 +186,46 @@ const BROWSER_COLORS: Record<string, string> = {
   Edge: "#0078d7",
   Opera: "#ff1b2d",
   Samsung: "#1428a0",
+  Unknown: "#d1d5db",
+};
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  EN: "English",
+  FR: "French",
+  ES: "Spanish",
+  PT: "Portuguese",
+  DE: "German",
+  IT: "Italian",
+  NL: "Dutch",
+  ZH: "Chinese",
+  JA: "Japanese",
+  KO: "Korean",
+  AR: "Arabic",
+  HI: "Hindi",
+  RU: "Russian",
+  HT: "Haitian Creole",
+  TR: "Turkish",
+  PL: "Polish",
+  VI: "Vietnamese",
+  TH: "Thai",
+  Unknown: "Unknown",
+};
+
+const LANGUAGE_COLORS: Record<string, string> = {
+  EN: "#3b82f6",
+  FR: "#2563eb",
+  ES: "#f59e0b",
+  PT: "#10b981",
+  DE: "#6b7280",
+  IT: "#22c55e",
+  NL: "#f97316",
+  ZH: "#ef4444",
+  JA: "#ec4899",
+  KO: "#8b5cf6",
+  AR: "#14b8a6",
+  HI: "#f43f5e",
+  RU: "#0ea5e9",
+  HT: "#a855f7",
   Unknown: "#d1d5db",
 };
 
@@ -653,8 +700,8 @@ export default function AnalyticsPage() {
               )}
             </div>
 
-            {/* Row 4: Device & Browser Breakdown */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Row 4: Device, Browser & Language Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Device Breakdown */}
               {data!.deviceBreakdown && data!.deviceBreakdown.length > 0 && (
                 <Card>
@@ -765,6 +812,65 @@ export default function AnalyticsPage() {
                           />
                           <span>
                             {item.browser} ({item.count})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Language Breakdown */}
+              {data!.languageBreakdown && data!.languageBreakdown.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Languages className="h-5 w-5" />
+                      Languages
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={data!.languageBreakdown}
+                          dataKey="count"
+                          nameKey="language"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          innerRadius={55}
+                          paddingAngle={2}
+                        >
+                          {data!.languageBreakdown.map((item) => (
+                            <Cell
+                              key={item.language}
+                              fill={
+                                LANGUAGE_COLORS[item.language] ||
+                                PAYMENT_COLORS[
+                                  data!.languageBreakdown.indexOf(item) %
+                                    PAYMENT_COLORS.length
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<PieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap justify-center gap-3 mt-2 text-xs">
+                      {data!.languageBreakdown.map((item, i) => (
+                        <div key={item.language} className="flex items-center gap-1.5">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{
+                              backgroundColor:
+                                LANGUAGE_COLORS[item.language] ||
+                                PAYMENT_COLORS[i % PAYMENT_COLORS.length],
+                            }}
+                          />
+                          <span>
+                            {LANGUAGE_NAMES[item.language] || item.language} ({item.count})
                           </span>
                         </div>
                       ))}
