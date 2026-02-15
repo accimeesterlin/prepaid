@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
         { $sort: { count: -1 } },
       ]),
 
-      // 5. Top customers by spend
+      // 5. Top customers by spend (lookup current name from Customer collection)
       Transaction.aggregate([
         { $match: { ...baseMatch, status: "completed" } },
         {
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
             totalSpent: { $sum: "$amount" },
             transactionCount: { $sum: 1 },
             email: { $first: "$recipient.email" },
-            name: { $first: "$recipient.name" },
+            txName: { $first: "$recipient.name" },
             country: { $first: "$operator.country" },
             lastPurchase: { $max: "$createdAt" },
           },
@@ -177,13 +177,30 @@ export async function GET(request: NextRequest) {
         { $sort: { totalSpent: -1 } },
         { $limit: 10 },
         {
+          $lookup: {
+            from: "customers",
+            let: { phone: "$_id" },
+            pipeline: [
+              { $match: { $expr: { $and: [{ $eq: ["$orgId", orgId] }, { $eq: ["$phoneNumber", "$$phone"] }] } } },
+              { $project: { name: 1 } },
+              { $limit: 1 },
+            ],
+            as: "customerDoc",
+          },
+        },
+        {
           $project: {
             _id: 0,
             phoneNumber: "$_id",
             totalSpent: { $round: ["$totalSpent", 2] },
             transactionCount: 1,
             email: 1,
-            name: 1,
+            name: {
+              $ifNull: [
+                { $arrayElemAt: ["$customerDoc.name", 0] },
+                "$txName",
+              ],
+            },
             country: 1,
             lastPurchase: 1,
           },
