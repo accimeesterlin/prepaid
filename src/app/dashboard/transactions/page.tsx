@@ -63,6 +63,13 @@ interface Transaction {
   metadata: {
     testMode?: boolean;
     productName?: string;
+    productSkuCode?: string;
+    isVariableValue?: boolean;
+    sendValue?: number;
+    failureReason?: string;
+    retryCount?: number;
+    retriedBy?: string;
+    retriedAt?: string;
     [key: string]: any;
   };
   createdAt: string;
@@ -96,6 +103,14 @@ export default function TransactionsPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [statusReason, setStatusReason] = useState("");
+  const [showRetryDialog, setShowRetryDialog] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryForm, setRetryForm] = useState({
+    phoneNumber: "",
+    skuCode: "",
+    sendValue: "",
+    validateOnly: false,
+  });
 
   // Load filters from localStorage on mount
   useEffect(() => {
@@ -277,6 +292,96 @@ export default function TransactionsPage() {
     setNewStatus(transaction.status);
     setStatusReason("");
     setShowStatusDialog(true);
+  };
+
+  const openRetryDialog = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setRetryForm({
+      phoneNumber: transaction.recipient.phoneNumber,
+      skuCode: transaction.metadata?.productSkuCode || "",
+      sendValue: transaction.metadata?.sendValue?.toString() || "",
+      validateOnly: false,
+    });
+    setShowRetryDialog(true);
+  };
+
+  const handleRetryTransaction = async () => {
+    if (!selectedTransaction) return;
+
+    setRetrying(true);
+    try {
+      const body: Record<string, unknown> = {
+        validateOnly: retryForm.validateOnly,
+      };
+
+      // Only send fields that differ from originals
+      if (retryForm.phoneNumber !== selectedTransaction.recipient.phoneNumber) {
+        body.phoneNumber = retryForm.phoneNumber;
+      }
+      if (
+        retryForm.skuCode !==
+        (selectedTransaction.metadata?.productSkuCode || "")
+      ) {
+        body.skuCode = retryForm.skuCode;
+      }
+      if (
+        retryForm.sendValue &&
+        Number(retryForm.sendValue) !== selectedTransaction.metadata?.sendValue
+      ) {
+        body.sendValue = Number(retryForm.sendValue);
+      }
+
+      const response = await fetch(
+        `/api/v1/transactions/${selectedTransaction._id}/retry`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.data?.retrySuccess) {
+        toast({
+          title: retryForm.validateOnly
+            ? "Validation Successful"
+            : "Retry Successful",
+          description: retryForm.validateOnly
+            ? "DingConnect validated the transfer successfully."
+            : "Transaction has been retried and completed successfully.",
+          variant: "success",
+        });
+        setShowRetryDialog(false);
+        setShowDetails(false);
+        fetchTransactions();
+      } else if (response.ok && data.data?.retrySuccess === false) {
+        toast({
+          title: "Retry Failed",
+          description:
+            data.data?.transferResult?.errorMessage ||
+            data.data?.transaction?.metadata?.failureReason ||
+            "DingConnect transfer failed. Check the failure reason and try again.",
+          variant: "error",
+          duration: 0,
+        });
+        fetchTransactions();
+      } else {
+        toast({
+          title: "Error",
+          description: data.detail || data.title || "Failed to retry transaction",
+          variant: "error",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to retry transaction. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setRetrying(false);
+    }
   };
 
   if (loading) {
@@ -509,6 +614,17 @@ export default function TransactionsPage() {
                             <RefreshCw className="h-3.5 w-3.5 mr-2" />
                             Update Status
                           </DropdownMenuItem>
+                          {transaction.status === "failed" && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openRetryDialog(transaction);
+                              }}
+                            >
+                              <Beaker className="h-3.5 w-3.5 mr-2" />
+                              Retry Transaction
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={(e) => {
@@ -669,6 +785,17 @@ export default function TransactionsPage() {
                         <RefreshCw className="h-3.5 w-3.5 mr-2" />
                         Update Status
                       </DropdownMenuItem>
+                      {selectedTransaction.status === "failed" && (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setShowDetails(false);
+                            openRetryDialog(selectedTransaction);
+                          }}
+                        >
+                          <Beaker className="h-3.5 w-3.5 mr-2" />
+                          Retry Transaction
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={() =>
@@ -1212,6 +1339,185 @@ export default function TransactionsPage() {
                   </>
                 ) : (
                   "Update Status"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Retry Transaction Dialog */}
+        <Dialog open={showRetryDialog} onOpenChange={setShowRetryDialog}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Retry Failed Transaction</DialogTitle>
+              <DialogDescription>
+                Retry DingConnect transfer for{" "}
+                <span className="font-mono text-xs">
+                  {selectedTransaction?.orderId}
+                </span>
+                . You can adjust the payload before retrying.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Failure Reason Banner */}
+              {selectedTransaction?.metadata?.failureReason && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                  <div className="text-sm text-red-800">
+                    <p className="font-medium">Previous Failure Reason</p>
+                    <p className="text-xs mt-1 break-words">
+                      {selectedTransaction.metadata.failureReason}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Retry Count */}
+              {(selectedTransaction?.metadata?.retryCount ?? 0) > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  This transaction has been retried{" "}
+                  <strong>{selectedTransaction?.metadata?.retryCount}</strong>{" "}
+                  time
+                  {selectedTransaction?.metadata?.retryCount === 1
+                    ? ""
+                    : "s"}{" "}
+                  before.
+                </p>
+              )}
+
+              {/* Phone Number */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={retryForm.phoneNumber}
+                  onChange={(e) =>
+                    setRetryForm((prev) => ({
+                      ...prev,
+                      phoneNumber: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g., +50937001234"
+                />
+              </div>
+
+              {/* SKU Code */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">
+                  SKU Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={retryForm.skuCode}
+                  onChange={(e) =>
+                    setRetryForm((prev) => ({
+                      ...prev,
+                      skuCode: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g., DBHTHT91705"
+                />
+              </div>
+
+              {/* Send Value - shown for variable-value products or when there's a sendValue */}
+              {(selectedTransaction?.metadata?.isVariableValue ||
+                selectedTransaction?.metadata?.sendValue) && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">
+                    Send Value (USD) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={retryForm.sendValue}
+                    onChange={(e) =>
+                      setRetryForm((prev) => ({
+                        ...prev,
+                        sendValue: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g., 5.00"
+                  />
+                </div>
+              )}
+
+              {/* Validate Only Toggle */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="retryValidateOnly"
+                  checked={retryForm.validateOnly}
+                  onChange={(e) =>
+                    setRetryForm((prev) => ({
+                      ...prev,
+                      validateOnly: e.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <label
+                  htmlFor="retryValidateOnly"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Validate only (do not send real top-up)
+                </label>
+              </div>
+
+              {/* Warning */}
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium">
+                    {retryForm.validateOnly
+                      ? "Validation Mode"
+                      : "Confirm Retry"}
+                  </p>
+                  <p className="text-xs mt-1">
+                    {retryForm.validateOnly
+                      ? "This will validate the transfer with DingConnect without sending a real top-up."
+                      : "This will send a real top-up via DingConnect. The recipient will receive the credit."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowRetryDialog(false)}
+                disabled={retrying}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRetryTransaction}
+                disabled={
+                  retrying ||
+                  !retryForm.phoneNumber.trim() ||
+                  !retryForm.skuCode.trim() ||
+                  !!(
+                    (selectedTransaction?.metadata?.isVariableValue ||
+                      selectedTransaction?.metadata?.sendValue) &&
+                    !retryForm.sendValue
+                  )
+                }
+              >
+                {retrying ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    {retryForm.validateOnly ? "Validating..." : "Retrying..."}
+                  </>
+                ) : retryForm.validateOnly ? (
+                  "Validate Transfer"
+                ) : (
+                  "Retry Transfer"
                 )}
               </Button>
             </DialogFooter>
