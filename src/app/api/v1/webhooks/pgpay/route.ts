@@ -345,36 +345,43 @@ export async function POST(request: NextRequest) {
       let sendValue = (pgpayMetadata?.sendValue || transactionMetadata.sendValue) as number | undefined;
       let isVariableValue = (pgpayMetadata?.isVariableValue ?? transactionMetadata.isVariableValue) as boolean | undefined;
 
-      // If isVariableValue is undefined, try to determine from the SKU code
-      // DingConnect variable-value products typically have specific SKU patterns
+      // If isVariableValue is undefined, try to determine from metadata or database
       if (isVariableValue === undefined && productSkuCode) {
-        // Variable-value products often end with patterns like '01' or have specific codes
-        // For now, we'll check if the product exists in our database
-        try {
-          const Product = (await import("@pg-prepaid/db")).Product;
-          const product = await Product.findOne({
-            $or: [
-              { skuCode: productSkuCode },
-              { "provider.productCode": productSkuCode },
-            ],
-          });
-
-          if (product) {
-            // 'range' denomination type means it's a variable-value product
-            isVariableValue = product.denomination?.type === 'range';
-            logger.info("Retrieved isVariableValue from product database", {
-              orderId: transaction.orderId,
-              productSkuCode,
-              denominationType: product.denomination?.type,
-              isVariableValue,
-            });
-          }
-        } catch (error) {
-          logger.warn("Failed to lookup product for isVariableValue", {
+        // If sendValue exists in metadata, treat it as variable-value
+        if (sendValue) {
+          isVariableValue = true;
+          logger.info("Inferred isVariableValue=true from sendValue in metadata", {
             orderId: transaction.orderId,
             productSkuCode,
-            error: error instanceof Error ? error.message : "Unknown error",
+            sendValue,
           });
+        } else {
+          // Fall back to Product database lookup
+          try {
+            const Product = (await import("@pg-prepaid/db")).Product;
+            const product = await Product.findOne({
+              $or: [
+                { skuCode: productSkuCode },
+                { "provider.productCode": productSkuCode },
+              ],
+            });
+
+            if (product) {
+              isVariableValue = product.denomination?.type === 'range';
+              logger.info("Retrieved isVariableValue from product database", {
+                orderId: transaction.orderId,
+                productSkuCode,
+                denominationType: product.denomination?.type,
+                isVariableValue,
+              });
+            }
+          } catch (error) {
+            logger.warn("Failed to lookup product for isVariableValue", {
+              orderId: transaction.orderId,
+              productSkuCode,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
         }
       }
 
@@ -385,6 +392,56 @@ export async function POST(request: NextRequest) {
           orderId: transaction.orderId,
           amount: transaction.amount,
         });
+      }
+
+      // Safety net: if sendValue exists but isVariableValue wasn't determined,
+      // still include it — DingConnect will ignore it for fixed-value products
+      if (!isVariableValue && sendValue) {
+        isVariableValue = true;
+        logger.warn("SendValue exists but isVariableValue was false — forcing to true", {
+          orderId: transaction.orderId,
+          productSkuCode,
+          sendValue,
+        });
+      }
+
+      // Last resort: if isVariableValue is still unknown, check the DingConnect product
+      // This handles transactions created before the metadata schema fix
+      if (isVariableValue === undefined && productSkuCode) {
+        try {
+          const products = await dingConnect.getProducts();
+          const dingProduct = products.find(
+            (p: { SkuCode: string }) => p.SkuCode === productSkuCode,
+          );
+          if (dingProduct) {
+            const hasMinMax = dingProduct.Minimum?.SendValue != null && dingProduct.Maximum?.SendValue != null;
+            if (hasMinMax) {
+              isVariableValue = true;
+              if (!sendValue) {
+                sendValue = transaction.amount;
+              }
+              logger.info("Determined variable-value from DingConnect product data", {
+                orderId: transaction.orderId,
+                productSkuCode,
+                min: dingProduct.Minimum?.SendValue,
+                max: dingProduct.Maximum?.SendValue,
+                sendValue,
+              });
+            } else {
+              isVariableValue = false;
+              logger.info("Determined fixed-value from DingConnect product data", {
+                orderId: transaction.orderId,
+                productSkuCode,
+              });
+            }
+          }
+        } catch (error) {
+          logger.warn("Failed to lookup product from DingConnect", {
+            orderId: transaction.orderId,
+            productSkuCode,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
       }
 
       logger.info("Product SKU extraction", {
