@@ -45,6 +45,7 @@ import {
   toast,
 } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
+import type { DuplicateGroup, FindDuplicatesResponse } from '@/types/find-duplicates';
 
 interface Customer {
   _id: string;
@@ -132,6 +133,11 @@ export default function CustomersPage() {
   const [editedNames, setEditedNames] = useState<Record<string, string>>({});
   const [editingGuessId, setEditingGuessId] = useState<string | null>(null);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
+  const [showFindDuplicatesModal, setShowFindDuplicatesModal] = useState(false);
+  const [findingDuplicates, setFindingDuplicates] = useState(false);
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
+  const [duplicateSummary, setDuplicateSummary] = useState({ totalGroups: 0, totalDuplicateCustomers: 0 });
+  const [mergeGroupCustomers, setMergeGroupCustomers] = useState<Customer[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [pagination, setPagination] = useState({
@@ -356,6 +362,7 @@ export default function CustomersPage() {
     setMergeMode(false);
     setPrimaryCustomer(null);
     setSelectedDuplicates([]);
+    setMergeGroupCustomers([]);
   };
 
   const handleMerge = async () => {
@@ -497,6 +504,78 @@ export default function CustomersPage() {
     if (nameGuesses.length === 0) {
       setShowGuessNamesModal(false);
     }
+  };
+
+  const fetchDuplicates = async () => {
+    setFindingDuplicates(true);
+    setDuplicateGroups([]);
+    setDuplicateSummary({ totalGroups: 0, totalDuplicateCustomers: 0 });
+    try {
+      const response = await fetch('/api/v1/customers/find-duplicates', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data: FindDuplicatesResponse = await response.json();
+        setDuplicateGroups(data.groups);
+        setDuplicateSummary({
+          totalGroups: data.totalGroups,
+          totalDuplicateCustomers: data.totalDuplicateCustomers,
+        });
+        if (data.groups.length === 0) {
+          toast({
+            title: 'No duplicates found',
+            description: 'All customer records appear to be unique.',
+            variant: 'default',
+          });
+        }
+      } else {
+        const error = await response.json();
+        toast({
+          title: 'Error',
+          description: error.error || 'Failed to find duplicates',
+          variant: 'error',
+        });
+      }
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to find duplicates',
+        variant: 'error',
+      });
+    } finally {
+      setFindingDuplicates(false);
+    }
+  };
+
+  const startMergeFromDuplicateGroup = (group: DuplicateGroup) => {
+    setShowFindDuplicatesModal(false);
+
+    // Sort by createdAt — oldest becomes suggested primary
+    const sorted = [...group.customers].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+
+    const primary = sorted[0];
+    const duplicateIds = sorted.slice(1).map((c) => String(c._id));
+
+    // Map to the Customer interface used by existing merge state
+    const toCustomer = (c: typeof primary): Customer => ({
+      _id: String(c._id),
+      phoneNumber: c.phoneNumber,
+      email: c.email,
+      name: c.name,
+      country: c.country,
+      isFavorite: c.isFavorite,
+      groups: c.groups,
+      metadata: c.metadata,
+      createdAt: c.createdAt,
+    });
+
+    setMergeGroupCustomers(sorted.map(toCustomer));
+    setMergeMode(true);
+    setPrimaryCustomer(toCustomer(primary));
+    setSelectedDuplicates(duplicateIds);
+    setShowMergeConfirmModal(true);
   };
 
   const handleCreateGroup = async () => {
@@ -984,6 +1063,16 @@ export default function CustomersPage() {
             >
               <Sparkles className="h-4 w-4 mr-2" />
               Guess Names
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowFindDuplicatesModal(true);
+                fetchDuplicates();
+              }}
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Find Duplicates
             </Button>
             <Button
               variant={mergeMode ? 'default' : 'outline'}
@@ -1628,6 +1717,114 @@ export default function CustomersPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Find Duplicates Modal */}
+        <Dialog open={showFindDuplicatesModal} onOpenChange={setShowFindDuplicatesModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Find Duplicate Customers
+              </DialogTitle>
+              <DialogDescription>
+                Customers that share the same phone number or email address.
+                {duplicateSummary.totalGroups > 0 && (
+                  <span className="ml-1">
+                    Found {duplicateSummary.totalGroups} group{duplicateSummary.totalGroups !== 1 ? 's' : ''} involving{' '}
+                    {duplicateSummary.totalDuplicateCustomers} customer{duplicateSummary.totalDuplicateCustomers !== 1 ? 's' : ''}.
+                  </span>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+
+            {findingDuplicates ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4" />
+                <p className="text-sm text-muted-foreground">Scanning for duplicates...</p>
+              </div>
+            ) : duplicateGroups.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Users className="h-8 w-8 text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">No duplicate customers found.</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  All customer records have unique phone numbers and email addresses.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                {duplicateGroups.map((group, groupIndex) => (
+                  <div key={`${group.matchType}-${group.matchValue}-${groupIndex}`} className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={
+                            group.matchType === 'phone'
+                              ? 'border-blue-500 text-blue-700'
+                              : 'border-purple-500 text-purple-700'
+                          }
+                        >
+                          {group.matchType === 'phone' ? (
+                            <><Phone className="h-3 w-3 mr-1" /> Phone</>
+                          ) : (
+                            <>Email</>
+                          )}
+                        </Badge>
+                        <span className="text-sm font-mono text-muted-foreground">
+                          {group.matchValue}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => startMergeFromDuplicateGroup(group)}
+                      >
+                        <GitMerge className="h-3.5 w-3.5 mr-1" />
+                        Merge
+                      </Button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {group.customers.map((customer, custIndex) => (
+                        <div
+                          key={String(customer._id)}
+                          className={`flex items-center gap-3 p-2 rounded text-sm ${
+                            custIndex === 0 ? 'bg-green-50 border border-green-200' : 'bg-muted/50'
+                          }`}
+                        >
+                          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">
+                              {customer.name || 'Unnamed'}
+                            </span>
+                            <span className="text-muted-foreground ml-2">
+                              {customer.phoneNumber}
+                            </span>
+                            {customer.email && (
+                              <span className="text-muted-foreground ml-2">
+                                {customer.email}
+                              </span>
+                            )}
+                          </div>
+                          {custIndex === 0 && (
+                            <Badge variant="outline" className="text-xs border-green-500 text-green-700 flex-shrink-0">
+                              Suggested Primary
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowFindDuplicatesModal(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Merge Confirmation Modal */}
         <Dialog open={showMergeConfirmModal} onOpenChange={setShowMergeConfirmModal}>
           <DialogContent className="max-w-2xl">
@@ -1661,7 +1858,7 @@ export default function CustomersPage() {
 
               {/* Duplicate Customers */}
               {selectedDuplicates.map((dupId) => {
-                const dup = customers.find((c) => c._id === dupId);
+                const dup = customers.find((c) => c._id === dupId) || mergeGroupCustomers.find((c) => c._id === dupId);
                 if (!dup) return null;
                 return (
                   <div key={dupId} className="p-3 border border-orange-300 rounded-lg bg-orange-50">
