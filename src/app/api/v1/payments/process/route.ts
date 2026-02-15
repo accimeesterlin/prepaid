@@ -13,6 +13,7 @@ import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { createPGPayService } from "@/lib/services/pgpay.service";
 import { logger } from "@/lib/logger";
 import { checkTransactionLimit } from "@/lib/services/usage-tracking.service";
+import { parseUserAgent } from "@/lib/parse-user-agent";
 import { parsePhoneNumber } from "awesome-phonenumber";
 import countries from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
@@ -310,6 +311,7 @@ export async function POST(request: NextRequest) {
           request.headers.get("x-real-ip") ||
           "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
+        ...parseUserAgent(request.headers.get("user-agent")),
         acceptLanguage: request.headers.get("accept-language") || undefined,
         referer: request.headers.get("referer") || undefined,
         origin: request.headers.get("origin") || undefined,
@@ -435,10 +437,8 @@ export async function POST(request: NextRequest) {
         });
 
         // Store PGPay token in transaction metadata
-        (transaction.metadata as Record<string, unknown>).pgpayToken =
-          pgpayResponse.token;
-        (transaction.metadata as Record<string, unknown>).pgpayOrderId =
-          pgpayResponse.orderId;
+        transaction.metadata.pgpayToken = pgpayResponse.token;
+        transaction.metadata.pgpayOrderId = pgpayResponse.orderId;
         transaction.status = "pending" as typeof transaction.status;
         await transaction.save();
 

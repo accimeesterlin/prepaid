@@ -39,6 +39,7 @@
     "react-dom": "19.1.0",
     "recharts": "^2.10.0",
     "tailwind-merge": "^2.2.0",
+    "ua-parser-js": "^2.0.9",
     "uuid": "^9.0.1",
     "zeptomail": "^7.0.0",
     "zod": "^3.22.4"

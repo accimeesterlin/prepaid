@@ -37,6 +37,43 @@ export interface ITransaction extends Document {
     userAgent?: string;
     failureReason?: string;
     retryCount: number;
+    // Product details
+    productSkuCode?: string;
+    productName?: string;
+    providerName?: string;
+    isVariableValue?: boolean;
+    sendValue?: number;
+    benefitAmount?: number;
+    benefitUnit?: string;
+    // Country info
+    countryCode?: string;
+    countryName?: string;
+    // Pricing breakdown
+    costPrice?: number;
+    customerPrice?: number;
+    markup?: number;
+    discount?: number;
+    discountAmount?: number;
+    finalPrice?: number;
+    pricingRuleName?: string;
+    // Payment gateway tokens
+    pgpayToken?: string;
+    pgpayOrderId?: string;
+    // Device & browser (parsed from user-agent)
+    deviceType?: string;
+    browserName?: string;
+    browserVersion?: string;
+    osName?: string;
+    osVersion?: string;
+    // Browser & request info
+    acceptLanguage?: string;
+    referer?: string;
+    origin?: string;
+    secChUa?: string;
+    secChUaPlatform?: string;
+    secChUaMobile?: string;
+    browser?: Record<string, unknown>;
+    [key: string]: unknown;
   };
   timeline: {
     createdAt: Date;
@@ -162,6 +199,42 @@ const TransactionSchema = new Schema<ITransaction>(
         type: Number,
         default: 0,
       },
+      // Product details
+      productSkuCode: String,
+      productName: String,
+      providerName: String,
+      isVariableValue: Boolean,
+      sendValue: Number,
+      benefitAmount: Number,
+      benefitUnit: String,
+      // Country info
+      countryCode: String,
+      countryName: String,
+      // Pricing breakdown
+      costPrice: Number,
+      customerPrice: Number,
+      markup: Number,
+      discount: Number,
+      discountAmount: Number,
+      finalPrice: Number,
+      pricingRuleName: String,
+      // Payment gateway tokens
+      pgpayToken: String,
+      pgpayOrderId: String,
+      // Device & browser (parsed from user-agent)
+      deviceType: String,
+      browserName: String,
+      browserVersion: String,
+      osName: String,
+      osVersion: String,
+      // Browser & request info
+      acceptLanguage: String,
+      referer: String,
+      origin: String,
+      secChUa: String,
+      secChUaPlatform: String,
+      secChUaMobile: String,
+      browser: Schema.Types.Mixed,
     },
     timeline: {
       createdAt: {
@@ -189,6 +262,7 @@ TransactionSchema.index({ paymentGateway: 1, paymentId: 1 });
 TransactionSchema.index({ createdBy: 1, createdAt: -1 });
 TransactionSchema.index({ orgId: 1, createdBy: 1, status: 1 });
 TransactionSchema.index({ orgId: 1, paymentType: 1 });
+TransactionSchema.index({ "metadata.productSkuCode": 1 });
 
 // Generate orderId before save
 TransactionSchema.pre("save", function (next) {

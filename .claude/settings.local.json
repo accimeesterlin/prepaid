@@ -72,7 +72,9 @@
       "Bash(find:*)",
       "mcp__ide__getDiagnostics",
       "Bash(tee:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(yarn remove:*)",
+      "Bash(npx tsx -e:*)"
     ],
     "deny": [],
     "ask": []

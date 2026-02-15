@@ -21,6 +21,7 @@ import { requireVerifiedCustomer } from "@/lib/auth-middleware";
 import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { logger } from "@/lib/logger";
 import { trackTransactionCompletion, checkTransactionLimit } from "@/lib/services/usage-tracking.service";
+import { parseUserAgent } from "@/lib/parse-user-agent";
 import { parsePhoneNumber } from "awesome-phonenumber";
 import countries from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
@@ -381,6 +382,7 @@ export async function POST(request: NextRequest) {
           request.headers.get("x-real-ip") ||
           "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
+        ...parseUserAgent(request.headers.get("user-agent")),
         acceptLanguage: request.headers.get("accept-language") || undefined,
         referer: request.headers.get("referer") || undefined,
         origin: request.headers.get("origin") || undefined,

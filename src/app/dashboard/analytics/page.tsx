@@ -17,6 +17,8 @@ import {
   Package,
   Eye,
   ExternalLink,
+  Smartphone,
+  Monitor,
 } from "lucide-react";
 import {
   Button,
@@ -124,6 +126,16 @@ interface FailureItem {
   createdAt: string;
 }
 
+interface DeviceItem {
+  device: string;
+  count: number;
+}
+
+interface BrowserItem {
+  browser: string;
+  count: number;
+}
+
 interface AnalyticsData {
   summary: AnalyticsSummary;
   revenueOverTime: RevenuePoint[];
@@ -134,6 +146,8 @@ interface AnalyticsData {
   paymentMethods: PaymentMethodItem[];
   topProducts: ProductItem[];
   recentFailures: FailureItem[];
+  deviceBreakdown: DeviceItem[];
+  browserBreakdown: BrowserItem[];
 }
 
 // --- Constants ---
@@ -148,6 +162,25 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const PAYMENT_COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#6b7280"];
+
+const DEVICE_COLORS: Record<string, string> = {
+  iPhone: "#000000",
+  iPad: "#6b7280",
+  Android: "#3ddc84",
+  Tablet: "#f59e0b",
+  Desktop: "#3b82f6",
+  Unknown: "#d1d5db",
+};
+
+const BROWSER_COLORS: Record<string, string> = {
+  Chrome: "#4285f4",
+  Safari: "#007aff",
+  Firefox: "#ff7139",
+  Edge: "#0078d7",
+  Opera: "#ff1b2d",
+  Samsung: "#1428a0",
+  Unknown: "#d1d5db",
+};
 
 const PERIOD_OPTIONS = [
   { value: "today", label: "Today" },
@@ -620,7 +653,128 @@ export default function AnalyticsPage() {
               )}
             </div>
 
-            {/* Row 4: Top Countries + Top Operators */}
+            {/* Row 4: Device & Browser Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Device Breakdown */}
+              {data!.deviceBreakdown && data!.deviceBreakdown.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Smartphone className="h-5 w-5" />
+                      Devices
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={data!.deviceBreakdown}
+                          dataKey="count"
+                          nameKey="device"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          innerRadius={55}
+                          paddingAngle={2}
+                        >
+                          {data!.deviceBreakdown.map((item) => (
+                            <Cell
+                              key={item.device}
+                              fill={
+                                DEVICE_COLORS[item.device] ||
+                                PAYMENT_COLORS[
+                                  data!.deviceBreakdown.indexOf(item) %
+                                    PAYMENT_COLORS.length
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<PieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap justify-center gap-3 mt-2 text-xs">
+                      {data!.deviceBreakdown.map((item, i) => (
+                        <div key={item.device} className="flex items-center gap-1.5">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{
+                              backgroundColor:
+                                DEVICE_COLORS[item.device] ||
+                                PAYMENT_COLORS[i % PAYMENT_COLORS.length],
+                            }}
+                          />
+                          <span>
+                            {item.device} ({item.count})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Browser Breakdown */}
+              {data!.browserBreakdown && data!.browserBreakdown.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Monitor className="h-5 w-5" />
+                      Browsers
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={data!.browserBreakdown}
+                          dataKey="count"
+                          nameKey="browser"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          innerRadius={55}
+                          paddingAngle={2}
+                        >
+                          {data!.browserBreakdown.map((item) => (
+                            <Cell
+                              key={item.browser}
+                              fill={
+                                BROWSER_COLORS[item.browser] ||
+                                PAYMENT_COLORS[
+                                  data!.browserBreakdown.indexOf(item) %
+                                    PAYMENT_COLORS.length
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<PieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap justify-center gap-3 mt-2 text-xs">
+                      {data!.browserBreakdown.map((item, i) => (
+                        <div key={item.browser} className="flex items-center gap-1.5">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{
+                              backgroundColor:
+                                BROWSER_COLORS[item.browser] ||
+                                PAYMENT_COLORS[i % PAYMENT_COLORS.length],
+                            }}
+                          />
+                          <span>
+                            {item.browser} ({item.count})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Row 5: Top Countries + Top Operators */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top Countries */}
               {data!.topCountries.length > 0 && (

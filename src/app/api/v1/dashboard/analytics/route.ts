@@ -79,6 +79,8 @@ export async function GET(request: NextRequest) {
       paymentMethods,
       topProducts,
       recentFailures,
+      deviceBreakdown,
+      browserBreakdown,
       totalCustomers,
       newCustomers,
       prevNewCustomers,
@@ -274,7 +276,33 @@ export async function GET(request: NextRequest) {
         },
       ]),
 
-      // 11. Total customers
+      // 11. Device type breakdown
+      Transaction.aggregate([
+        { $match: baseMatch },
+        {
+          $group: {
+            _id: { $ifNull: ["$metadata.deviceType", "Unknown"] },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $project: { _id: 0, device: "$_id", count: 1 } },
+      ]),
+
+      // 12. Browser breakdown
+      Transaction.aggregate([
+        { $match: baseMatch },
+        {
+          $group: {
+            _id: { $ifNull: ["$metadata.browserName", "Unknown"] },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $project: { _id: 0, browser: "$_id", count: 1 } },
+      ]),
+
+      // 13. Total customers
       Customer.countDocuments({ orgId }),
 
       // 12. New customers in period
@@ -358,6 +386,8 @@ export async function GET(request: NextRequest) {
       paymentMethods,
       topProducts,
       recentFailures,
+      deviceBreakdown,
+      browserBreakdown,
     };
 
     return createSuccessResponse(analytics);
