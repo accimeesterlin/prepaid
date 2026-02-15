@@ -72,6 +72,7 @@
     "provider": "Provider:",
     "enterAmount": "Enter Amount (${min} - ${max})",
     "theyReceive": "They receive:",
+    "receiveDisclaimer": "Actual amount may vary. Carrier bonuses may be included.",
     "calculating": "Calculating...",
     "enterValidAmount": "Enter valid amount",
     "emailAddress": "Email Address",

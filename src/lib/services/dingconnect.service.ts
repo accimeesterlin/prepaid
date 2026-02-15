@@ -106,6 +106,22 @@ export interface SendTransferResponse {
   ErrorCode?: string;
 }
 
+export interface DingConnectProductDescription {
+  /** Short description of the product */
+  DisplayText: string;
+  /** Longer markdown description of the product */
+  DescriptionMarkdown?: string;
+  /** More detailed information about the product */
+  ReadMoreMarkdown?: string;
+  LocalizationKey: string;
+  LanguageCode: string;
+}
+
+export interface GetProductDescriptionsParams {
+  skuCodes?: string[];
+  languageCodes?: string[];
+}
+
 export interface GetProvidersParams {
   countryIso?: string;
   regionCode?: string;
@@ -347,6 +363,31 @@ export class DingConnectService {
     if (params.providerCode) query.append('ProviderCode', params.providerCode);
 
     return this.request<AccountLookupResponse>(`/api/V1/GetAccountLookup?${query.toString()}`);
+  }
+
+  /**
+   * Get localized product descriptions
+   * GET /api/V1/GetProductDescriptions
+   */
+  async getProductDescriptions(params?: GetProductDescriptionsParams): Promise<DingConnectProductDescription[]> {
+    const query = new URLSearchParams();
+    if (params?.skuCodes) {
+      for (const code of params.skuCodes) {
+        query.append('skuCodes', code);
+      }
+    }
+    if (params?.languageCodes) {
+      for (const lang of params.languageCodes) {
+        query.append('languageCodes', lang);
+      }
+    }
+
+    const queryString = query.toString();
+    const endpoint = queryString
+      ? `/api/V1/GetProductDescriptions?${queryString}`
+      : '/api/V1/GetProductDescriptions';
+
+    return this.request<DingConnectProductDescription[]>(endpoint);
   }
 
   /**

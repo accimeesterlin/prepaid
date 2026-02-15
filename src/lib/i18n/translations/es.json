@@ -72,6 +72,7 @@
     "provider": "Proveedor:",
     "enterAmount": "Ingrese el Monto (${min} - ${max})",
     "theyReceive": "Ellos reciben:",
+    "receiveDisclaimer": "El monto real puede variar. Bonos del operador pueden estar incluidos.",
     "calculating": "Calculando...",
     "enterValidAmount": "Ingrese un monto válido",
     "emailAddress": "Dirección de Correo",

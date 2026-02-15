@@ -30,6 +30,12 @@ export interface ProductInfo {
   isVariableValue: boolean;
   minAmount?: number;
   maxAmount?: number;
+  /** Receive value at minimum send amount (for computing exchange rate) */
+  minReceiveValue?: number;
+  /** Receive value at maximum send amount */
+  maxReceiveValue?: number;
+  /** Currency of receive values (e.g., "HTG") */
+  receiveCurrency?: string;
   // Product classification fields
   benefits?: string[]; // e.g., ["Mobile", "Minutes", "Data"]
   validityPeriod?: string; // ISO 8601 duration (e.g., "P30D" for 30 days)

@@ -64,6 +64,12 @@ interface Product {
   isVariableValue: boolean;
   minAmount?: number;
   maxAmount?: number;
+  /** Receive value at minimum send amount (for computing exchange rate) */
+  minReceiveValue?: number;
+  /** Receive value at maximum send amount */
+  maxReceiveValue?: number;
+  /** Currency of receive values (e.g., "HTG") */
+  receiveCurrency?: string;
 }
 
 export default function SendMinutesPage({
@@ -91,6 +97,9 @@ export default function SendMinutesPage({
     "all",
   );
   const [showProductModal, setShowProductModal] = useState(false);
+  const [estimatedReceive, setEstimatedReceive] = useState<{ value: number; currency: string } | null>(null);
+  const [productDescription, setProductDescription] = useState<string | null>(null);
+  const [isLoadingDescription, setIsLoadingDescription] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -137,6 +146,48 @@ export default function SendMinutesPage({
 
     return usdCost + markup;
   };
+
+  // Fetch product description for fixed-value products (plans)
+  const fetchProductDescription = async (skuCode: string) => {
+    if (!orgSlug) return;
+    setIsLoadingDescription(true);
+    try {
+      const res = await fetch(
+        `/api/v1/products/description?skuCode=${encodeURIComponent(skuCode)}&orgSlug=${encodeURIComponent(orgSlug)}&lang=en`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setProductDescription(data.data?.description || null);
+      }
+    } catch {
+      // Non-critical - silently fail
+    } finally {
+      setIsLoadingDescription(false);
+    }
+  };
+
+  // Compute receive estimate locally when custom amount changes
+  useEffect(() => {
+    if (selectedProduct?.isVariableValue && customAmount) {
+      const amount = parseFloat(customAmount);
+      if (
+        !isNaN(amount) &&
+        amount > 0 &&
+        selectedProduct.minReceiveValue &&
+        selectedProduct.minAmount
+      ) {
+        const rate = selectedProduct.minReceiveValue / selectedProduct.minAmount;
+        setEstimatedReceive({
+          value: amount * rate,
+          currency: selectedProduct.receiveCurrency || '',
+        });
+      } else {
+        setEstimatedReceive(null);
+      }
+    } else {
+      setEstimatedReceive(null);
+    }
+  }, [customAmount, selectedProduct]);
 
   useEffect(() => {
     params.then((p) => setOrgSlug(p.orgSlug));
@@ -736,11 +787,15 @@ export default function SendMinutesPage({
                   <Card
                     key={product.skuCode}
                     onClick={() => {
-                      console.log("Selected product:", product);
-                      console.log("Product pricing:", product.pricing);
                       setSelectedProduct(product);
                       setCustomAmount("");
+                      setEstimatedReceive(null);
+                      setProductDescription(null);
                       setShowProductModal(true);
+                      // Fetch description only for fixed-value products (plans)
+                      if (!product.isVariableValue) {
+                        fetchProductDescription(product.skuCode);
+                      }
                     }}
                     className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50"
                   >
@@ -817,6 +872,15 @@ export default function SendMinutesPage({
                 <DialogDescription>
                   {selectedProduct.providerName} • {selectedProduct.benefitType}
                 </DialogDescription>
+                {/* Product Description */}
+                {isLoadingDescription && (
+                  <div className="h-4 bg-muted animate-pulse rounded w-3/4 mt-2" />
+                )}
+                {productDescription && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {productDescription}
+                  </p>
+                )}
               </DialogHeader>
 
               <div className="space-y-4 my-6">
@@ -870,6 +934,35 @@ export default function SendMinutesPage({
                       required
                       autoFocus
                     />
+                    {/* They Receive - Variable Value */}
+                    {estimatedReceive && estimatedReceive.value > 0 && (
+                      <div className="mt-3">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">{t('storefront.theyReceive')}</span>
+                          <span className="font-medium text-green-600">
+                            ~{estimatedReceive.value.toFixed(2)} {estimatedReceive.currency}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t('storefront.receiveDisclaimer')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* They Receive - Fixed Value Products */}
+                {!selectedProduct.isVariableValue && selectedProduct.benefitAmount > 0 && (
+                  <div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">{t('storefront.theyReceive')}</span>
+                      <span className="font-medium text-green-600">
+                        ~{selectedProduct.benefitAmount} {selectedProduct.benefitUnit}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t('storefront.receiveDisclaimer')}
+                    </p>
                   </div>
                 )}
 

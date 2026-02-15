@@ -385,6 +385,20 @@ export async function POST(request: NextRequest) {
             logger.info("Estimated prices for variable products", {
               requestCount: estimateRequests.length,
               responseCount: estimates.length,
+              sampleEstimate: estimates[0] ? {
+                skuCode: estimates[0].SkuCode,
+                rootReceiveValue: estimates[0].ReceiveValue,
+                rootReceiveCurrency: estimates[0].ReceiveCurrencyIso,
+                priceReceiveValue: estimates[0].Price?.ReceiveValue,
+                priceReceiveCurrency: estimates[0].Price?.ReceiveCurrencyIso,
+                sendValue: estimates[0].SendValue,
+              } : null,
+              sampleProduct: variableProducts[0] ? {
+                skuCode: variableProducts[0].SkuCode,
+                minSend: variableProducts[0].Minimum?.SendValue,
+                minReceive: variableProducts[0].Minimum?.ReceiveValue,
+                minReceiveCurrency: variableProducts[0].Minimum?.ReceiveCurrencyIso,
+              } : null,
             });
           } catch (error: any) {
             logger.error("Failed to estimate prices for variable products", {
@@ -584,6 +598,42 @@ export async function POST(request: NextRequest) {
             isVariableValue,
             minAmount: product.Minimum?.SendValue,
             maxAmount: product.Maximum?.SendValue,
+            // Extract actual receive values from DefaultDisplayText (e.g., "HTG 262.72-9589.28")
+            // DingConnect's Minimum/Maximum.ReceiveValue contains promotional/face values
+            // that don't match actual delivery amounts. The display text has the real values.
+            ...(() => {
+              if (isVariableValue && product.DefaultDisplayText) {
+                const match = product.DefaultDisplayText.match(
+                  /([A-Z]{3})\s+([\d,.]+)-([\d,.]+)/
+                );
+                if (match) {
+                  const parsedMin = parseFloat(match[2].replace(/,/g, ''));
+                  const parsedMax = parseFloat(match[3].replace(/,/g, ''));
+                  if (!isNaN(parsedMin) && !isNaN(parsedMax) && parsedMin > 0) {
+                    logger.info("Parsed actual receive values from DefaultDisplayText", {
+                      skuCode: product.SkuCode,
+                      displayText: product.DefaultDisplayText,
+                      parsedMin,
+                      parsedMax,
+                      parsedCurrency: match[1],
+                      rawMinReceive: product.Minimum?.ReceiveValue,
+                      rawMaxReceive: product.Maximum?.ReceiveValue,
+                    });
+                    return {
+                      minReceiveValue: parsedMin,
+                      maxReceiveValue: parsedMax,
+                      receiveCurrency: match[1],
+                    };
+                  }
+                }
+              }
+              // Fallback to raw product data for non-variable or non-parseable products
+              return {
+                minReceiveValue: product.Minimum?.ReceiveValue || undefined,
+                maxReceiveValue: product.Maximum?.ReceiveValue || undefined,
+                receiveCurrency: product.Minimum?.ReceiveCurrencyIso,
+              };
+            })(),
             // Include product classification fields
             benefits: product.Benefits,
             validityPeriod: product.ValidityPeriodIso,

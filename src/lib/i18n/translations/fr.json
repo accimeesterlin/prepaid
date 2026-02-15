@@ -72,6 +72,7 @@
     "provider": "Fournisseur:",
     "enterAmount": "Entrer le Montant (${min} - ${max})",
     "theyReceive": "Ils reçoivent:",
+    "receiveDisclaimer": "Le montant r\u00e9el peut varier. Des bonus de l'op\u00e9rateur peuvent \u00eatre inclus.",
     "calculating": "Calcul en cours...",
     "enterValidAmount": "Entrez un montant valide",
     "emailAddress": "Adresse Email",

@@ -37,7 +37,6 @@ export default function PublicStorefrontPage() {
   const [customAmount, setCustomAmount] = useState<string>('');
   const [amountError, setAmountError] = useState<string>('');
   const [estimatedReceive, setEstimatedReceive] = useState<{ value: number; currency: string } | null>(null);
-  const [isEstimating, setIsEstimating] = useState(false);
 
   // Payment methods state
   const [paymentMethods, setPaymentMethods] = useState<any>(null);
@@ -48,6 +47,10 @@ export default function PublicStorefrontPage() {
   const [discountData, setDiscountData] = useState<any>(null);
   const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
   const [discountError, setDiscountError] = useState<string>('');
+
+  // Product description state
+  const [productDescription, setProductDescription] = useState<string | null>(null);
+  const [isLoadingDescription, setIsLoadingDescription] = useState(false);
 
   // Phone number validation
   const validatePhoneNumber = (phone: string): { valid: boolean; error?: string } => {
@@ -370,12 +373,19 @@ export default function PublicStorefrontPage() {
       setPaymentMethod(paymentMethods.methods[0].provider as 'stripe' | 'paypal' | 'pgpay');
     }
 
-    // Initialize custom amount for variable-value products and trigger estimate
+    // Initialize custom amount for variable-value products and compute estimate
     if (product.isVariableValue && product.minAmount) {
       const amount = product.minAmount;
       setCustomAmount(amount.toString());
-      // Immediately fetch estimate for the initial amount
-      setTimeout(() => fetchEstimate(amount, product.skuCode), 100);
+
+      // Compute receive estimate locally from product exchange rate
+      if (product.minReceiveValue && product.minAmount) {
+        const rate = product.minReceiveValue / product.minAmount;
+        setEstimatedReceive({
+          value: amount * rate,
+          currency: product.receiveCurrency || '',
+        });
+      }
     } else {
       setCustomAmount('');
     }
@@ -385,6 +395,12 @@ export default function PublicStorefrontPage() {
     setDiscountCode('');
     setDiscountData(null);
     setDiscountError('');
+
+    // Only fetch description for fixed-value products (plans) - variable-value top-ups don't have descriptions
+    setProductDescription(null);
+    if (!product.isVariableValue) {
+      fetchProductDescription(product.skuCode);
+    }
   };
 
   // Validate discount code
@@ -454,53 +470,31 @@ export default function PublicStorefrontPage() {
     }
   };
 
-  // Fetch price estimate from DingConnect
-  const fetchEstimate = async (amount: number, skuCode: string) => {
-    if (!amount || amount <= 0) return;
-
-    setIsEstimating(true);
+  // Fetch product description from DingConnect
+  const fetchProductDescription = async (skuCode: string) => {
+    setIsLoadingDescription(true);
+    setProductDescription(null);
     try {
-      const response = await fetch('/api/v1/estimate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orgSlug,
-          skuCode,
-          sendValue: amount,
-          sendCurrencyIso: 'USD',
-        }),
-      });
-
+      const response = await fetch(
+        `/api/v1/products/description?skuCode=${encodeURIComponent(skuCode)}&orgSlug=${encodeURIComponent(orgSlug)}&lang=en`
+      );
       const data = await response.json();
-
-      if (response.ok && data.receiveValue !== undefined && data.receiveCurrency) {
-        setEstimatedReceive({
-          value: data.receiveValue,
-          currency: data.receiveCurrency,
-        });
-      } else {
-        console.error('Failed to fetch estimate:', data.detail || data.message || 'Invalid response format');
-        setEstimatedReceive(null);
+      if (response.ok && data.description) {
+        setProductDescription(data.description);
       }
     } catch (error) {
-      console.error('Error fetching estimate:', error);
-      setEstimatedReceive(null);
+      console.error('Error fetching product description:', error);
     } finally {
-      setIsEstimating(false);
+      setIsLoadingDescription(false);
     }
   };
 
-  // Debounce estimate calls when amount changes
-  const estimateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+
+  // Compute receive estimate locally when amount changes
   useEffect(() => {
     if (selectedProduct?.isVariableValue && customAmount) {
       const amount = parseFloat(customAmount);
-
-      // Clear previous timeout
-      if (estimateTimeoutRef.current) {
-        clearTimeout(estimateTimeoutRef.current);
-      }
 
       // Validate amount is within range
       if (isNaN(amount) || amount <= 0) {
@@ -513,19 +507,19 @@ export default function PublicStorefrontPage() {
         setEstimatedReceive(null);
         setAmountError(t('storefront.enterAmountMax', { max: selectedProduct.maxAmount.toFixed(2) }));
       } else {
-        // Valid range - clear error and fetch estimate
+        // Valid range - compute receive estimate from product exchange rate
         setAmountError('');
-        estimateTimeoutRef.current = setTimeout(() => {
-          fetchEstimate(amount, selectedProduct.skuCode);
-        }, 500);
+        if (selectedProduct.minReceiveValue && selectedProduct.minAmount) {
+          const rate = selectedProduct.minReceiveValue / selectedProduct.minAmount;
+          setEstimatedReceive({
+            value: amount * rate,
+            currency: selectedProduct.receiveCurrency || '',
+          });
+        } else {
+          setEstimatedReceive(null);
+        }
       }
     }
-
-    return () => {
-      if (estimateTimeoutRef.current) {
-        clearTimeout(estimateTimeoutRef.current);
-      }
-    };
   }, [customAmount, selectedProduct]);
 
   // Calculate fees and total - reused by both payment call and display
@@ -1306,7 +1300,13 @@ export default function PublicStorefrontPage() {
                 <div className="space-y-4">
                   {/* Product Summary */}
                   <div className="p-4 bg-gray-50 rounded-lg">
-                    <h4 className="font-semibold mb-2">{selectedProduct.name}</h4>
+                    <h4 className="font-semibold mb-1">{selectedProduct.name}</h4>
+                    {/* Product Description */}
+                    {isLoadingDescription ? (
+                      <div className="mb-2 h-4 w-3/4 animate-pulse rounded bg-gray-200" />
+                    ) : productDescription ? (
+                      <p className="mb-2 text-xs text-gray-500">{productDescription}</p>
+                    ) : null}
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">{t('storefront.provider')}</span>
@@ -1348,26 +1348,31 @@ export default function PublicStorefrontPage() {
                           {/* Estimated Receive Value */}
                           <div className="flex justify-between items-center text-sm pt-2">
                             <span className="text-gray-600">{t('storefront.theyReceive')}</span>
-                            {isEstimating ? (
-                              <span className="flex items-center gap-1 text-gray-500">
-                                <div className="animate-spin rounded-full h-3 w-3 border-2 border-gray-400 border-t-transparent" />
-                                {t('storefront.calculating')}
-                              </span>
-                            ) : estimatedReceive && estimatedReceive.value !== undefined ? (
+                            {estimatedReceive && estimatedReceive.value !== undefined ? (
                               <span className="font-medium text-green-600">
-                                {estimatedReceive.value.toFixed(2)} {estimatedReceive.currency}
+                                ~{estimatedReceive.value.toFixed(2)} {estimatedReceive.currency}
                               </span>
                             ) : customAmount && parseFloat(customAmount) > 0 ? (
                               <span className="text-gray-400">{t('storefront.enterValidAmount')}</span>
                             ) : null}
                           </div>
+                          {estimatedReceive && estimatedReceive.value !== undefined && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              {t('storefront.receiveDisclaimer')}
+                            </p>
+                          )}
                         </div>
                       ) : (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">{t('storefront.theyReceive')}</span>
-                          <span className="font-medium text-green-600">
-                            {selectedProduct.benefitAmount} {selectedProduct.benefitUnit}
-                          </span>
+                        <div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">{t('storefront.theyReceive')}</span>
+                            <span className="font-medium text-green-600">
+                              ~{selectedProduct.benefitAmount} {selectedProduct.benefitUnit}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {t('storefront.receiveDisclaimer')}
+                          </p>
                         </div>
                       )}
 
@@ -1593,12 +1598,10 @@ export default function PublicStorefrontPage() {
 
               <DialogFooter className="flex-col gap-2">
                 {/* Helper text when button is disabled */}
-                {(amountError || (selectedProduct?.isVariableValue && isEstimating) || (!paymentMethods?.available || paymentMethods?.methods?.length === 0)) && (
+                {(amountError || (!paymentMethods?.available || paymentMethods?.methods?.length === 0)) && (
                   <p className="text-xs text-gray-500 text-center w-full">
                     {amountError
                       ? t('storefront.enterValidAmountRange')
-                      : isEstimating
-                      ? t('storefront.calculatingEstimate')
                       : (!paymentMethods?.available || paymentMethods?.methods?.length === 0)
                       ? t('storefront.paymentMethodsNotConfiguredShort')
                       : ''}
@@ -1619,7 +1622,6 @@ export default function PublicStorefrontPage() {
                     disabled={
                       isProcessing ||
                       !!amountError ||
-                      (selectedProduct?.isVariableValue && isEstimating) ||
                       (selectedProduct?.isVariableValue && !estimatedReceive && customAmount !== '') ||
                       (!paymentMethods?.available || paymentMethods?.methods?.length === 0)
                     }
@@ -1629,11 +1631,6 @@ export default function PublicStorefrontPage() {
                       <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                         {t('storefront.processing')}
-                      </div>
-                    ) : isEstimating ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                        {t('storefront.calculating')}
                       </div>
                     ) : (
                       t('storefront.pay', {
