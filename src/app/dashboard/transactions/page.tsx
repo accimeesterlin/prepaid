@@ -38,6 +38,7 @@ import {
   DropdownMenuSeparator,
 } from "@pg-prepaid/ui";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import { format } from "date-fns";
 import { TransactionStatus } from "@pg-prepaid/types";
 
@@ -558,6 +559,7 @@ export default function TransactionsPage() {
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Phone className="h-3.5 w-3.5" />
                           <span>{transaction.recipient.phoneNumber}</span>
+                          <WhatsAppButton phoneNumber={transaction.recipient.phoneNumber} size="sm" />
                         </div>
                         {transaction.recipient.email && (
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -934,6 +936,7 @@ export default function TransactionsPage() {
                         >
                           <Copy className="h-3 w-3" />
                         </Button>
+                        <WhatsAppButton phoneNumber={selectedTransaction.recipient.phoneNumber} />
                       </div>
 
                       {selectedTransaction.recipient.email && (

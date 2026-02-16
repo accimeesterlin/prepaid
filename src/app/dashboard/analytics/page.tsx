@@ -34,6 +34,7 @@ import {
   DialogDescription,
 } from "@pg-prepaid/ui";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import { format } from "date-fns";
 import {
   AreaChart,
@@ -1016,8 +1017,11 @@ export default function AnalyticsPage() {
                                 {i + 1}
                               </td>
                               <td className="py-2.5">
-                                <div className="font-medium">
-                                  {customer.name || customer.phoneNumber}
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium">
+                                    {customer.name || customer.phoneNumber}
+                                  </span>
+                                  <WhatsAppButton phoneNumber={customer.phoneNumber} size="sm" />
                                 </div>
                                 {customer.name && (
                                   <div className="text-xs text-muted-foreground">
@@ -1145,7 +1149,12 @@ export default function AnalyticsPage() {
                             <td className="py-2.5 pr-4 font-mono text-xs">
                               {failure.orderId}
                             </td>
-                            <td className="py-2.5 pr-4">{failure.phoneNumber}</td>
+                            <td className="py-2.5 pr-4">
+                              <div className="flex items-center gap-1.5">
+                                <span>{failure.phoneNumber}</span>
+                                <WhatsAppButton phoneNumber={failure.phoneNumber} size="sm" />
+                              </div>
+                            </td>
                             <td className="py-2.5 pr-4 text-right font-medium">
                               {formatCurrency(failure.amount)}
                             </td>
@@ -1203,7 +1212,10 @@ export default function AnalyticsPage() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground text-xs">Phone Number</p>
-                        <p className="font-medium">{selectedFailure.phoneNumber}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium">{selectedFailure.phoneNumber}</p>
+                          <WhatsAppButton phoneNumber={selectedFailure.phoneNumber} size="sm" />
+                        </div>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs">Amount</p>

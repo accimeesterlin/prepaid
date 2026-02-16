@@ -45,6 +45,7 @@ import {
   toast,
 } from '@pg-prepaid/ui';
 import { DashboardLayout } from '@/components/dashboard-layout';
+import { WhatsAppButton } from '@/components/whatsapp-button';
 import type { DuplicateGroup, FindDuplicatesResponse } from '@/types/find-duplicates';
 
 interface Customer {
@@ -876,6 +877,7 @@ export default function CustomersPage() {
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Phone className="h-3 w-3 flex-shrink-0" />
                 <span className="truncate">{customer.phoneNumber}</span>
+                <WhatsAppButton phoneNumber={customer.phoneNumber} size="sm" />
               </div>
               {customer.email && (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -967,7 +969,10 @@ export default function CustomersPage() {
                     <Badge variant="outline" className="text-xs border-orange-500 text-orange-700">Duplicate</Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">{customer.phoneNumber}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm text-muted-foreground">{customer.phoneNumber}</p>
+                  <WhatsAppButton phoneNumber={customer.phoneNumber} size="sm" />
+                </div>
               </div>
             </div>
             <div>
@@ -1813,6 +1818,7 @@ export default function CustomersPage() {
                             <span className="text-muted-foreground ml-2">
                               {customer.phoneNumber}
                             </span>
+                            <WhatsAppButton phoneNumber={customer.phoneNumber} size="sm" />
                             {customer.email && (
                               <span className="text-muted-foreground ml-2">
                                 {customer.email}

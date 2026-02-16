@@ -61,6 +61,7 @@ import {
   DialogFooter,
 } from "@pg-prepaid/ui";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 
 interface Customer {
   _id: string;
@@ -610,7 +611,10 @@ export default function CustomerDetailPage() {
                       }
                     />
                   ) : (
-                    <span>{customer.phoneNumber}</span>
+                    <>
+                      <span>{customer.phoneNumber}</span>
+                      <WhatsAppButton phoneNumber={customer.phoneNumber} />
+                    </>
                   )}
                 </div>
                 {!editing &&
@@ -624,6 +628,7 @@ export default function CustomerDetailPage() {
                         >
                           <Phone className="h-3 w-3" />
                           <span>{phone}</span>
+                          <WhatsAppButton phoneNumber={phone} size="sm" />
                           <span className="text-xs px-1.5 py-0.5 rounded border text-muted-foreground">
                             additional
                           </span>

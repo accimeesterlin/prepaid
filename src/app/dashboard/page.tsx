@@ -35,6 +35,7 @@ import {
   toast,
 } from "@pg-prepaid/ui";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import { getNextTier } from "@/lib/pricing";
 import type { SubscriptionData } from "@/types/subscription";
 import { SubscriptionUpgradePreview } from "@/components/SubscriptionUpgradePreview";
@@ -845,9 +846,12 @@ export default function DashboardPage() {
                               {transaction.status}
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {transaction.recipient.phoneNumber}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs text-muted-foreground">
+                              {transaction.recipient.phoneNumber}
+                            </p>
+                            <WhatsAppButton phoneNumber={transaction.recipient.phoneNumber} size="sm" />
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             {new Date(transaction.createdAt).toLocaleString(
                               "en-US",
