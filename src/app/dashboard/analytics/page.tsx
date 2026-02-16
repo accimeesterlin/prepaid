@@ -115,6 +115,7 @@ interface PaymentMethodItem {
 interface ProductItem {
   skuCode: string;
   productName: string;
+  providerName: string;
   count: number;
   revenue: number;
 }
@@ -125,6 +126,7 @@ interface FailureItem {
   amount: number;
   currency: string;
   failureReason?: string;
+  providerName?: string;
   createdAt: string;
 }
 
@@ -1087,6 +1089,9 @@ export default function AnalyticsPage() {
                                 <div className="font-medium">
                                   {product.productName}
                                 </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {product.providerName}
+                                </div>
                                 <div className="text-xs text-muted-foreground font-mono">
                                   {product.skuCode}
                                 </div>
@@ -1127,6 +1132,9 @@ export default function AnalyticsPage() {
                           <th className="pb-2 pr-4 font-medium text-muted-foreground">
                             Phone
                           </th>
+                          <th className="pb-2 pr-4 font-medium text-muted-foreground">
+                            Provider
+                          </th>
                           <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">
                             Amount
                           </th>
@@ -1154,6 +1162,9 @@ export default function AnalyticsPage() {
                                 <span>{failure.phoneNumber}</span>
                                 <WhatsAppButton phoneNumber={failure.phoneNumber} size="sm" />
                               </div>
+                            </td>
+                            <td className="py-2.5 pr-4 text-muted-foreground">
+                              {failure.providerName || "—"}
                             </td>
                             <td className="py-2.5 pr-4 text-right font-medium">
                               {formatCurrency(failure.amount)}
@@ -1216,6 +1227,12 @@ export default function AnalyticsPage() {
                           <p className="font-medium">{selectedFailure.phoneNumber}</p>
                           <WhatsAppButton phoneNumber={selectedFailure.phoneNumber} size="sm" />
                         </div>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Provider</p>
+                        <p className="font-medium">
+                          {selectedFailure.providerName || "Unknown"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs">Amount</p>

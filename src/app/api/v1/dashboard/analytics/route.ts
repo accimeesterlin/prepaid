@@ -259,6 +259,7 @@ export async function GET(request: NextRequest) {
           $group: {
             _id: "$metadata.productSkuCode",
             productName: { $first: "$metadata.productName" },
+            providerName: { $first: "$metadata.providerName" },
             count: { $sum: 1 },
             revenue: { $sum: "$amount" },
           },
@@ -270,6 +271,7 @@ export async function GET(request: NextRequest) {
             _id: 0,
             skuCode: { $ifNull: ["$_id", "unknown"] },
             productName: { $ifNull: ["$productName", "Unknown Product"] },
+            providerName: { $ifNull: ["$providerName", "Unknown"] },
             count: 1,
             revenue: { $round: ["$revenue", 2] },
           },
@@ -289,6 +291,7 @@ export async function GET(request: NextRequest) {
             amount: 1,
             currency: 1,
             failureReason: "$metadata.failureReason",
+            providerName: { $ifNull: ["$metadata.providerName", "$operator.name"] },
             createdAt: 1,
           },
         },
