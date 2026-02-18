@@ -10,6 +10,7 @@ import { hasPermission } from "@/lib/permissions";
 import { retryTransactionSchema } from "@/lib/validations/retry-transaction";
 import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { trackTransactionCompletion } from "@/lib/services/usage-tracking.service";
+import { processRefund } from "@/lib/services/refund.service";
 import { ZodError } from "zod";
 
 /**
@@ -61,8 +62,9 @@ export async function POST(
     }
 
     // Atomically claim the transaction — prevents double-retry race conditions
+    // Allow retrying both "failed" and "refunded" transactions
     const transaction = await Transaction.findOneAndUpdate(
-      { _id: id, orgId: session.orgId, status: "failed" },
+      { _id: id, orgId: session.orgId, status: { $in: ["failed", "refunded"] } },
       {
         $set: {
           status: "processing",
@@ -84,7 +86,7 @@ export async function POST(
         return createErrorResponse("Transaction not found", 404);
       }
       return createErrorResponse(
-        `Transaction cannot be retried — current status is "${existing.status}". Only failed transactions can be retried.`,
+        `Transaction cannot be retried — current status is "${existing.status}". Only failed or refunded transactions can be retried.`,
         400,
       );
     }
@@ -343,26 +345,34 @@ export async function POST(
           },
         });
       } else {
-        // DingConnect returned Failed
-        transaction.status = "failed";
-        transaction.timeline.failedAt = now;
-        transaction.metadata.failureReason =
+        // DingConnect returned Failed - process refund
+        const failureReason =
           transferResult.ErrorMessage || "Unknown DingConnect error";
-        transaction.metadata.dingconnectErrorCode =
-          transferResult.ErrorCode;
 
-        await transaction.save();
+        logger.error(
+          "Transaction retry failed at DingConnect - processing refund",
+          {
+            orderId: transaction.orderId,
+            errorMessage: transferResult.ErrorMessage,
+            errorCode: transferResult.ErrorCode,
+            retryCount,
+          },
+        );
 
-        logger.error("Transaction retry failed at DingConnect", {
-          orderId: transaction.orderId,
-          errorMessage: transferResult.ErrorMessage,
-          errorCode: transferResult.ErrorCode,
-          retryCount,
+        const refundResult = await processRefund({
+          transaction,
+          failureReason,
+          additionalMetadata: {
+            dingconnectErrorCode: transferResult.ErrorCode,
+            refundSource: "admin_retry",
+            retriedBy: session.userId,
+          },
         });
 
         return createSuccessResponse({
           retrySuccess: false,
-          message: "DingConnect transfer failed",
+          message: "DingConnect transfer failed. Customer has been refunded.",
+          refundApplied: refundResult.balanceRefunded,
           transaction: {
             _id: transaction._id,
             orderId: transaction.orderId,
@@ -387,26 +397,30 @@ export async function POST(
       const errorMessage =
         dingError instanceof Error ? dingError.message : "Unknown error";
 
-      transaction.status = "failed";
-      transaction.timeline.failedAt = new Date();
-      transaction.metadata.failureReason = errorMessage;
-      transaction.metadata.retriedBy = session.userId;
-      transaction.metadata.retriedAt = new Date().toISOString();
-      await transaction.save();
-
-      logger.error("DingConnect API error during retry", {
+      logger.error("DingConnect API error during retry - processing refund", {
         orderId: transaction.orderId,
         error: errorMessage,
         retryCount,
       });
 
+      const refundResult = await processRefund({
+        transaction,
+        failureReason: errorMessage,
+        additionalMetadata: {
+          refundSource: "admin_retry",
+          retriedBy: session.userId,
+          retriedAt: new Date().toISOString(),
+        },
+      });
+
       return createSuccessResponse({
         retrySuccess: false,
-        message: "DingConnect API error",
+        message: "DingConnect API error. Customer has been refunded.",
+        refundApplied: refundResult.balanceRefunded,
         transaction: {
           _id: transaction._id,
           orderId: transaction.orderId,
-          status: "failed",
+          status: transaction.status,
           metadata: {
             failureReason: errorMessage,
             retryCount: transaction.metadata.retryCount,

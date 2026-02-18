@@ -74,6 +74,11 @@ export interface ICustomer extends Document {
     description: string,
     metadata?: any,
   ): Promise<void>;
+  refundBalance(
+    amount: number,
+    description: string,
+    metadata?: any,
+  ): Promise<void>;
   canUseBalance(): boolean;
 }
 
@@ -322,6 +327,32 @@ CustomerSchema.methods.addBalance = async function (
     orgId: this.orgId,
     amount,
     type: "assignment",
+    previousBalance,
+    newBalance: this.currentBalance,
+    description,
+    metadata,
+  });
+};
+
+// Refund balance with history tracking
+CustomerSchema.methods.refundBalance = async function (
+  amount: number,
+  description: string,
+  metadata?: any,
+): Promise<void> {
+  const previousBalance = this.currentBalance;
+  this.currentBalance += amount;
+  this.totalUsed = Math.max(0, this.totalUsed - amount);
+
+  await this.save();
+
+  // Create balance history record with type "refund"
+  const CustomerBalanceHistory = mongoose.model("CustomerBalanceHistory");
+  await CustomerBalanceHistory.create({
+    customerId: this._id,
+    orgId: this.orgId,
+    amount,
+    type: "refund",
     previousBalance,
     newBalance: this.currentBalance,
     description,

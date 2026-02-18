@@ -12,6 +12,7 @@ import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { createPGPayService } from "@/lib/services/pgpay.service";
 import { logger } from "@/lib/logger";
 import { trackTransactionCompletion } from "@/lib/services/usage-tracking.service";
+import { processRefund } from "@/lib/services/refund.service";
 
 /**
  * Find or create/update a customer record from a transaction.
@@ -628,16 +629,25 @@ export async function POST(request: NextRequest) {
             });
           }
         } else if (transferResult.Status === "Failed") {
-          transaction.status = "failed";
-          transaction.timeline.failedAt = new Date();
-          transaction.metadata.failureReason =
-            transferResult.ErrorMessage || "Unknown error";
-          (transaction.metadata as Record<string, unknown>).dingconnectErrorCode = transferResult.ErrorCode;
+          const failureReason =
+            transferResult.ErrorMessage || "Unknown DingConnect error";
 
-          logger.error("Transaction failed at DingConnect", {
-            orderId: transaction.orderId,
-            errorMessage: transferResult.ErrorMessage,
-            errorCode: transferResult.ErrorCode,
+          logger.error(
+            "Transaction failed at DingConnect - processing refund",
+            {
+              orderId: transaction.orderId,
+              errorMessage: transferResult.ErrorMessage,
+              errorCode: transferResult.ErrorCode,
+            },
+          );
+
+          await processRefund({
+            transaction,
+            failureReason,
+            additionalMetadata: {
+              dingconnectErrorCode: transferResult.ErrorCode,
+              refundSource: "pgpay_webhook",
+            },
           });
         } else if (transferResult.Status === "Processing") {
           // DingConnect is still processing - mark as completed anyway
@@ -772,12 +782,17 @@ export async function POST(request: NextRequest) {
         error instanceof Error ? error.message : "Unknown error";
 
       // Check if it's an insufficient balance error
-      const isInsufficientBalance = errorMessage.includes("InsufficientBalance");
+      const isInsufficientBalance =
+        errorMessage.includes("InsufficientBalance");
+
+      const failureReason = isInsufficientBalance
+        ? "Provider balance insufficient to complete transaction"
+        : errorMessage;
 
       logger.error(
         isInsufficientBalance
           ? "CRITICAL: Insufficient provider balance during top-up - URGENT FUNDING REQUIRED"
-          : "Failed to send DingConnect transfer",
+          : "Failed to send DingConnect transfer - processing refund",
         {
           error: errorMessage,
           stack: error instanceof Error ? error.stack : undefined,
@@ -788,28 +803,28 @@ export async function POST(request: NextRequest) {
           alert: isInsufficientBalance
             ? "PROVIDER ACCOUNT DEPLETED - BLOCKING NEW TRANSACTIONS"
             : undefined,
-        }
+        },
       );
 
-      transaction.status = "failed";
-      transaction.timeline.failedAt = new Date();
-
-      // Store detailed reason in metadata for admin review
-      if (isInsufficientBalance) {
-        transaction.metadata.failureReason =
-          "Provider balance insufficient to complete transaction";
-        (transaction.metadata as Record<string, unknown>).internalNote =
-          "URGENT: DingConnect account needs funding immediately";
-      } else {
-        transaction.metadata.failureReason = errorMessage;
-      }
-
-      await transaction.save();
+      // Process refund: credits customer balance, creates history record, marks transaction as "refunded"
+      await processRefund({
+        transaction,
+        failureReason,
+        additionalMetadata: {
+          refundSource: "pgpay_webhook",
+          ...(isInsufficientBalance
+            ? {
+                internalNote:
+                  "URGENT: DingConnect account needs funding immediately",
+              }
+            : {}),
+        },
+      });
 
       // Return generic customer-facing error (don't expose internal issues)
       const userMessage = isInsufficientBalance
-        ? "We're unable to process your top-up at this time. Your payment has been received and will be refunded. Please contact support for assistance."
-        : "Top-up could not be completed. Please contact support with your order ID.";
+        ? "We're unable to process your top-up at this time. Your payment has been received and has been refunded to your account balance. Please contact support for assistance."
+        : "Top-up could not be completed. The payment amount has been credited to your account balance. Please contact support with your order ID.";
 
       return createErrorResponse(userMessage, 503);
     }

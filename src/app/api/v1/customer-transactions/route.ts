@@ -21,6 +21,7 @@ import { requireVerifiedCustomer } from "@/lib/auth-middleware";
 import { createDingConnectService } from "@/lib/services/dingconnect.service";
 import { logger } from "@/lib/logger";
 import { trackTransactionCompletion, checkTransactionLimit } from "@/lib/services/usage-tracking.service";
+import { processRefund } from "@/lib/services/refund.service";
 import { parseUserAgent } from "@/lib/parse-user-agent";
 import { parsePhoneNumber } from "awesome-phonenumber";
 import countries from "i18n-iso-countries";
@@ -502,28 +503,25 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (error) {
-      // Top-up failed - refund customer balance
-      logger.error("DingConnect transfer failed - refunding customer", {
-        error: error instanceof Error ? error.message : "Unknown error",
+      const failureReason =
+        error instanceof Error ? error.message : "Unknown error";
+
+      logger.error("DingConnect transfer failed - processing refund", {
+        error: failureReason,
         orderId: transaction.orderId,
         customerId: session.customerId,
         refundAmount: finalPrice,
       });
 
-      // Refund balance (refund what customer was charged)
-      customer.currentBalance += finalPrice;
-      customer.totalUsed -= finalPrice;
-      await customer.save();
-
-      // Update transaction status
-      transaction.status = "failed";
-      transaction.timeline.failedAt = new Date();
-      transaction.metadata.failureReason =
-        error instanceof Error ? error.message : "Unknown error";
-      await transaction.save();
+      // Process refund: restores customer balance, creates history record, marks transaction as "refunded"
+      await processRefund({
+        transaction,
+        failureReason,
+        refundAmount: finalPrice,
+      });
 
       throw ApiErrors.InternalServerError(
-        `Failed to send top-up: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to send top-up: ${failureReason}`,
       );
     }
   } catch (error) {
