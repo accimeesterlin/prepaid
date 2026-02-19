@@ -223,12 +223,12 @@ export async function GET(request: NextRequest) {
         { $project: { _id: 0, country: "$_id", revenue: { $round: ["$revenue", 2] }, count: 1 } },
       ]),
 
-      // 7. Top operators by revenue
+      // 7. Top operators by revenue (prefer friendly providerName over raw operator code)
       Transaction.aggregate([
         { $match: { ...baseMatch, status: "completed" } },
         {
           $group: {
-            _id: "$operator.name",
+            _id: { $ifNull: ["$metadata.providerName", "$operator.name", "Unknown"] },
             revenue: { $sum: "$amount" },
             count: { $sum: 1 },
           },

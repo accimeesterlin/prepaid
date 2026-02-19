@@ -5,8 +5,14 @@
  * Used by customer-transactions, PGPay webhook, and retry routes.
  */
 
-import { Customer, type ICustomer, type ITransaction } from "@pg-prepaid/db";
+import {
+  Customer,
+  Organization,
+  type ICustomer,
+  type ITransaction,
+} from "@pg-prepaid/db";
 import { logger } from "@/lib/logger";
+import { EmailService } from "@/lib/services/email.service";
 
 /** Parameters for processing a refund */
 export interface ProcessRefundParams {
@@ -197,6 +203,23 @@ export async function processRefund(
       customerId: customer?._id?.toString(),
     });
 
+    // Step 4: Send refund notification email (fire-and-forget)
+    if (balanceRefunded && customer) {
+      const recipientEmail =
+        customer.email || transaction.recipient?.email;
+
+      if (recipientEmail) {
+        void sendRefundNotificationEmail({
+          orgId: transaction.orgId,
+          customer,
+          recipientEmail,
+          orderId,
+          refundAmount,
+          currency: transaction.currency,
+        });
+      }
+    }
+
     return {
       success: true,
       balanceRefunded,
@@ -231,5 +254,58 @@ export async function processRefund(
       balanceRefunded: false,
       error: errorMessage,
     };
+  }
+}
+
+/**
+ * Send refund notification email to the customer.
+ * Runs as fire-and-forget so it doesn't block the refund flow.
+ */
+async function sendRefundNotificationEmail(params: {
+  orgId: string;
+  customer: ICustomer;
+  recipientEmail: string;
+  orderId: string;
+  refundAmount: number;
+  currency: string;
+}): Promise<void> {
+  const { orgId, customer, recipientEmail, orderId, refundAmount, currency } =
+    params;
+
+  try {
+    const org = await Organization.findOne({ _id: orgId });
+    const orgName = org?.name || "Prepaid Minutes";
+    const orgSlug = org?.slug || "";
+
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://prepaid.pgecom.com";
+    const loginUrl = orgSlug
+      ? `${baseUrl}/customer-portal/${orgSlug}/login`
+      : `${baseUrl}/login`;
+
+    await EmailService.sendRefundNotificationEmail({
+      orgId,
+      recipientEmail,
+      customerName: customer.name,
+      orgName,
+      orderId,
+      refundAmount,
+      currency,
+      newBalance: customer.currentBalance,
+      loginUrl,
+    });
+
+    logger.info("Refund notification email sent", {
+      orderId,
+      recipientEmail,
+    });
+  } catch (emailError) {
+    // Email failure should not affect the refund result
+    logger.error("Failed to send refund notification email", {
+      orderId,
+      recipientEmail,
+      error:
+        emailError instanceof Error ? emailError.message : "Unknown error",
+    });
   }
 }

@@ -416,6 +416,133 @@ The ${orgName} Team
       text,
     });
   }
+
+  /**
+   * Send refund notification email to customer
+   */
+  static async sendRefundNotificationEmail(params: {
+    orgId: string;
+    recipientEmail: string;
+    customerName?: string;
+    orgName: string;
+    orderId: string;
+    refundAmount: number;
+    currency: string;
+    newBalance: number;
+    loginUrl: string;
+  }): Promise<void> {
+    const {
+      orgId,
+      recipientEmail,
+      customerName,
+      orgName,
+      orderId,
+      refundAmount,
+      currency,
+      newBalance,
+      loginUrl,
+    } = params;
+
+    const greeting = customerName ? `Hello ${customerName},` : "Hello,";
+    const subject = `Your top-up order ${orderId} has been refunded`;
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refund Notification</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Refund Processed</h1>
+  </div>
+
+  <div style="background: #ffffff; padding: 40px 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      ${greeting}
+    </p>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      We were unable to complete your top-up order <strong>${orderId}</strong>. A refund of <strong>${currency} ${refundAmount.toFixed(2)}</strong> has been credited to your account balance.
+    </p>
+
+    <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 8px 0; font-weight: 600; color: #374151;">Refund Summary</p>
+      <table style="width: 100%; font-size: 14px; color: #374151;">
+        <tr>
+          <td style="padding: 4px 0;">Order ID:</td>
+          <td style="padding: 4px 0; text-align: right; font-weight: 600;">${orderId}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0;">Refund Amount:</td>
+          <td style="padding: 4px 0; text-align: right; font-weight: 600; color: #22c55e;">${currency} ${refundAmount.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0;">New Account Balance:</td>
+          <td style="padding: 4px 0; text-align: right; font-weight: 600;">${currency} ${newBalance.toFixed(2)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      You can log in to your account to use your balance and try your top-up again.
+    </p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${loginUrl}"
+         style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">
+        Log In to Your Account
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6b7280; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+      If you have any questions about this refund, please don't hesitate to contact our support team.
+    </p>
+
+    <p style="font-size: 14px; color: #6b7280; margin-top: 16px;">
+      Best regards,<br>
+      The ${orgName} Team
+    </p>
+  </div>
+
+  <div style="text-align: center; margin-top: 24px; padding: 20px; color: #9ca3af; font-size: 12px;">
+    <p style="margin: 0 0 8px 0;">This is an automated email. Please do not reply.</p>
+    <p style="margin: 0;">&copy; ${new Date().getFullYear()} ${orgName}. All rights reserved.</p>
+  </div>
+</body>
+</html>
+    `;
+
+    const text = `
+Refund Processed
+
+${greeting}
+
+We were unable to complete your top-up order ${orderId}. A refund of ${currency} ${refundAmount.toFixed(2)} has been credited to your account balance.
+
+Refund Summary:
+- Order ID: ${orderId}
+- Refund Amount: ${currency} ${refundAmount.toFixed(2)}
+- New Account Balance: ${currency} ${newBalance.toFixed(2)}
+
+You can log in to your account to use your balance and try your top-up again:
+${loginUrl}
+
+If you have any questions about this refund, please contact our support team.
+
+Best regards,
+The ${orgName} Team
+    `.trim();
+
+    await this.sendEmail(orgId, {
+      to: recipientEmail,
+      subject,
+      html,
+      text,
+    });
+  }
 }
 
 // Export wrapper function for compatibility

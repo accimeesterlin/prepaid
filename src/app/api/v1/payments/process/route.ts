@@ -269,9 +269,24 @@ export async function POST(request: NextRequest) {
     const markup = Number(pricing?.markup) || 0;
     const discount = Number(pricing?.discount) || 0;
 
-    // Resolve operator name: prefer providerName, then name, then providerCode
-    const operatorName = (productData.providerName || productData.name || productData.providerCode || "Unknown") as string;
+    // Resolve operator name from DingConnect GetProviders API (server-side)
     const operatorId = (productData.providerCode || productData.provider || "unknown") as string;
+    const providers = await dingConnect
+      .getProviders({ countryIso: detectedCountry })
+      .catch((error) => {
+        logger.warn("Failed to fetch providers for name resolution", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          countryIso: detectedCountry,
+        });
+        return [];
+      });
+    const matchedProvider = providers.find(
+      (p) => p.ProviderCode === operatorId,
+    );
+    const operatorName = matchedProvider?.ProviderName
+      || (productData.providerName as string)
+      || (productData.name as string)
+      || operatorId;
 
     logger.info("Transaction metadata preparation", {
       isVariableValue: productData.isVariableValue,
