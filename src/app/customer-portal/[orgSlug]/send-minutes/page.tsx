@@ -470,12 +470,29 @@ export default function SendMinutesPage({
         router.push(`/customer-portal/${orgSlug}/transactions`);
       }, 2000);
     } catch (err: any) {
-      setError(err.message || t("customer.portal.sendMinutes.error"));
+      // Close the product modal so the error alert is visible
+      setShowProductModal(false);
+
+      // Provide a customer-friendly error message
+      const rawMessage = err.message || "";
+      const isTopUpFailure = rawMessage.toLowerCase().includes("failed to send top-up");
+
+      const friendlyMessage = isTopUpFailure
+        ? t("customer.portal.sendMinutes.topUpFailedRefunded")
+        : rawMessage || t("customer.portal.sendMinutes.error");
+
+      setError(friendlyMessage);
       toast({
-        title: "Error",
-        description: err.message || t("customer.portal.sendMinutes.error"),
+        title: t("common.error"),
+        description: friendlyMessage,
         variant: "error",
+        duration: 6000,
       });
+
+      // Reload balance since a refund may have been processed
+      if (isTopUpFailure) {
+        await loadData();
+      }
     } finally {
       setSending(false);
     }

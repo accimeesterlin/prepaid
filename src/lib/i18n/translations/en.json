@@ -239,6 +239,7 @@
         "sending": "Sending...",
         "success": "Top-up sent successfully!",
         "error": "Failed to send top-up",
+        "topUpFailedRefunded": "Your top-up could not be completed. Your balance has been refunded. Please try again or choose a different product.",
         "loadError": "Failed to load data"
       }
     },

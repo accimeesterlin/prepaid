@@ -239,6 +239,7 @@
         "sending": "Enviando...",
         "success": "¡Recarga enviada exitosamente!",
         "error": "Error al enviar la recarga",
+        "topUpFailedRefunded": "Su recarga no pudo completarse. Su saldo ha sido reembolsado. Por favor intente de nuevo o elija otro producto.",
         "loadError": "Error al cargar los datos"
       }
     },

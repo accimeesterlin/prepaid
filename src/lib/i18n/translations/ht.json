@@ -239,6 +239,7 @@
         "sending": "Ap voye...",
         "success": "Recharge voye avèk siksè!",
         "error": "Erè nan voyè recharge",
+        "topUpFailedRefunded": "Recharge ou a pa t kapab fèt. Balans ou ranbouse. Tanpri eseye ankò oswa chwazi yon lòt pwodui.",
         "loadError": "Erè nan chaje done yo"
       }
     },

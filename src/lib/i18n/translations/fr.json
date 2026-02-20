@@ -239,6 +239,7 @@
         "sending": "Envoi en cours...",
         "success": "Recharge envoyée avec succès!",
         "error": "Échec de l'envoi de la recharge",
+        "topUpFailedRefunded": "Votre recharge n'a pas pu être effectuée. Votre solde a été remboursé. Veuillez réessayer ou choisir un autre produit.",
         "loadError": "Échec du chargement des données"
       }
     },
