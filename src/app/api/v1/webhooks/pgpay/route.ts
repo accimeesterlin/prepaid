@@ -412,11 +412,34 @@ export async function POST(request: NextRequest) {
         try {
           const products = await dingConnect.getProducts();
           const dingProduct = products.find(
-            (p: { SkuCode: string }) => p.SkuCode === productSkuCode,
+            (p) => p.SkuCode === productSkuCode,
           );
           if (dingProduct) {
+            // Use the same classification logic as phone lookup:
+            // Variable-value: Has min/max BUT no fixed price, no specific benefits, no validity period
             const hasMinMax = dingProduct.Minimum?.SendValue != null && dingProduct.Maximum?.SendValue != null;
-            if (hasMinMax) {
+            const hasFixedPrice = !!(dingProduct.Price && dingProduct.Price.Amount);
+            const hasSpecificBenefits =
+              dingProduct.BenefitTypes &&
+              (dingProduct.BenefitTypes.Data ||
+                dingProduct.BenefitTypes.Voice ||
+                dingProduct.BenefitTypes.SMS);
+            const hasValidityPeriod = !!dingProduct.ValidityPeriodIso;
+            const benefitsIndicatePlan =
+              dingProduct.Benefits &&
+              Array.isArray(dingProduct.Benefits) &&
+              (dingProduct.Benefits.includes("Data") ||
+                dingProduct.Benefits.includes("Voice") ||
+                dingProduct.Benefits.includes("SMS"));
+
+            const isVariable =
+              hasMinMax &&
+              !hasFixedPrice &&
+              !hasSpecificBenefits &&
+              !hasValidityPeriod &&
+              !benefitsIndicatePlan;
+
+            if (isVariable) {
               isVariableValue = true;
               if (!sendValue) {
                 sendValue = transaction.amount;

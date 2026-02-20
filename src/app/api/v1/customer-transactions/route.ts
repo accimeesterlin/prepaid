@@ -163,10 +163,30 @@ export async function POST(request: NextRequest) {
     let sendValue: number;
     let customerPrice: number; // What customer pays (with markup & discount)
 
-    // Check if this is a variable-value product
-    const isVariableValue = !!(
-      productDetails.Minimum && productDetails.Maximum
-    );
+    // Determine if this is a variable-value product using the same logic as phone lookup
+    // Variable-value: Has min/max BUT no fixed price, no specific benefits, no validity period
+    // Fixed-value (plans): Has fixed price OR specific benefit amounts OR validity period
+    const hasMinMax = !!(productDetails.Minimum && productDetails.Maximum);
+    const hasFixedPrice = !!(productDetails.Price && productDetails.Price.Amount);
+    const hasSpecificBenefits =
+      productDetails.BenefitTypes &&
+      (productDetails.BenefitTypes.Data ||
+        productDetails.BenefitTypes.Voice ||
+        productDetails.BenefitTypes.SMS);
+    const hasValidityPeriod = !!productDetails.ValidityPeriodIso;
+    const benefitsIndicatePlan =
+      productDetails.Benefits &&
+      Array.isArray(productDetails.Benefits) &&
+      (productDetails.Benefits.includes("Data") ||
+        productDetails.Benefits.includes("Voice") ||
+        productDetails.Benefits.includes("SMS"));
+
+    const isVariableValue =
+      hasMinMax &&
+      !hasFixedPrice &&
+      !hasSpecificBenefits &&
+      !hasValidityPeriod &&
+      !benefitsIndicatePlan;
 
     if (isVariableValue) {
       if (!data.sendValue) {
@@ -262,8 +282,12 @@ export async function POST(request: NextRequest) {
         customerPrice = dingConnectCost;
       }
     } else {
-      // Fixed-value product - use the price from DingConnect
-      dingConnectCost = productDetails.Price?.Amount || 0;
+      // Fixed-value product (plan) - use the price from DingConnect
+      // Try Price.Amount first (old format), then fall back to Minimum.SendValue (new format)
+      dingConnectCost =
+        productDetails.Price?.Amount ||
+        productDetails.Minimum?.SendValue ||
+        0;
       sendValue = dingConnectCost;
 
       if (dingConnectCost <= 0) {
@@ -451,6 +475,9 @@ export async function POST(request: NextRequest) {
         SkuCode: data.skuCode,
         AccountNumber: accountNumber,
         SendValue: isVariableValue ? sendValue : undefined,
+        SendCurrencyIso: isVariableValue
+          ? (productDetails.Minimum?.SendCurrencyIso || "USD")
+          : undefined,
         DistributorRef: transaction.orderId, // Use our order ID as the unique reference
         ValidateOnly: validateOnly, // Use organization's test mode setting
       });
