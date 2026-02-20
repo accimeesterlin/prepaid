@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { Search, Phone, DollarSign, Zap, Shield, SlidersHorizontal, CreditCard, CheckCircle, XCircle, Wifi, Banknote, AlertCircle, Beaker } from 'lucide-react';
+import { Search, Phone, DollarSign, Zap, Shield, SlidersHorizontal, CreditCard, CheckCircle, XCircle, Wifi, Banknote, AlertCircle, Beaker, LogIn } from 'lucide-react';
+import Link from 'next/link';
 import { Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, toast } from '@pg-prepaid/ui';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -803,6 +804,13 @@ export default function PublicStorefrontPage() {
             </h1>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
+              <Link
+                href={`/customer-portal/${orgSlug}/login`}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Login</span>
+              </Link>
               {lookupData && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Phone className="h-4 w-4" />

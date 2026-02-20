@@ -79,6 +79,7 @@ interface Transaction {
     paidAt?: Date;
     completedAt?: Date;
     failedAt?: Date;
+    refundedAt?: Date;
   };
 }
 
@@ -114,6 +115,9 @@ export default function TransactionsPage() {
     sendValue: "",
     validateOnly: false,
   });
+  const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [refunding, setRefunding] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
 
   // Load filters from localStorage on mount
   useEffect(() => {
@@ -324,6 +328,12 @@ export default function TransactionsPage() {
     setShowRetryDialog(true);
   };
 
+  const openRefundDialog = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setRefundReason("");
+    setShowRefundDialog(true);
+  };
+
   const handleRetryTransaction = async () => {
     if (!selectedTransaction) return;
 
@@ -400,6 +410,54 @@ export default function TransactionsPage() {
       });
     } finally {
       setRetrying(false);
+    }
+  };
+
+  const handleRefundTransaction = async () => {
+    if (!selectedTransaction) return;
+
+    setRefunding(true);
+    try {
+      const response = await fetch(
+        `/api/v1/transactions/${selectedTransaction._id}/refund`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reason: refundReason || undefined,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.data?.success) {
+        toast({
+          title: "Refund Successful",
+          description:
+            data.data.message ||
+            "Transaction has been refunded successfully.",
+          variant: "success",
+        });
+        setShowRefundDialog(false);
+        setShowDetails(false);
+        fetchTransactions();
+      } else {
+        toast({
+          title: "Refund Failed",
+          description:
+            data.detail || data.title || "Failed to process refund.",
+          variant: "error",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to process refund. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setRefunding(false);
     }
   };
 
@@ -645,6 +703,17 @@ export default function TransactionsPage() {
                               Retry Transaction
                             </DropdownMenuItem>
                           )}
+                          {transaction.status === "failed" && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openRefundDialog(transaction);
+                              }}
+                            >
+                              <DollarSign className="h-3.5 w-3.5 mr-2" />
+                              Refund Transaction
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={(e) => {
@@ -814,6 +883,17 @@ export default function TransactionsPage() {
                         >
                           <Beaker className="h-3.5 w-3.5 mr-2" />
                           Retry Transaction
+                        </DropdownMenuItem>
+                      )}
+                      {selectedTransaction.status === "failed" && (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setShowDetails(false);
+                            openRefundDialog(selectedTransaction);
+                          }}
+                        >
+                          <DollarSign className="h-3.5 w-3.5 mr-2" />
+                          Refund Transaction
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
@@ -1539,6 +1619,113 @@ export default function TransactionsPage() {
                   "Validate Transfer"
                 ) : (
                   "Retry Transfer"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Refund Transaction Dialog */}
+        <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Refund Transaction</DialogTitle>
+              <DialogDescription>
+                Refund transaction{" "}
+                <span className="font-mono text-xs">
+                  {selectedTransaction?.orderId}
+                </span>
+                . This will credit the customer&apos;s balance.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Transaction Summary */}
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div>
+                  <p className="text-sm font-medium">
+                    {selectedTransaction?.recipient?.phoneNumber}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedTransaction?.metadata?.productName ||
+                      selectedTransaction?.productName ||
+                      "Unknown product"}
+                  </p>
+                </div>
+                <p className="text-lg font-bold">
+                  {selectedTransaction &&
+                    formatCurrency(
+                      selectedTransaction.amount,
+                      selectedTransaction.currency,
+                    )}
+                </p>
+              </div>
+
+              {/* Failure Reason Banner */}
+              {selectedTransaction?.metadata?.failureReason && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                  <div className="text-sm text-red-800">
+                    <p className="font-medium">Failure Reason</p>
+                    <p className="text-xs mt-1 break-words">
+                      {selectedTransaction.metadata.failureReason}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Refund Reason */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Refund Reason</label>
+                <textarea
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
+                  placeholder="Explain the reason for this refund..."
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                />
+              </div>
+
+              {/* Warning */}
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium">Confirm Refund</p>
+                  <p className="text-xs mt-1">
+                    This will credit{" "}
+                    <strong>
+                      {selectedTransaction &&
+                        formatCurrency(
+                          selectedTransaction.amount,
+                          selectedTransaction.currency,
+                        )}
+                    </strong>{" "}
+                    to the customer&apos;s balance and send them an email
+                    notification. This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowRefundDialog(false)}
+                disabled={refunding}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRefundTransaction}
+                disabled={refunding}
+                variant="destructive"
+              >
+                {refunding ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Confirm Refund"
                 )}
               </Button>
             </DialogFooter>

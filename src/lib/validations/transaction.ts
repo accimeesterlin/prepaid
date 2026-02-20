@@ -55,6 +55,7 @@ export function validateStatusUpdate(
     ],
     [TransactionStatus.FAILED]: [
       TransactionStatus.PENDING, // Allow retry
+      TransactionStatus.REFUNDED, // Allow manual refund
     ],
     [TransactionStatus.REFUNDED]: [], // No transitions from refunded
   };

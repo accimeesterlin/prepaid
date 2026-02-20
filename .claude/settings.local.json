@@ -77,7 +77,8 @@
       "Bash(npx tsx -e:*)",
       "Bash(yarn list:*)",
       "WebFetch(domain:api.dingconnect.com)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

@@ -31,6 +31,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_TRANSACTIONS,
     Permission.PROCESS_TRANSACTIONS,
     Permission.UPDATE_TRANSACTION_STATUS,
+    Permission.REFUND_TRANSACTIONS,
 
     // Customers
     Permission.VIEW_CUSTOMERS,
