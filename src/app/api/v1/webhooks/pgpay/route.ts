@@ -416,24 +416,30 @@ export async function POST(request: NextRequest) {
           );
           if (dingProduct) {
             // Use the same classification logic as phone lookup:
-            // Variable-value: Has min/max BUT no fixed price, no specific benefits, no validity period
+            // Variable-value: Has min/max range, no fixed price, no specific benefits, no validity period
             const hasMinMax = dingProduct.Minimum?.SendValue != null && dingProduct.Maximum?.SendValue != null;
             const hasFixedPrice = !!(dingProduct.Price && dingProduct.Price.Amount);
-            const hasSpecificBenefits =
+            const hasSpecificBenefits = !!(
               dingProduct.BenefitTypes &&
               (dingProduct.BenefitTypes.Data ||
                 dingProduct.BenefitTypes.Voice ||
-                dingProduct.BenefitTypes.SMS);
+                dingProduct.BenefitTypes.SMS)
+            );
             const hasValidityPeriod = !!dingProduct.ValidityPeriodIso;
+            const benefitsLower = (dingProduct.Benefits || []).map((b: string) =>
+              b.toLowerCase(),
+            );
             const benefitsIndicatePlan =
-              dingProduct.Benefits &&
-              Array.isArray(dingProduct.Benefits) &&
-              (dingProduct.Benefits.includes("Data") ||
-                dingProduct.Benefits.includes("Voice") ||
-                dingProduct.Benefits.includes("SMS"));
+              benefitsLower.includes("data") ||
+              benefitsLower.includes("voice") ||
+              benefitsLower.includes("sms");
+            const isFixedRange =
+              hasMinMax &&
+              dingProduct.Minimum!.SendValue === dingProduct.Maximum!.SendValue;
 
             const isVariable =
               hasMinMax &&
+              !isFixedRange &&
               !hasFixedPrice &&
               !hasSpecificBenefits &&
               !hasValidityPeriod &&

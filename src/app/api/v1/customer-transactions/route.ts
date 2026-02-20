@@ -164,29 +164,54 @@ export async function POST(request: NextRequest) {
     let customerPrice: number; // What customer pays (with markup & discount)
 
     // Determine if this is a variable-value product using the same logic as phone lookup
-    // Variable-value: Has min/max BUT no fixed price, no specific benefits, no validity period
-    // Fixed-value (plans): Has fixed price OR specific benefit amounts OR validity period
+    // Variable-value: Has min/max range, no fixed price, no specific benefits, no validity period
+    // Fixed-value (plans): Has fixed price OR specific benefit amounts OR validity period OR same min/max
     const hasMinMax = !!(productDetails.Minimum && productDetails.Maximum);
     const hasFixedPrice = !!(productDetails.Price && productDetails.Price.Amount);
-    const hasSpecificBenefits =
+    const hasSpecificBenefits = !!(
       productDetails.BenefitTypes &&
       (productDetails.BenefitTypes.Data ||
         productDetails.BenefitTypes.Voice ||
-        productDetails.BenefitTypes.SMS);
+        productDetails.BenefitTypes.SMS)
+    );
     const hasValidityPeriod = !!productDetails.ValidityPeriodIso;
+
+    // Check Benefits array (case-insensitive) for plan indicators
+    const benefitsLower = (productDetails.Benefits || []).map((b) =>
+      b.toLowerCase(),
+    );
     const benefitsIndicatePlan =
-      productDetails.Benefits &&
-      Array.isArray(productDetails.Benefits) &&
-      (productDetails.Benefits.includes("Data") ||
-        productDetails.Benefits.includes("Voice") ||
-        productDetails.Benefits.includes("SMS"));
+      benefitsLower.includes("data") ||
+      benefitsLower.includes("voice") ||
+      benefitsLower.includes("sms");
+
+    // If Minimum.SendValue === Maximum.SendValue, it's a fixed product (no range)
+    const isFixedRange =
+      hasMinMax &&
+      productDetails.Minimum!.SendValue === productDetails.Maximum!.SendValue;
 
     const isVariableValue =
       hasMinMax &&
+      !isFixedRange &&
       !hasFixedPrice &&
       !hasSpecificBenefits &&
       !hasValidityPeriod &&
       !benefitsIndicatePlan;
+
+    logger.info("Product classification for transaction", {
+      skuCode: data.skuCode,
+      isVariableValue,
+      hasMinMax,
+      isFixedRange,
+      hasFixedPrice,
+      hasSpecificBenefits,
+      hasValidityPeriod,
+      benefitsIndicatePlan,
+      benefits: productDetails.Benefits,
+      hasPriceAmount: !!productDetails.Price?.Amount,
+      minSendValue: productDetails.Minimum?.SendValue,
+      maxSendValue: productDetails.Maximum?.SendValue,
+    });
 
     if (isVariableValue) {
       if (!data.sendValue) {

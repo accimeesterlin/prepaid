@@ -416,32 +416,35 @@ export async function POST(request: NextRequest) {
           let benefitType = "airtime";
 
           // Determine if this is a variable-value product (top-up with custom amount)
-          // Variable-value products have:
-          // - Minimum and Maximum values
-          // - NO fixed Price (uses range pricing)
-          // - NO specific benefits (Data/Voice/SMS)
-          // - NO validity period (instant top-up, not a plan)
+          // Variable-value: Has min/max range, no fixed price, no specific benefits, no validity period
+          // Fixed-value (plans): Has fixed price OR specific benefit amounts OR validity period OR same min/max
           const hasMinMax = !!(product.Minimum && product.Maximum);
           const hasFixedPrice = !!(product.Price && product.Price.Amount);
-          const hasSpecificBenefits =
+          const hasSpecificBenefits = !!(
             product.BenefitTypes &&
             (product.BenefitTypes.Data ||
               product.BenefitTypes.Voice ||
-              product.BenefitTypes.SMS);
+              product.BenefitTypes.SMS)
+          );
           const hasValidityPeriod = !!product.ValidityPeriodIso;
 
-          // Check if Benefits array indicates this is a plan
+          // Check Benefits array (case-insensitive) for plan indicators
+          const benefitsLower = (product.Benefits || []).map((b) =>
+            b.toLowerCase(),
+          );
           const benefitsIndicatePlan =
-            product.Benefits &&
-            Array.isArray(product.Benefits) &&
-            (product.Benefits.includes("Data") ||
-              product.Benefits.includes("Voice") ||
-              product.Benefits.includes("SMS"));
+            benefitsLower.includes("data") ||
+            benefitsLower.includes("voice") ||
+            benefitsLower.includes("sms");
 
-          // Variable-value: Has min/max BUT no fixed price, no specific benefits, and no validity period
-          // Fixed-value (plans): Has fixed price OR has specific benefit amounts OR has validity period OR benefits indicate plan
+          // If Minimum.SendValue === Maximum.SendValue, it's a fixed product (no range)
+          const isFixedRange =
+            hasMinMax &&
+            product.Minimum!.SendValue === product.Maximum!.SendValue;
+
           const isVariableValue =
             hasMinMax &&
+            !isFixedRange &&
             !hasFixedPrice &&
             !hasSpecificBenefits &&
             !hasValidityPeriod &&
