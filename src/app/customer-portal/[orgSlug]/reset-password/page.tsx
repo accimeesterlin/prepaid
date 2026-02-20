@@ -22,6 +22,7 @@ export default function ResetPasswordPage({
   const { t } = useTranslation();
 
   const token = searchParams.get("token");
+  const email = searchParams.get("email");
 
   useEffect(() => {
     params.then((p) => setOrgSlug(p.orgSlug));
@@ -48,13 +49,13 @@ export default function ResetPasswordPage({
       const res = await fetch("/api/v1/customer-auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: password, orgSlug }),
+        body: JSON.stringify({ token, email, password, orgSlug }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error?.message || "Reset failed");
+        throw new Error(data.detail || data.title || t("customer.resetPassword.error"));
       }
 
       setSuccess(true);

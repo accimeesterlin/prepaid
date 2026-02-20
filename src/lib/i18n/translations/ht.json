@@ -181,6 +181,19 @@
       "backToLogin": "Retounen nan Koneksyon",
       "error": "Echwe nan voyè lyen. Tanpri eseye ankò."
     },
+    "resetPassword": {
+      "title": "Nouvo Modpas",
+      "subtitle": "Antre nouvo modpas ou anba a",
+      "newPassword": "Nouvo Modpas",
+      "confirmPassword": "Konfime Modpas",
+      "resetButton": "Reyajiste Modpas",
+      "resetting": "Ap reyajiste...",
+      "successMessage": "Modpas ou reyajiste avèk siksè. Ap redirije nan koneksyon...",
+      "backToLogin": "Retounen nan Koneksyon",
+      "error": "Echwe nan reyajiste modpas. Tanpri eseye ankò.",
+      "passwordMismatch": "Modpas yo pa menm.",
+      "noToken": "Lyen reyajisteman envalid oswa manke. Tanpri mande yon nouvo reyajisteman modpas."
+    },
     "portal": {
       "title": "Pòtal Kliyant",
       "welcome": "Byenveni, {name}",

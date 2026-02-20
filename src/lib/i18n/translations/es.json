@@ -181,6 +181,19 @@
       "backToLogin": "Volver al Inicio",
       "error": "Error al enviar el enlace. Inténtelo de nuevo."
     },
+    "resetPassword": {
+      "title": "Nueva Contraseña",
+      "subtitle": "Ingrese su nueva contraseña a continuación",
+      "newPassword": "Nueva Contraseña",
+      "confirmPassword": "Confirmar Contraseña",
+      "resetButton": "Restablecer Contraseña",
+      "resetting": "Restableciendo...",
+      "successMessage": "Su contraseña ha sido restablecida con éxito. Redirigiendo al inicio de sesión...",
+      "backToLogin": "Volver al Inicio",
+      "error": "Error al restablecer la contraseña. Inténtelo de nuevo.",
+      "passwordMismatch": "Las contraseñas no coinciden.",
+      "noToken": "Enlace de restablecimiento inválido o faltante. Por favor solicite un nuevo restablecimiento."
+    },
     "portal": {
       "title": "Portal del Cliente",
       "welcome": "Bienvenido de nuevo, {name}",

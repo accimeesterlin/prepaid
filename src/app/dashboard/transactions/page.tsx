@@ -431,11 +431,11 @@ export default function TransactionsPage() {
 
       const data = await response.json();
 
-      if (response.ok && data.data?.success) {
+      if (response.ok && data.success) {
         toast({
           title: "Refund Successful",
           description:
-            data.data.message ||
+            data.message ||
             "Transaction has been refunded successfully.",
           variant: "success",
         });

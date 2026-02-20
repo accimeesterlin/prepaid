@@ -181,6 +181,19 @@
       "backToLogin": "Retour à la Connexion",
       "error": "Échec de l'envoi du lien. Veuillez réessayer."
     },
+    "resetPassword": {
+      "title": "Nouveau Mot de Passe",
+      "subtitle": "Entrez votre nouveau mot de passe ci-dessous",
+      "newPassword": "Nouveau Mot de Passe",
+      "confirmPassword": "Confirmer le Mot de Passe",
+      "resetButton": "Réinitialiser le Mot de Passe",
+      "resetting": "Réinitialisation...",
+      "successMessage": "Votre mot de passe a été réinitialisé avec succès. Redirection vers la connexion...",
+      "backToLogin": "Retour à la Connexion",
+      "error": "Échec de la réinitialisation du mot de passe. Veuillez réessayer.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas.",
+      "noToken": "Lien de réinitialisation invalide ou manquant. Veuillez demander une nouvelle réinitialisation."
+    },
     "portal": {
       "title": "Portail Client",
       "welcome": "Bienvenue, {name}",

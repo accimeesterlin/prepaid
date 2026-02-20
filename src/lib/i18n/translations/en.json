@@ -181,6 +181,19 @@
       "backToLogin": "Back to Login",
       "error": "Failed to send reset link. Please try again."
     },
+    "resetPassword": {
+      "title": "Set New Password",
+      "subtitle": "Enter your new password below",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password",
+      "resetButton": "Reset Password",
+      "resetting": "Resetting...",
+      "successMessage": "Your password has been reset successfully. Redirecting to login...",
+      "backToLogin": "Back to Login",
+      "error": "Failed to reset password. Please try again.",
+      "passwordMismatch": "Passwords do not match.",
+      "noToken": "Invalid or missing reset link. Please request a new password reset."
+    },
     "portal": {
       "title": "Customer Portal",
       "welcome": "Welcome back, {name}",
