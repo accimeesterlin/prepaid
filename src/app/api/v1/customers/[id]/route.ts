@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { dbConnection } from "@pg-prepaid/db/connection";
 import { Customer } from "@pg-prepaid/db";
+import bcrypt from "bcryptjs";
 
 // GET single customer
 export async function GET(
@@ -115,6 +116,7 @@ export async function PUT(
       lastName,
       phone,
       password,
+      twoFactorEnabled,
     } = body;
 
     await dbConnection.connect();
@@ -192,12 +194,36 @@ export async function PUT(
       }
       if (phone !== undefined) customer.phoneNumber = phone;
 
-      if (password) {
-        customer.passwordHash = password; // Will be hashed by pre-save hook
+      // Staff can toggle 2FA for customers
+      if (twoFactorEnabled !== undefined) {
+        customer.twoFactorEnabled = twoFactorEnabled;
+        // If disabling 2FA, clear any existing codes
+        if (twoFactorEnabled === false) {
+          customer.twoFactorCode = undefined;
+          customer.twoFactorCodeExpiry = undefined;
+          customer.twoFactorVerified = false;
+        }
       }
+
+      // NOTE: password is handled separately below via direct DB update
+      // to avoid issues with Mongoose select:false on passwordHash
     }
 
     await customer.save();
+
+    // Handle password separately using direct DB update
+    // Mongoose may not properly persist fields loaded with select:false
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 12);
+      await Customer.updateOne(
+        { _id: id },
+        { $set: { passwordHash: hashedPassword } },
+      );
+      console.log("[Customer Update] Password saved via direct update:", {
+        customerId: id,
+        email: customer.email,
+      });
+    }
 
     return NextResponse.json(customer);
   } catch (error) {

@@ -34,10 +34,11 @@ export async function GET(request: NextRequest) {
 
     // Search filter
     if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { phoneNumber: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { name: { $regex: search, $options: 'i' } },
+        { phoneNumber: { $regex: escaped, $options: 'i' } },
+        { email: { $regex: escaped, $options: 'i' } },
+        { name: { $regex: escaped, $options: 'i' } },
       ];
     }
 

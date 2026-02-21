@@ -26,10 +26,11 @@ export async function GET(request: NextRequest) {
 
     // Search by name, description, or code
     if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { code: { $regex: search, $options: 'i' } },
+        { name: { $regex: escaped, $options: 'i' } },
+        { description: { $regex: escaped, $options: 'i' } },
+        { code: { $regex: escaped, $options: 'i' } },
       ];
     }
 

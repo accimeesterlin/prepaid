@@ -44,10 +44,11 @@ export async function GET(
 
     // Add search filter if provided
     if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { "recipient.phoneNumber": { $regex: search, $options: "i" } },
-        { orderId: { $regex: search, $options: "i" } },
-        { status: { $regex: search, $options: "i" } },
+        { "recipient.phoneNumber": { $regex: escaped, $options: "i" } },
+        { orderId: { $regex: escaped, $options: "i" } },
+        { status: { $regex: escaped, $options: "i" } },
       ];
     }
 

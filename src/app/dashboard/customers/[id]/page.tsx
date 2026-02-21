@@ -27,6 +27,8 @@ import {
   XCircle,
   Clock,
   Loader2,
+  Shield,
+  ShieldOff,
 } from "lucide-react";
 
 const COUNTRIES = [
@@ -74,6 +76,7 @@ interface Customer {
   balanceCurrency?: string;
   totalAssigned?: number;
   totalUsed?: number;
+  twoFactorEnabled?: boolean;
   metadata: {
     totalPurchases: number;
     totalSpent: number;
@@ -292,6 +295,40 @@ export default function CustomerDetailPage() {
     }
     setEditing(false);
     setMessage(null);
+  };
+
+  const handleToggle2FA = async (enabled: boolean) => {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/v1/customers/${customerId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ twoFactorEnabled: enabled }),
+      });
+
+      if (response.ok) {
+        setCustomer((prev) =>
+          prev ? { ...prev, twoFactorEnabled: enabled } : prev,
+        );
+        setMessage({
+          type: "success",
+          text: enabled
+            ? "Two-factor authentication enabled"
+            : "Two-factor authentication disabled",
+        });
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        const error = await response.json();
+        setMessage({
+          type: "error",
+          text: error.error || "Failed to update 2FA setting",
+        });
+      }
+    } catch (_error) {
+      setMessage({ type: "error", text: "Failed to update 2FA setting" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSetPassword = async () => {
@@ -546,6 +583,18 @@ export default function CustomerDetailPage() {
           </div>
           {!editing && (
             <div className="flex gap-2">
+              {customer.email && orgSlug && (
+                <Button variant="outline" asChild>
+                  <a
+                    href={`/customer-portal/${orgSlug}/login?email=${encodeURIComponent(customer.email)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Customer Portal
+                  </a>
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setEditing(true)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
@@ -987,6 +1036,45 @@ export default function CustomerDetailPage() {
                   >
                     <Key className="h-4 w-4 mr-2" />
                     Set Password
+                  </Button>
+                </div>
+
+                {/* Two-Factor Authentication Toggle */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {customer.twoFactorEnabled ? (
+                      <Shield className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <ShieldOff className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    <div>
+                      <p className="font-medium">Two-Factor Authentication</p>
+                      <p className="text-sm text-muted-foreground">
+                        {customer.twoFactorEnabled
+                          ? "2FA is enabled — customer must verify via email code on login"
+                          : "2FA is disabled — customer logs in with password only"}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant={customer.twoFactorEnabled ? "destructive" : "outline"}
+                    size="sm"
+                    disabled={saving}
+                    onClick={() =>
+                      handleToggle2FA(!customer.twoFactorEnabled)
+                    }
+                  >
+                    {customer.twoFactorEnabled ? (
+                      <>
+                        <ShieldOff className="h-4 w-4 mr-2" />
+                        Disable 2FA
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Enable 2FA
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

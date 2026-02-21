@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Create session (but user needs to verify email before using balance)
-    await createCustomerSession({
+    const token = await createCustomerSession({
       customerId: String(customer._id),
       orgId: String(org._id),
       email: customer.email!,
@@ -89,7 +89,8 @@ export async function POST(request: NextRequest) {
       name: customer.name,
     });
 
-    return createCreatedResponse({
+    // Explicitly set cookie on the response to ensure it's included
+    const response = createCreatedResponse({
       message:
         "Account created successfully. Please check your email to verify your account.",
       customer: {
@@ -99,6 +100,16 @@ export async function POST(request: NextRequest) {
         emailVerified: false,
       },
     });
+
+    response.cookies.set("customer-session", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60,
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return handleApiError(ApiErrors.BadRequest(error.errors[0].message));

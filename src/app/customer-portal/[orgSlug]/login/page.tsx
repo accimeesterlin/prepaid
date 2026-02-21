@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
 import { Button, Input, Label, Alert, AlertDescription } from "@pg-prepaid/ui";
@@ -19,11 +19,20 @@ export default function CustomerLoginPage({
   const [error, setError] = useState("");
   const [show2FAModal, setShow2FAModal] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
 
   useEffect(() => {
     params.then((p) => setOrgSlug(p.orgSlug));
   }, [params]);
+
+  // Pre-fill email from URL search params (e.g., from admin "Customer Portal" link)
+  useEffect(() => {
+    const emailParam = searchParams.get("email");
+    if (emailParam && !email) {
+      setEmail(emailParam);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

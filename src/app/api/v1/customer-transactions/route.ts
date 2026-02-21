@@ -499,10 +499,11 @@ export async function POST(request: NextRequest) {
       const transferResult = await dingConnect.sendTransfer({
         SkuCode: data.skuCode,
         AccountNumber: accountNumber,
-        SendValue: isVariableValue ? sendValue : undefined,
-        SendCurrencyIso: isVariableValue
-          ? (productDetails.Minimum?.SendCurrencyIso || "USD")
-          : undefined,
+        SendValue: sendValue,
+        SendCurrencyIso:
+          productDetails.Minimum?.SendCurrencyIso ||
+          productDetails.Price?.CurrencyCode ||
+          "USD",
         DistributorRef: transaction.orderId, // Use our order ID as the unique reference
         ValidateOnly: validateOnly, // Use organization's test mode setting
       });

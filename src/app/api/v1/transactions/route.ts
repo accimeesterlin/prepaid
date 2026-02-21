@@ -28,10 +28,11 @@ export async function GET(request: NextRequest) {
     const query: any = { orgId: session.orgId };
 
     if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { orderId: { $regex: search, $options: 'i' } },
-        { 'recipient.phoneNumber': { $regex: search, $options: 'i' } },
-        { 'recipient.email': { $regex: search, $options: 'i' } },
+        { orderId: { $regex: escaped, $options: 'i' } },
+        { 'recipient.phoneNumber': { $regex: escaped, $options: 'i' } },
+        { 'recipient.email': { $regex: escaped, $options: 'i' } },
       ];
     }
 

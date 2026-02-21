@@ -499,29 +499,27 @@ export async function POST(request: NextRequest) {
         throw new Error("Missing product SKU or phone number in transaction");
       }
 
+      // DingConnect requires SendValue for ALL products (fixed and variable)
+      const resolvedSendValue = sendValue || transaction.amount;
+      if (!resolvedSendValue) {
+        logger.error("Missing sendValue for transfer", {
+          orderId: transaction.orderId,
+          productSkuCode,
+          isVariableValue,
+          sendValue,
+          transactionAmount: transaction.amount,
+        });
+        throw new Error("Missing sendValue for DingConnect transfer");
+      }
+
       const transferRequest: Record<string, unknown> = {
         SkuCode: productSkuCode,
         AccountNumber: phoneNumber,
         ValidateOnly: validateOnly,
         DistributorRef: transaction.orderId,
+        SendValue: typeof resolvedSendValue === "string" ? parseFloat(resolvedSendValue) : resolvedSendValue,
+        SendCurrencyIso: "USD",
       };
-
-      // For variable-value products, include SendValue and SendCurrencyIso
-      if (isVariableValue) {
-        if (!sendValue) {
-          logger.error("Variable-value product missing sendValue", {
-            orderId: transaction.orderId,
-            productSkuCode,
-            isVariableValue,
-            sendValue,
-            transactionAmount: transaction.amount,
-          });
-          throw new Error("Variable-value product requires sendValue");
-        }
-        transferRequest.SendValue =
-          typeof sendValue === "string" ? parseFloat(sendValue) : sendValue;
-        transferRequest.SendCurrencyIso = "USD"; // Variable-value products need currency
-      }
 
       logger.info("Sending DingConnect transfer", {
         orderId: transaction.orderId,

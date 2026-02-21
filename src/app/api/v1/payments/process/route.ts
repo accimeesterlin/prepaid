@@ -253,10 +253,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For variable-value products, use sendValue or fall back to finalAmount
+    // Always resolve sendValue — DingConnect requires it for ALL products
     const actualSendValue = productData.isVariableValue
-      ? sendValue || finalAmount // Use sendValue if provided, otherwise use finalAmount
-      : undefined;
+      ? sendValue || finalAmount
+      : Number((productData.pricing as Record<string, unknown> | undefined)?.costPrice) || finalAmount;
 
     // Use country from lookup if provided, otherwise detect from phone number
     const parsedPhone = parsePhoneNumber(phoneNumber!);

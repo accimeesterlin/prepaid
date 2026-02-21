@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     await customer.save();
 
     // Create session
-    await createCustomerSession({
+    const token = await createCustomerSession({
       customerId: String(customer._id),
       orgId: String(org._id),
       email: customer.email!,
@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
       name: customer.name,
     });
 
-    return createSuccessResponse({
+    // Explicitly set cookie on the response to ensure it's included
+    const response = createSuccessResponse({
       message: "Verification successful",
       customer: {
         id: String(customer._id),
@@ -92,6 +93,16 @@ export async function POST(request: NextRequest) {
         balanceCurrency: customer.balanceCurrency,
       },
     });
+
+    response.cookies.set("customer-session", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60,
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return handleApiError(ApiErrors.BadRequest(error.errors[0].message));
