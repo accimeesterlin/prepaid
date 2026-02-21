@@ -157,7 +157,7 @@ export default function SendMinutesPage({
       );
       if (res.ok) {
         const data = await res.json();
-        setProductDescription(data.data?.description || null);
+        setProductDescription(data.description || null);
       }
     } catch {
       // Non-critical - silently fail
