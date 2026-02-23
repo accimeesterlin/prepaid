@@ -17,7 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Mobile Top-Up | Prepaid Minutes Platform",
-  description: "Send mobile top-ups worldwide instantly. Fast, secure, and reliable prepaid mobile recharge service.",
+  description:
+    "Send mobile top-ups worldwide instantly. Fast, secure, and reliable prepaid mobile recharge service.",
   applicationName: "Mobile Top-Up",
   appleWebApp: {
     capable: true,
@@ -31,12 +32,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Mobile Top-Up",
     title: "Mobile Top-Up | Prepaid Minutes Platform",
-    description: "Send mobile top-ups worldwide instantly. Fast, secure, and reliable prepaid mobile recharge service.",
+    description:
+      "Send mobile top-ups worldwide instantly. Fast, secure, and reliable prepaid mobile recharge service.",
   },
   twitter: {
     card: "summary",
     title: "Mobile Top-Up | Prepaid Minutes Platform",
-    description: "Send mobile top-ups worldwide instantly. Fast, secure, and reliable prepaid mobile recharge service.",
+    description:
+      "Send mobile top-ups worldwide instantly. Fast, secure, and reliable prepaid mobile recharge service.",
   },
 };
 
@@ -49,10 +52,14 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="theme-color" content="#3b82f6" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes"
+        />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body
+        translate="no"
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ClientProviders>{children}</ClientProviders>
