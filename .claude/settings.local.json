@@ -78,7 +78,8 @@
       "Bash(yarn list:*)",
       "WebFetch(domain:api.dingconnect.com)",
       "Bash(npx tsc:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:gist.github.com)"
     ],
     "deny": [],
     "ask": []
