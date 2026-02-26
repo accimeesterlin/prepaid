@@ -79,7 +79,8 @@
       "WebFetch(domain:api.dingconnect.com)",
       "Bash(npx tsc:*)",
       "Bash(ls:*)",
-      "WebFetch(domain:gist.github.com)"
+      "WebFetch(domain:gist.github.com)",
+      "Bash(rm sentry.server.config.ts sentry.edge.config.ts)"
     ],
     "deny": [],
     "ask": []
