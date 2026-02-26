@@ -26,6 +26,7 @@
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.0.2",
     "@sendgrid/mail": "^8.1.6",
+    "@sentry/nextjs": "^10",
     "awesome-phonenumber": "^7.5.0",
     "bcryptjs": "^2.4.3",
     "change-case": "^5.4.4",
