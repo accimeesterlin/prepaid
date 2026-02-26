@@ -23,9 +23,37 @@ Sentry.init({
   // Define how likely Replay events are sampled when an error occurs.
   replaysOnErrorSampleRate: 1.0,
 
-  // Enable sending user PII (Personally Identifiable Information)
+  // Disable sending PII (Personally Identifiable Information)
+  // We'll manually set user context with non-PII data only
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
+  sendDefaultPii: false,
+
+  // Scrub sensitive data before sending to Sentry
+  beforeSend(event, hint) {
+    // Remove any PII from the event
+    if (event.user) {
+      // Remove email and any other PII fields
+      delete event.user.email;
+      delete event.user.username;
+      delete event.user.ip_address;
+    }
+
+    // Remove sensitive request data
+    if (event.request) {
+      // Remove cookies that might contain sensitive data
+      delete event.request.cookies;
+
+      // Sanitize headers - remove authorization and other sensitive headers
+      if (event.request.headers) {
+        delete event.request.headers.Authorization;
+        delete event.request.headers.authorization;
+        delete event.request.headers.Cookie;
+        delete event.request.headers.cookie;
+      }
+    }
+
+    return event;
+  },
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

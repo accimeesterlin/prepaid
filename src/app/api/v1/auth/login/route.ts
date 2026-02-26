@@ -7,6 +7,7 @@ import { verifyPassword, createToken, createSessionCookie } from "@/lib/auth";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { createSuccessResponse } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
+import { setSentryUser } from "@/lib/sentry-utils";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -100,12 +101,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Create session token
-    const token = await createToken({
+    const sessionPayload = {
       userId: user._id.toString(),
       email: user.email,
       roles: user.roles,
       orgId: sessionOrgId || "",
-    });
+    };
+    const token = await createToken(sessionPayload);
+
+    // Set Sentry user context with non-PII data
+    setSentryUser(sessionPayload);
 
     // Create response with session cookie
     const response = createSuccessResponse({
