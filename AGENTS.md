@@ -454,6 +454,7 @@ Browser translation mutates the DOM inside React portals (overlays, dropdowns, d
 - Any other portal-based components (context-menu, hover-card, menubar, navigation-menu)
 
 **Pattern:**
+
 ```tsx
 <SomePrimitive.Content translate="no" {...props} />
 <SomePrimitive.Trigger translate="no" {...props} />
