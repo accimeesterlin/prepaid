@@ -58,7 +58,12 @@ export default function BillingPage() {
 
   const fetchSubscription = async () => {
     try {
-      const response = await fetch("/api/v1/subscriptions/current");
+      const response = await fetch("/api/v1/subscriptions/current", {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("API Error:", errorData);
@@ -161,6 +166,7 @@ export default function BillingPage() {
     (new Date(subscription.currentPeriodEnd).getTime() - Date.now()) /
       (1000 * 60 * 60 * 24),
   );
+  const isExpired = daysUntilRenewal <= 0;
 
   return (
     <DashboardLayout>
@@ -182,10 +188,14 @@ export default function BillingPage() {
                   {tierInfo.name} Plan
                   <Badge
                     variant={
-                      subscription.status === "active" ? "default" : "secondary"
+                      isExpired
+                        ? "destructive"
+                        : subscription.status === "active"
+                          ? "default"
+                          : "secondary"
                     }
                   >
-                    {subscription.status}
+                    {isExpired ? "expired" : subscription.status}
                   </Badge>
                 </CardTitle>
                 <CardDescription>{tierInfo.description}</CardDescription>
@@ -202,19 +212,62 @@ export default function BillingPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    {daysUntilRenewal > 0
-                      ? `Renews in ${daysUntilRenewal} days`
-                      : "Renews today"}
-                  </span>
+                  {isExpired ? (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <span className="text-destructive font-medium">
+                        Expired {Math.abs(daysUntilRenewal)} days ago
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        {daysUntilRenewal > 0
+                          ? `Renews in ${daysUntilRenewal} days`
+                          : "Renews today"}
+                      </span>
+                    </>
+                  )}
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Transaction Fee: {subscription.transactionFeePercentage}%
                 </div>
               </div>
 
-              {nextTier && (
+              {isExpired && (
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-destructive mb-1">
+                        Subscription Expired
+                      </h4>
+                      <p className="text-sm text-destructive/90 mb-3">
+                        Your subscription expired on{" "}
+                        {new Date(subscription.currentPeriodEnd).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
+                          },
+                        )}
+                        . Please renew to continue using premium features.
+                      </p>
+                      <Button
+                        onClick={() => handleUpgrade(subscription.tier)}
+                        disabled={upgrading}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        {upgrading ? "Processing..." : "Renew Subscription"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {nextTier && !isExpired && (
                 <SubscriptionUpgradePreview
                   subscription={subscription}
                   nextTier={nextTier}

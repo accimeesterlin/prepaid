@@ -69,6 +69,25 @@ export async function GET(req: NextRequest) {
     }
     const tierInfo = getTierInfo(tier);
 
+    // Check if subscription is expired and auto-update status
+    const currentPeriodEnd = organization.subscription?.currentPeriodEnd || new Date();
+    const isExpired = currentPeriodEnd < new Date();
+
+    if (isExpired && organization.subscription?.status === "active") {
+      // Auto-update status to past_due when subscription expires
+      try {
+        await Organization.findByIdAndUpdate(organization._id, {
+          "subscription.status": "past_due",
+        });
+        // Update local object for response
+        if (organization.subscription) {
+          organization.subscription.status = "past_due";
+        }
+      } catch (updateError) {
+        console.error("Failed to update expired subscription status", updateError);
+      }
+    }
+
     // Calculate usage limits
     const transactionLimit = checkLimit(
       tier,
@@ -123,7 +142,14 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    return createSuccessResponse(subscriptionData);
+    const response = createSuccessResponse(subscriptionData);
+
+    // Add cache control headers to prevent stale subscription data
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+
+    return response;
   } catch (error) {
     console.error("Error fetching subscription:", error);
     return createErrorResponse("Internal server error", 500);
