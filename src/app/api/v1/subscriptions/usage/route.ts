@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
 
     const user = await requireAuth(req);
 
-    // Get organization
-    const organization = await Organization.findById(user.orgId);
+    // Get organization - bypass Mongoose cache for fresh data
+    const organization = await Organization.findById(user.orgId).lean();
     if (!organization) {
       return createErrorResponse("Organization not found", 404);
     }

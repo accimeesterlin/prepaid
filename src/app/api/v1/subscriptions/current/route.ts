@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
       orgId: user.orgId,
     });
 
-    // Get organization
-    const organization = await Organization.findById(user.orgId);
+    // Get organization - use lean() to bypass Mongoose caching and get fresh data
+    const organization = await Organization.findById(user.orgId).lean();
 
     if (!organization) {
       console.error("Organization not found for orgId:", user.orgId);

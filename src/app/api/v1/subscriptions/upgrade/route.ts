@@ -35,19 +35,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get organization
-    const organization = await Organization.findById(user.orgId);
+    // Get organization - bypass Mongoose cache to ensure fresh data
+    const organization = await Organization.findById(user.orgId).lean();
     if (!organization) {
       return createErrorResponse("Organization not found", 404);
     }
 
-    // Check if already on this tier
-    if (organization.subscriptionTier === tier) {
-      return createErrorResponse("Already subscribed to this tier", 400);
-    }
+    // Check if subscription is expired
+    const currentPeriodEnd = organization.subscription?.currentPeriodEnd || new Date();
+    const isExpired = currentPeriodEnd < new Date();
+    const isSameTier = organization.subscriptionTier === tier;
 
     // Get tier info
     const tierInfo = getTierInfo(tier);
+
+    // Define tier order for upgrade/downgrade checking
+    const currentTierOrder = {
+      starter: 0,
+      growth: 1,
+      scale: 2,
+      enterprise: 3,
+    };
+    const currentOrder =
+      currentTierOrder[organization.subscriptionTier || "starter"];
+    const newOrder = currentTierOrder[tier];
+
+    // Allow renewals (same tier) ONLY if subscription is expired
+    // Otherwise, prevent same-tier purchases and downgrades
+    if (isSameTier && !isExpired) {
+      return createErrorResponse(
+        "You are already subscribed to this tier. Your subscription is active until " +
+          new Date(currentPeriodEnd).toLocaleDateString(),
+        400
+      );
+    }
+
+    // Prevent downgrades (only allow same tier if expired, or upgrades)
+    if (newOrder < currentOrder) {
+      return createErrorResponse(
+        "Downgrades are not supported. Please contact support for assistance.",
+        400
+      );
+    }
 
     // Calculate total amount based on months
     const monthlyFee = tierInfo.features.monthlyFee;
@@ -61,21 +90,6 @@ export async function POST(req: NextRequest) {
 
     const finalAmount = totalAmount * (1 - discount);
     const discountAmount = totalAmount - finalAmount;
-
-    // Prevent downgrade via this endpoint
-    const currentTierOrder = {
-      starter: 0,
-      growth: 1,
-      scale: 2,
-      enterprise: 3,
-    };
-    const currentOrder =
-      currentTierOrder[organization.subscriptionTier || "starter"];
-    const newOrder = currentTierOrder[tier];
-
-    if (newOrder <= currentOrder) {
-      return createErrorResponse("Please contact support for downgrades", 400);
-    }
 
     // Initialize PGPay service
     const pgPayUserId = process.env.PGPAY_USER_ID;
