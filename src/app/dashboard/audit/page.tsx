@@ -87,10 +87,16 @@ export default function AuditLogsPage() {
 
   const checkAccess = async () => {
     try {
-      const response = await fetch("/api/v1/subscriptions/current");
+      const response = await fetch(`/api/v1/subscriptions/current?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
+      });
       if (response.ok) {
         const data = await response.json();
-        const tier = data.organization?.subscriptionTier || "starter";
+        const tier = data.tier || data.organization?.subscriptionTier || "starter";
         // Only Scale and Enterprise tiers have audit logs
         setHasAccess(tier === "scale" || tier === "enterprise");
       }

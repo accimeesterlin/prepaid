@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import { Organization, Transaction, UserOrganization } from "@pg-prepaid/db";
+import { Organization, Transaction, UserOrganization, dbConnection } from "@pg-prepaid/db";
 import {
   checkLimit,
   isApproachingLimit,
@@ -8,8 +8,15 @@ import {
 } from "@/lib/pricing";
 import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
 
+// Disable Next.js caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   try {
+    // Ensure database connection is established
+    await dbConnection.connect();
+
     const user = await requireAuth(req);
 
     // Get organization

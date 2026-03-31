@@ -1,8 +1,12 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth-middleware";
-import { Organization } from "@pg-prepaid/db";
+import { Organization, dbConnection } from "@pg-prepaid/db";
 import { getTierInfo, SubscriptionTier } from "@/lib/pricing";
 import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
+
+// Disable Next.js caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 /**
  * GET /api/v1/subscriptions/billing-history
@@ -10,6 +14,9 @@ import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
  */
 export async function GET(req: NextRequest) {
   try {
+    // Ensure database connection is established
+    await dbConnection.connect();
+
     const user = await requireAuth(req);
 
     const organization = await Organization.findById(user.orgId);

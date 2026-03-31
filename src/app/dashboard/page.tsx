@@ -155,7 +155,15 @@ export default function DashboardPage() {
 
   const fetchSubscriptionInfo = async () => {
     try {
-      const response = await fetch("/api/v1/subscriptions/current");
+      // Add timestamp to force fresh data and prevent caching
+      const timestamp = Date.now();
+      const response = await fetch(`/api/v1/subscriptions/current?t=${timestamp}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setSubscription(data);
@@ -168,7 +176,13 @@ export default function DashboardPage() {
       }
 
       // Fetch usage
-      const usageResponse = await fetch("/api/v1/subscriptions/usage");
+      const usageResponse = await fetch(`/api/v1/subscriptions/usage?t=${timestamp}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
+      });
       if (usageResponse.ok) {
         const usageData = await usageResponse.json();
         setTransactionCount(usageData.transactions?.current || 0);

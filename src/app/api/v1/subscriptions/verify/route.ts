@@ -3,6 +3,10 @@ import { dbConnection, Organization } from "@pg-prepaid/db";
 import { createSuccessResponse, createErrorResponse } from "@/lib/api-response";
 import { PGPayService } from "@/lib/services/pgpay.service";
 
+// Disable Next.js caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * Verify subscription payment status
  * Called by the frontend after payment redirect

@@ -58,10 +58,11 @@ export default function BillingPage() {
 
   const fetchSubscription = async () => {
     try {
-      const response = await fetch("/api/v1/subscriptions/current", {
+      const response = await fetch(`/api/v1/subscriptions/current?t=${Date.now()}`, {
         cache: "no-store",
         headers: {
-          "Cache-Control": "no-cache",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
         },
       });
       if (!response.ok) {
@@ -89,7 +90,13 @@ export default function BillingPage() {
 
   const fetchBillingHistory = async () => {
     try {
-      const response = await fetch("/api/v1/subscriptions/billing-history");
+      const response = await fetch(`/api/v1/subscriptions/billing-history?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setBillingHistory(data.history || []);
