@@ -2,7 +2,12 @@
 
 import { ReactNode } from "react";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
+import { PostHogProvider } from "@/components/posthog-provider";
 
 export function ClientProviders({ children }: { children: ReactNode }) {
-  return <LanguageProvider>{children}</LanguageProvider>;
+  return (
+    <PostHogProvider>
+      <LanguageProvider>{children}</LanguageProvider>
+    </PostHogProvider>
+  );
 }

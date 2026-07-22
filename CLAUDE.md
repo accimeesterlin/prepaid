@@ -860,6 +860,136 @@ toast({
 - Multiple toasts can be shown simultaneously (max 5)
 - Toasts appear in the top-right corner of the screen
 
+### Analytics & Session Replay (PostHog)
+
+**PostHog Integration** for product analytics, error tracking, and session replay
+
+The application uses PostHog for:
+- **Session Replay** - Watch user sessions to understand behavior and debug issues
+- **Error Tracking** - Automatically capture JavaScript errors and exceptions
+- **Event Tracking** - Track custom events throughout the application
+- **Feature Flags** - A/B testing and feature rollouts
+- **User Analytics** - Understand user behavior and product usage
+
+**Configuration:**
+
+Environment variables required:
+```bash
+NEXT_PUBLIC_POSTHOG_KEY=your-posthog-project-api-key
+NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+```
+
+**Import:**
+```typescript
+import { analytics } from '@/lib/analytics';
+```
+
+**Basic Usage:**
+
+```typescript
+// Track custom events
+analytics.track('button_clicked', {
+  button_name: 'signup',
+  page: '/landing'
+});
+
+// Identify users (call after login)
+analytics.identify(user.id, {
+  email: user.email,
+  role: user.role,
+  organizationId: user.orgId,
+});
+
+// Reset on logout
+analytics.reset();
+
+// Capture errors manually
+try {
+  // risky operation
+} catch (error) {
+  analytics.captureError(error, {
+    context: 'checkout_flow',
+    userId: user.id
+  });
+  throw error;
+}
+```
+
+**Convenience Event Methods:**
+
+```typescript
+// Authentication events
+analytics.events.userSignedUp(userId, { plan: 'free' });
+analytics.events.userLoggedIn(userId, { method: 'email' });
+analytics.events.userLoggedOut();
+
+// Transaction events
+analytics.events.transactionStarted(transactionId, amount, currency);
+analytics.events.transactionCompleted(transactionId, amount, currency);
+analytics.events.transactionFailed(transactionId, 'insufficient_balance');
+
+// Product events
+analytics.events.productViewed(productId, { category: 'mobile-topup' });
+analytics.events.productSelected(productId, { provider: 'Digicel' });
+
+// Wallet events
+analytics.events.walletDeposit(amount, currency);
+analytics.events.walletWithdrawal(amount, currency);
+
+// Organization events
+analytics.events.organizationCreated(orgId, orgName);
+analytics.events.organizationSwitched(orgId, orgName);
+
+// Integration events
+analytics.events.integrationConnected('dingconnect');
+analytics.events.integrationDisconnected('stripe');
+
+// API errors
+analytics.events.apiError('/api/v1/products', 500, 'Internal server error');
+```
+
+**Advanced Features:**
+
+```typescript
+// Set properties sent with every event
+analytics.setSuperProperties({
+  app_version: '1.0.0',
+  environment: 'production'
+});
+
+// Feature flags
+if (analytics.isFeatureEnabled('new_checkout_flow')) {
+  // Show new checkout UI
+}
+
+// Control session recording
+analytics.setSessionRecording(false); // Pause recording
+analytics.setSessionRecording(true);  // Resume recording
+```
+
+**Privacy & Security:**
+
+PostHog is configured to:
+- Mask all input fields by default (`maskAllInputs: true`)
+- Mask elements with `data-private` attribute
+- Sanitize sensitive properties (passwords, tokens, API keys)
+- Only create user profiles for identified users
+- Record console logs and network requests for debugging
+
+**Integration Points:**
+
+1. **Provider:** `src/components/posthog-provider.tsx` - Wraps the entire app
+2. **Utility:** `src/lib/analytics.ts` - Clean API for tracking
+3. **Auto-tracking:** Page views, errors, and unhandled promise rejections
+
+**Best Practices:**
+- Always call `analytics.identify()` after user login
+- Always call `analytics.reset()` on logout
+- Track meaningful user actions (not every click)
+- Add context to error captures
+- Use the convenience methods for common events
+- Never track sensitive data (passwords, credit cards, etc.)
+
 ## Key Dependencies
 
 - **Next.js 15.5.6** - App Router with Turbopack
@@ -872,6 +1002,7 @@ toast({
 - **recharts** - Charts for dashboard
 - **date-fns** - Date utilities
 - **lucide-react** - Icons
+- **posthog-js** - Analytics, session replay, and error tracking
 
 ## Multi-Tenant Architecture
 
