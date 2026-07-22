@@ -80,7 +80,10 @@
       "Bash(npx tsc:*)",
       "Bash(ls:*)",
       "WebFetch(domain:gist.github.com)",
-      "Bash(rm sentry.server.config.ts sentry.edge.config.ts)"
+      "Bash(rm sentry.server.config.ts sentry.edge.config.ts)",
+      "Bash(yarn prepare)",
+      "Bash(chmod +x .husky/pre-push)",
+      "Bash(.husky/pre-push)"
     ],
     "deny": [],
     "ask": []

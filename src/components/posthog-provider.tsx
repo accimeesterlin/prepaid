@@ -1,13 +1,31 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import posthog from 'posthog-js';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-export function PostHogProvider({ children }: { children: React.ReactNode }) {
+function PostHogPageView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Track page views
+  useEffect(() => {
+    if (pathname && posthog.__loaded) {
+      let url = window.origin + pathname;
+      if (searchParams && searchParams.toString()) {
+        url = url + `?${searchParams.toString()}`;
+      }
+
+      posthog.capture('$pageview', {
+        $current_url: url,
+      });
+    }
+  }, [pathname, searchParams]);
+
+  return null;
+}
+
+export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Initialize PostHog only on client side and if API key is provided
     if (
@@ -26,18 +44,6 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             maskAllInputs: true, // Mask all input fields by default for privacy
             maskTextSelector: '[data-private]', // Mask elements with data-private attribute
             recordCrossOriginIframes: false,
-            // Capture console logs for debugging
-            recordConsole: {
-              log: true,
-              warn: true,
-              error: true,
-            },
-            // Capture network requests for debugging
-            recordNetwork: {
-              recordHeaders: true,
-              recordBody: true,
-              recordPerformance: true,
-            },
           },
 
           // Enable session recording by default
@@ -115,21 +121,14 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     }
   }, []); // Only run once on mount
 
-  // Track page views
-  useEffect(() => {
-    if (pathname && posthog.__loaded) {
-      let url = window.origin + pathname;
-      if (searchParams && searchParams.toString()) {
-        url = url + `?${searchParams.toString()}`;
-      }
-
-      posthog.capture('$pageview', {
-        $current_url: url,
-      });
-    }
-  }, [pathname, searchParams]);
-
-  return <>{children}</>;
+  return (
+    <>
+      <Suspense fallback={null}>
+        <PostHogPageView />
+      </Suspense>
+      {children}
+    </>
+  );
 }
 
 // Helper function to identify users

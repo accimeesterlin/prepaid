@@ -15,6 +15,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "prepare": "husky",
     "pwa:generate-icons": "node scripts/generate-icons.js && node scripts/convert-icons-to-png.js",
     "pwa:test": "echo '\nTo test PWA:\n1. Run: yarn build && yarn start\n2. Open: http://localhost:3000\n3. Open DevTools > Application > Service Workers\n4. Check Lighthouse PWA score\n'"
   },

@@ -1,0 +1,16 @@
+echo "🔨 Running build before push..."
+
+# Run the build
+yarn build
+
+# Capture the exit code
+BUILD_EXIT_CODE=$?
+
+if [ $BUILD_EXIT_CODE -ne 0 ]; then
+  echo "❌ Build failed! Push aborted."
+  echo "Fix the build errors before pushing."
+  exit 1
+fi
+
+echo "✅ Build successful! Proceeding with push..."
+exit 0
